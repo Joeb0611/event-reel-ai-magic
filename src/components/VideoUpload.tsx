@@ -3,18 +3,26 @@ import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Upload, X, Video, CheckCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { VideoFile } from '@/pages/Index';
 
 interface VideoUploadProps {
   isOpen: boolean;
   onClose: () => void;
-  onVideosUploaded: (files: File[]) => void;
+  onVideosUploaded: (videos: VideoFile[]) => void;
+  projectId: string;
   projectName: string;
 }
 
-const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectName }: VideoUploadProps) => {
+const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName }: VideoUploadProps) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
@@ -46,11 +54,72 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectName }: VideoUp
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleUpload = () => {
-    if (selectedFiles.length > 0) {
-      onVideosUploaded(selectedFiles);
+  const handleUpload = async () => {
+    if (selectedFiles.length === 0 || !user) return;
+
+    setUploading(true);
+    const uploadedVideos: VideoFile[] = [];
+
+    try {
+      for (const file of selectedFiles) {
+        // Create unique file path
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user.id}/${projectId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        
+        // Upload file to Supabase Storage
+        const { error: uploadError } = await supabase.storage
+          .from('videos')
+          .upload(fileName, file);
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw uploadError;
+        }
+
+        // Save video metadata to database
+        const { data: videoData, error: dbError } = await supabase
+          .from('videos')
+          .insert([
+            {
+              user_id: user.id,
+              project_id: projectId,
+              name: file.name,
+              file_path: fileName,
+              size: file.size,
+            },
+          ])
+          .select()
+          .single();
+
+        if (dbError) {
+          console.error('Database error:', dbError);
+          throw dbError;
+        }
+
+        // Get signed URL for immediate display
+        const { data: urlData } = await supabase.storage
+          .from('videos')
+          .createSignedUrl(fileName, 3600);
+
+        uploadedVideos.push({
+          ...videoData,
+          url: urlData?.signedUrl
+        });
+      }
+
+      onVideosUploaded(uploadedVideos);
       setSelectedFiles([]);
       onClose();
+
+    } catch (error) {
+      console.error('Error uploading videos:', error);
+      toast({
+        title: "Upload Error",
+        description: "Failed to upload one or more videos. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -71,7 +140,7 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectName }: VideoUp
         <div className="space-y-6">
           {/* Drop Zone */}
           <div
-            className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
+            className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 cursor-pointer ${
               isDragging 
                 ? 'border-purple-400 bg-purple-50' 
                 : 'border-gray-300 hover:border-purple-300 hover:bg-gray-50'
@@ -120,6 +189,7 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectName }: VideoUp
                       size="sm"
                       onClick={() => removeFile(index)}
                       className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      disabled={uploading}
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -131,15 +201,15 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectName }: VideoUp
 
           {/* Actions */}
           <div className="flex gap-3 pt-4">
-            <Button variant="outline" onClick={onClose} className="flex-1">
+            <Button variant="outline" onClick={onClose} className="flex-1" disabled={uploading}>
               Cancel
             </Button>
             <Button 
               onClick={handleUpload}
-              disabled={selectedFiles.length === 0}
+              disabled={selectedFiles.length === 0 || uploading}
               className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
             >
-              Upload {selectedFiles.length} Video{selectedFiles.length !== 1 ? 's' : ''}
+              {uploading ? 'Uploading...' : `Upload ${selectedFiles.length} Video${selectedFiles.length !== 1 ? 's' : ''}`}
             </Button>
           </div>
         </div>

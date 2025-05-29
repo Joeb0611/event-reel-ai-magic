@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import ProjectModal from '@/components/ProjectModal';
 import ProjectCard from '@/components/ProjectCard';
 import VideoUpload from '@/components/VideoUpload';
@@ -13,28 +15,33 @@ export interface Project {
   id: string;
   name: string;
   description: string;
-  createdAt: Date;
-  videos: VideoFile[];
-  editedVideoUrl?: string;
+  created_at: string;
+  edited_video_url?: string;
+  user_id: string;
 }
 
 export interface VideoFile {
   id: string;
   name: string;
-  url: string;
+  file_path: string;
   size: number;
-  uploadedAt: Date;
+  uploaded_at: string;
   edited: boolean;
-  projectId: string;
+  project_id: string;
+  user_id: string;
+  url?: string;
 }
 
 const Index = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [projectVideos, setProjectVideos] = useState<VideoFile[]>([]);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [showVideoUpload, setShowVideoUpload] = useState(false);
+  const [loadingProjects, setLoadingProjects] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -42,48 +49,157 @@ const Index = () => {
     }
   }, [user, loading, navigate]);
 
-  const createProject = (name: string, description: string) => {
-    const newProject: Project = {
-      id: Date.now().toString(),
-      name,
-      description,
-      createdAt: new Date(),
-      videos: [],
-    };
-    setProjects([newProject, ...projects]);
-    setIsProjectModalOpen(false);
+  useEffect(() => {
+    if (user) {
+      fetchProjects();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (selectedProject) {
+      fetchProjectVideos(selectedProject.id);
+    }
+  }, [selectedProject]);
+
+  const fetchProjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProjects(data || []);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch projects",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingProjects(false);
+    }
   };
 
-  const handleVideosUploaded = (files: File[], projectId: string) => {
-    const newVideos: VideoFile[] = files.map(file => ({
-      id: Date.now().toString() + Math.random(),
-      name: file.name,
-      url: URL.createObjectURL(file),
-      size: file.size,
-      uploadedAt: new Date(),
-      edited: false,
-      projectId,
-    }));
+  const fetchProjectVideos = async (projectId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('videos')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('uploaded_at', { ascending: false });
 
-    setProjects(prev => prev.map(project => 
-      project.id === projectId 
-        ? { ...project, videos: [...project.videos, ...newVideos] }
-        : project
-    ));
+      if (error) throw error;
+
+      // Get signed URLs for the videos
+      const videosWithUrls = await Promise.all(
+        (data || []).map(async (video) => {
+          const { data: urlData } = await supabase.storage
+            .from('videos')
+            .createSignedUrl(video.file_path, 3600); // 1 hour expiry
+          
+          return {
+            ...video,
+            url: urlData?.signedUrl
+          };
+        })
+      );
+
+      setProjectVideos(videosWithUrls);
+    } catch (error) {
+      console.error('Error fetching project videos:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch project videos",
+        variant: "destructive",
+      });
+    }
   };
 
-  const triggerAIEditing = (project: Project) => {
-    // Placeholder for AI video editing integration
+  const createProject = async (name: string, description: string) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .insert([
+          {
+            name,
+            description,
+            user_id: user.id,
+          },
+        ])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setProjects([data, ...projects]);
+      setIsProjectModalOpen(false);
+      toast({
+        title: "Success",
+        description: "Project created successfully",
+      });
+    } catch (error) {
+      console.error('Error creating project:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create project",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleVideosUploaded = (uploadedVideos: VideoFile[]) => {
+    setProjectVideos([...uploadedVideos, ...projectVideos]);
+    toast({
+      title: "Success",
+      description: `${uploadedVideos.length} video(s) uploaded successfully`,
+    });
+  };
+
+  const triggerAIEditing = async (project: Project) => {
     console.log('Triggering AI editing for project:', project.name);
-    console.log('Video URLs:', project.videos.map(v => v.url));
     
     // Simulate AI processing
-    setTimeout(() => {
-      setProjects(prev => prev.map(p => 
-        p.id === project.id 
-          ? { ...p, editedVideoUrl: 'https://example.com/edited-video.mp4' }
-          : p
-      ));
+    toast({
+      title: "AI Processing",
+      description: "Starting AI video editing...",
+    });
+
+    setTimeout(async () => {
+      try {
+        const { error } = await supabase
+          .from('projects')
+          .update({ edited_video_url: 'https://example.com/edited-video.mp4' })
+          .eq('id', project.id);
+
+        if (error) throw error;
+
+        // Update local state
+        setProjects(prev => prev.map(p => 
+          p.id === project.id 
+            ? { ...p, edited_video_url: 'https://example.com/edited-video.mp4' }
+            : p
+        ));
+
+        if (selectedProject?.id === project.id) {
+          setSelectedProject(prev => prev ? { ...prev, edited_video_url: 'https://example.com/edited-video.mp4' } : null);
+        }
+
+        toast({
+          title: "Success",
+          description: "AI editing completed!",
+        });
+      } catch (error) {
+        console.error('Error updating project:', error);
+        toast({
+          title: "Error",
+          description: "Failed to complete AI editing",
+          variant: "destructive",
+        });
+      }
     }, 3000);
   };
 
@@ -92,7 +208,7 @@ const Index = () => {
     navigate('/auth');
   };
 
-  if (loading) {
+  if (loading || loadingProjects) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
@@ -155,7 +271,12 @@ const Index = () => {
                 {projects.map((project) => (
                   <ProjectCard
                     key={project.id}
-                    project={project}
+                    project={{
+                      ...project,
+                      createdAt: new Date(project.created_at),
+                      videos: [], // We'll load videos when project is selected
+                      editedVideoUrl: project.edited_video_url
+                    }}
                     onClick={() => setSelectedProject(project)}
                     onEdit={() => triggerAIEditing(project)}
                   />
@@ -202,16 +323,16 @@ const Index = () => {
                 <div className="flex items-center gap-4 text-sm text-gray-500">
                   <div className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
-                    {selectedProject.createdAt.toLocaleDateString()}
+                    {new Date(selectedProject.created_at).toLocaleDateString()}
                   </div>
                   <div className="flex items-center gap-1">
                     <Video className="w-4 h-4" />
-                    {selectedProject.videos.length} videos
+                    {projectVideos.length} videos
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                {selectedProject.editedVideoUrl && (
+                {selectedProject.edited_video_url && (
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                       <Edit3 className="w-5 h-5 text-green-600" />
@@ -219,16 +340,16 @@ const Index = () => {
                     </h3>
                     <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-4">
                       <p className="text-green-700 mb-2">✨ Your edited video is ready!</p>
-                      <p className="text-sm text-gray-600">URL: {selectedProject.editedVideoUrl}</p>
+                      <p className="text-sm text-gray-600">URL: {selectedProject.edited_video_url}</p>
                     </div>
                   </div>
                 )}
 
-                {selectedProject.videos.length > 0 ? (
+                {projectVideos.length > 0 ? (
                   <>
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-semibold">Uploaded Videos</h3>
-                      {selectedProject.videos.length > 0 && !selectedProject.editedVideoUrl && (
+                      {projectVideos.length > 0 && !selectedProject.edited_video_url && (
                         <Button
                           onClick={() => triggerAIEditing(selectedProject)}
                           variant="outline"
@@ -240,18 +361,26 @@ const Index = () => {
                       )}
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {selectedProject.videos.map((video) => (
+                      {projectVideos.map((video) => (
                         <Card key={video.id} className="border-gray-200">
                           <CardContent className="p-4">
                             <div className="aspect-video bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                              <Video className="w-8 h-8 text-gray-400" />
+                              {video.url ? (
+                                <video
+                                  src={video.url}
+                                  className="w-full h-full object-cover rounded-lg"
+                                  controls
+                                />
+                              ) : (
+                                <Video className="w-8 h-8 text-gray-400" />
+                              )}
                             </div>
                             <p className="font-medium text-sm truncate mb-1">{video.name}</p>
                             <div className="flex items-center justify-between text-xs text-gray-500">
                               <span>{(video.size / (1024 * 1024)).toFixed(1)} MB</span>
                               <div className="flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
-                                {video.uploadedAt.toLocaleTimeString()}
+                                {new Date(video.uploaded_at).toLocaleTimeString()}
                               </div>
                             </div>
                           </CardContent>
@@ -287,7 +416,8 @@ const Index = () => {
           <VideoUpload
             isOpen={showVideoUpload}
             onClose={() => setShowVideoUpload(false)}
-            onVideosUploaded={(files) => handleVideosUploaded(files, selectedProject.id)}
+            onVideosUploaded={handleVideosUploaded}
+            projectId={selectedProject.id}
             projectName={selectedProject.name}
           />
         )}

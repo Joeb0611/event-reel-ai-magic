@@ -1,8 +1,16 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Video, Calendar, Edit3, Play } from 'lucide-react';
-import { Project } from '@/pages/Index';
+import { Video, Calendar, Edit3 } from 'lucide-react';
+
+interface Project {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: Date;
+  videos: any[];
+  editedVideoUrl?: string;
+}
 
 interface ProjectCardProps {
   project: Project;

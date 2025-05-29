@@ -36,6 +36,66 @@ export type Database = {
         }
         Relationships: []
       }
+      projects: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          edited_video_url: string | null
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          edited_video_url?: string | null
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          edited_video_url?: string | null
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      videos: {
+        Row: {
+          edited: boolean | null
+          file_path: string
+          id: string
+          name: string
+          project_id: string
+          size: number
+          uploaded_at: string | null
+          user_id: string
+        }
+        Insert: {
+          edited?: boolean | null
+          file_path: string
+          id?: string
+          name: string
+          project_id: string
+          size: number
+          uploaded_at?: string | null
+          user_id: string
+        }
+        Update: {
+          edited?: boolean | null
+          file_path?: string
+          id?: string
+          name?: string
+          project_id?: string
+          size?: number
+          uploaded_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
