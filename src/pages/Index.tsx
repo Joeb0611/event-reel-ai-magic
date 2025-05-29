@@ -1,8 +1,10 @@
 
-import { useState } from 'react';
-import { Plus, Video, Calendar, Clock, Edit3 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Video, Calendar, Clock, Edit3, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import ProjectModal from '@/components/ProjectModal';
 import ProjectCard from '@/components/ProjectCard';
 import VideoUpload from '@/components/VideoUpload';
@@ -27,10 +29,18 @@ export interface VideoFile {
 }
 
 const Index = () => {
+  const { user, loading, signOut } = useAuth();
+  const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [showVideoUpload, setShowVideoUpload] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth');
+    }
+  }, [user, loading, navigate]);
 
   const createProject = (name: string, description: string) => {
     const newProject: Project = {
@@ -77,20 +87,52 @@ const Index = () => {
     }, 3000);
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Video className="w-8 h-8 text-white animate-pulse" />
+          </div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl mb-6">
-            <Video className="w-8 h-8 text-white" />
+        {/* Header with sign out */}
+        <div className="flex justify-between items-center mb-8">
+          <div className="text-center flex-1">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl mb-6">
+              <Video className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-4">
+              Event Editor
+            </h1>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Create stunning video highlights with AI-powered editing. Manage your projects and turn your memories into beautiful stories.
+            </p>
           </div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-4">
-            Video Editor
-          </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Create stunning video highlights with AI-powered editing. Manage your projects and turn your memories into beautiful stories.
-          </p>
+          <Button
+            onClick={handleSignOut}
+            variant="outline"
+            className="absolute top-4 right-4"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
         </div>
 
         {!selectedProject ? (
