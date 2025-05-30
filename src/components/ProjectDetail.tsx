@@ -5,8 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import VideoManager from '@/components/VideoManager';
 import VideoUpload from '@/components/VideoUpload';
+import AIProcessingPanel from '@/components/AIProcessingPanel';
+import ProcessingTimeline from '@/components/ProcessingTimeline';
+import ProcessingDashboard from '@/components/ProcessingDashboard';
 import { Project } from '@/hooks/useProjects';
 import { VideoFile } from '@/hooks/useVideos';
+import { useWeddingProcessing } from '@/hooks/useWeddingProcessing';
 
 interface ProjectDetailProps {
   project: Project;
@@ -26,6 +30,7 @@ const ProjectDetail = ({
   onVideoDeleted 
 }: ProjectDetailProps) => {
   const [showVideoUpload, setShowVideoUpload] = useState(false);
+  const { currentJob } = useWeddingProcessing(project.id);
 
   return (
     <div className="space-y-6">
@@ -52,6 +57,22 @@ const ProjectDetail = ({
         onVideoDeleted={onVideoDeleted}
       />
 
+      {/* AI Processing Panel */}
+      <AIProcessingPanel 
+        projectId={project.id}
+        hasVideos={projectVideos.length > 0}
+      />
+
+      {/* Processing Timeline */}
+      {currentJob?.detected_moments && currentJob.detected_moments.length > 0 && (
+        <ProcessingTimeline moments={currentJob.detected_moments} />
+      )}
+
+      {/* Processing Dashboard */}
+      {currentJob && (
+        <ProcessingDashboard job={currentJob} />
+      )}
+
       <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl">{project.name}</CardTitle>
@@ -72,10 +93,10 @@ const ProjectDetail = ({
             <div className="mb-6">
               <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                 <Edit3 className="w-5 h-5 text-green-600" />
-                AI-Edited Highlight Reel
+                AI-Edited Wedding Highlight Reel
               </h3>
               <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-4">
-                <p className="text-green-700 mb-2">✨ Your edited video is ready!</p>
+                <p className="text-green-700 mb-2">✨ Your wedding highlight reel is ready!</p>
                 <p className="text-sm text-gray-600">URL: {project.edited_video_url}</p>
               </div>
             </div>
@@ -85,14 +106,14 @@ const ProjectDetail = ({
             <>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">Uploaded Videos</h3>
-                {projectVideos.length > 0 && !project.edited_video_url && (
+                {projectVideos.length > 0 && !project.edited_video_url && !currentJob?.status && (
                   <Button
                     onClick={() => onTriggerAIEditing(project)}
                     variant="outline"
                     className="border-purple-200 text-purple-600 hover:bg-purple-50"
                   >
                     <Edit3 className="w-4 h-4 mr-2" />
-                    Generate Highlight Reel
+                    Generate Basic Highlight Reel
                   </Button>
                 )}
               </div>

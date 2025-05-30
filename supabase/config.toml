@@ -1,1 +1,5 @@
+
 project_id = "vmhwsxotkckfktehzfaz"
+
+[functions.process-wedding-videos]
+verify_jwt = false

@@ -9,6 +9,48 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      processing_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          detected_moments: Json | null
+          error_message: string | null
+          id: string
+          progress: number | null
+          project_id: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          detected_moments?: Json | null
+          error_message?: string | null
+          id?: string
+          progress?: number | null
+          project_id: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          detected_moments?: Json | null
+          error_message?: string | null
+          id?: string
+          progress?: number | null
+          project_id?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -65,36 +107,50 @@ export type Database = {
       }
       videos: {
         Row: {
+          ai_analysis: Json | null
           edited: boolean | null
           file_path: string
           id: string
           name: string
+          processing_job_id: string | null
           project_id: string
           size: number
           uploaded_at: string | null
           user_id: string
         }
         Insert: {
+          ai_analysis?: Json | null
           edited?: boolean | null
           file_path: string
           id?: string
           name: string
+          processing_job_id?: string | null
           project_id: string
           size: number
           uploaded_at?: string | null
           user_id: string
         }
         Update: {
+          ai_analysis?: Json | null
           edited?: boolean | null
           file_path?: string
           id?: string
           name?: string
+          processing_job_id?: string | null
           project_id?: string
           size?: number
           uploaded_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "videos_processing_job_id_fkey"
+            columns: ["processing_job_id"]
+            isOneToOne: false
+            referencedRelation: "processing_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
