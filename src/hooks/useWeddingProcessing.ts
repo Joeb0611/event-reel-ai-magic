@@ -63,7 +63,19 @@ export const useWeddingProcessing = (projectId: string | null) => {
         .maybeSingle();
 
       if (error) throw error;
-      setCurrentJob(data);
+      
+      if (data) {
+        // Type cast the database response to match our interface
+        const typedJob: ProcessingJob = {
+          ...data,
+          status: data.status as ProcessingJob['status'],
+          detected_moments: (data.detected_moments as WeddingMoment[]) || [],
+          progress: data.progress || 0
+        };
+        setCurrentJob(typedJob);
+      } else {
+        setCurrentJob(null);
+      }
     } catch (error) {
       console.error('Error fetching processing job:', error);
     }
