@@ -69,7 +69,7 @@ export const useWeddingProcessing = (projectId: string | null) => {
         const typedJob: ProcessingJob = {
           ...data,
           status: data.status as ProcessingJob['status'],
-          detected_moments: (data.detected_moments as WeddingMoment[]) || [],
+          detected_moments: (data.detected_moments as unknown as WeddingMoment[]) || [],
           progress: data.progress || 0
         };
         setCurrentJob(typedJob);
