@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Plus, Video, Calendar, Clock, Edit3, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import ProjectModal from '@/components/ProjectModal';
 import ProjectCard from '@/components/ProjectCard';
 import VideoUpload from '@/components/VideoUpload';
+import VideoManager from '@/components/VideoManager';
 
 export interface Project {
   id: string;
@@ -208,6 +208,19 @@ const Index = () => {
     navigate('/auth');
   };
 
+  const handleVideoDeleted = () => {
+    if (selectedProject) {
+      setSelectedProject(prev => prev ? { ...prev, edited_video_url: null } : null);
+      
+      // Also update the projects list
+      setProjects(prev => prev.map(p => 
+        p.id === selectedProject.id 
+          ? { ...p, edited_video_url: null }
+          : p
+      ));
+    }
+  };
+
   if (loading || loadingProjects) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center">
@@ -315,6 +328,12 @@ const Index = () => {
                 Add Videos
               </Button>
             </div>
+
+            {/* Video Manager Component */}
+            <VideoManager 
+              project={selectedProject} 
+              onVideoDeleted={handleVideoDeleted}
+            />
 
             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
               <CardHeader>
