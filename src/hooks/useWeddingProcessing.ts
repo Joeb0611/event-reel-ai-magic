@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { AI_SERVICE_CONFIG, AIServiceError } from '@/config/aiService';
 
 export interface WeddingMoment {
   type: 'ceremony' | 'reception' | 'emotional' | 'group';
@@ -32,10 +32,12 @@ export const useWeddingProcessing = (projectId: string | null) => {
   const { toast } = useToast();
   const [currentJob, setCurrentJob] = useState<ProcessingJob | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [serviceStatus, setServiceStatus] = useState<'checking' | 'available' | 'sleeping' | 'error'>('available');
 
   useEffect(() => {
     if (projectId) {
       fetchCurrentJob();
+      checkServiceHealth();
     }
   }, [projectId]);
 
@@ -49,6 +51,25 @@ export const useWeddingProcessing = (projectId: string | null) => {
       return () => clearInterval(interval);
     }
   }, [currentJob?.status]);
+
+  const checkServiceHealth = async () => {
+    try {
+      setServiceStatus('checking');
+      const response = await fetch(`${AI_SERVICE_CONFIG.baseUrl}${AI_SERVICE_CONFIG.endpoints.health}`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      });
+
+      if (response.ok) {
+        setServiceStatus('available');
+      } else {
+        setServiceStatus('sleeping');
+      }
+    } catch (error) {
+      console.error('Service health check failed:', error);
+      setServiceStatus('sleeping');
+    }
+  };
 
   const fetchCurrentJob = async () => {
     if (!projectId) return;
@@ -84,6 +105,16 @@ export const useWeddingProcessing = (projectId: string | null) => {
   const startProcessing = async () => {
     if (!projectId || !user) return;
 
+    // Check service health before starting
+    if (serviceStatus === 'sleeping') {
+      toast({
+        title: "AI Service Unavailable",
+        description: "The AI service is currently sleeping (free tier). Please try again in a few minutes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const { data, error } = await supabase.functions.invoke('process-wedding-videos', {
@@ -94,7 +125,7 @@ export const useWeddingProcessing = (projectId: string | null) => {
 
       toast({
         title: "AI Processing Started",
-        description: "Your wedding videos are being analyzed for key moments.",
+        description: "Your wedding videos are being analyzed by our AI service.",
       });
 
       // Start polling for updates
@@ -102,10 +133,21 @@ export const useWeddingProcessing = (projectId: string | null) => {
 
     } catch (error) {
       console.error('Error starting processing:', error);
+      
+      let errorMessage = "Failed to start AI processing. Please try again.";
+      let variant: "destructive" | "default" = "destructive";
+      
+      if (error.message?.includes('sleeping') || error.message?.includes('unavailable')) {
+        errorMessage = "AI service is currently sleeping (free tier). Please try again in a few minutes.";
+        setServiceStatus('sleeping');
+        // Retry health check in 30 seconds
+        setTimeout(checkServiceHealth, 30000);
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to start AI processing. Please try again.",
-        variant: "destructive",
+        description: errorMessage,
+        variant,
       });
     } finally {
       setIsProcessing(false);
@@ -136,8 +178,10 @@ export const useWeddingProcessing = (projectId: string | null) => {
   return {
     currentJob,
     isProcessing,
+    serviceStatus,
     startProcessing,
     cancelProcessing,
-    refetchJob: fetchCurrentJob
+    refetchJob: fetchCurrentJob,
+    checkServiceHealth
   };
 };

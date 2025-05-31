@@ -7,6 +7,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const AI_SERVICE_URL = 'https://wedding-ai-service.onrender.com';
+
 interface WeddingMoment {
   type: 'ceremony' | 'reception' | 'emotional' | 'group';
   subtype: string;
@@ -42,7 +44,7 @@ serve(async (req) => {
       .insert({
         project_id: projectId,
         user_id: userId,
-        status: 'processing',
+        status: 'pending',
         progress: 0,
         started_at: new Date().toISOString()
       })
@@ -54,11 +56,11 @@ serve(async (req) => {
       throw jobError;
     }
 
-    // Start background processing
-    EdgeRuntime.waitUntil(processWeddingVideos(supabaseClient, job.id, projectId));
+    // Start processing with external AI service
+    EdgeRuntime.waitUntil(processWithExternalService(supabaseClient, job.id, projectId));
 
     return new Response(
-      JSON.stringify({ jobId: job.id, status: 'processing' }),
+      JSON.stringify({ jobId: job.id, status: 'pending' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
@@ -71,9 +73,19 @@ serve(async (req) => {
   }
 });
 
-async function processWeddingVideos(supabase: any, jobId: string, projectId: string) {
+async function processWithExternalService(supabase: any, jobId: string, projectId: string) {
   try {
-    // Fetch all videos for the project
+    // First check if the AI service is healthy
+    const healthCheck = await checkServiceHealth();
+    if (!healthCheck.healthy) {
+      await updateJobStatus(supabase, jobId, 'failed', 0, [], healthCheck.error);
+      return;
+    }
+
+    // Update job to processing status
+    await updateJobStatus(supabase, jobId, 'processing', 5, []);
+
+    // Fetch videos for the project
     const { data: videos } = await supabase
       .from('videos')
       .select('*')
@@ -81,131 +93,149 @@ async function processWeddingVideos(supabase: any, jobId: string, projectId: str
 
     console.log(`Processing ${videos?.length || 0} videos for project ${projectId}`);
 
-    // Simulate AI analysis progress
-    const totalSteps = 5;
-    const detectedMoments: WeddingMoment[] = [];
+    // Send videos to external AI service
+    const processResponse = await fetch(`${AI_SERVICE_URL}/process-wedding-videos`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        projectId,
+        videos: videos || []
+      })
+    });
 
-    for (let step = 0; step < totalSteps; step++) {
-      const progress = Math.round(((step + 1) / totalSteps) * 100);
-      
-      // Simulate different processing steps
-      switch (step) {
-        case 0:
-          // Video preprocessing
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          break;
-        case 1:
-          // Scene detection
-          detectedMoments.push({
-            type: 'ceremony',
-            subtype: 'processional',
-            timestamp: 45,
-            duration: 30,
-            confidence: 0.92,
-            description: 'Bride walking down the aisle'
-          });
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          break;
-        case 2:
-          // Audio analysis
-          detectedMoments.push({
-            type: 'ceremony',
-            subtype: 'vows',
-            timestamp: 120,
-            duration: 60,
-            confidence: 0.88,
-            description: 'Wedding vows exchange'
-          });
-          await new Promise(resolve => setTimeout(resolve, 2500));
-          break;
-        case 3:
-          // Emotion detection
-          detectedMoments.push(
-            {
-              type: 'ceremony',
-              subtype: 'kiss',
-              timestamp: 280,
-              duration: 15,
-              confidence: 0.95,
-              description: 'First kiss as married couple'
-            },
-            {
-              type: 'reception',
-              subtype: 'first_dance',
-              timestamp: 450,
-              duration: 90,
-              confidence: 0.90,
-              description: 'First dance as married couple'
-            }
-          );
-          await new Promise(resolve => setTimeout(resolve, 3000));
-          break;
-        case 4:
-          // Final compilation
-          detectedMoments.push(
-            {
-              type: 'emotional',
-              subtype: 'tears_of_joy',
-              timestamp: 200,
-              duration: 20,
-              confidence: 0.85,
-              description: 'Emotional moment during ceremony'
-            },
-            {
-              type: 'reception',
-              subtype: 'cake_cutting',
-              timestamp: 600,
-              duration: 25,
-              confidence: 0.87,
-              description: 'Cake cutting ceremony'
-            }
-          );
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          break;
-      }
-
-      // Update progress
-      await supabase
-        .from('processing_jobs')
-        .update({
-          progress,
-          detected_moments: detectedMoments,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', jobId);
+    if (!processResponse.ok) {
+      const errorText = await processResponse.text();
+      throw new Error(`AI Service error: ${processResponse.status} - ${errorText}`);
     }
 
-    // Mark as completed and generate final video URL
-    const editedVideoUrl = `https://example-storage.com/wedding-highlights/${projectId}-${Date.now()}.mp4`;
-    
-    await supabase
-      .from('processing_jobs')
-      .update({
-        status: 'completed',
-        progress: 100,
-        completed_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', jobId);
+    const { jobId: externalJobId } = await processResponse.json();
+    console.log(`External AI job started: ${externalJobId}`);
 
-    // Update project with edited video URL
-    await supabase
-      .from('projects')
-      .update({ edited_video_url: editedVideoUrl })
-      .eq('id', projectId);
-
-    console.log(`Processing completed for job ${jobId}`);
+    // Poll the external service for updates
+    await pollExternalJobStatus(supabase, jobId, externalJobId);
 
   } catch (error) {
-    console.error('Error in background processing:', error);
+    console.error('Error in external processing:', error);
     
-    await supabase
-      .from('processing_jobs')
-      .update({
-        status: 'failed',
-        error_message: error.message,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', jobId);
+    let errorMessage = error.message;
+    if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch failed')) {
+      errorMessage = 'AI service is currently unavailable. This may be due to the service sleeping on free tier. Please try again in a few minutes.';
+    }
+    
+    await updateJobStatus(supabase, jobId, 'failed', 0, [], errorMessage);
   }
+}
+
+async function checkServiceHealth() {
+  try {
+    const response = await fetch(`${AI_SERVICE_URL}/health`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    if (response.ok) {
+      return { healthy: true };
+    } else {
+      return { 
+        healthy: false, 
+        error: 'AI service is not responding. It may be sleeping (free tier limitation). Please try again in a few minutes.' 
+      };
+    }
+  } catch (error) {
+    return { 
+      healthy: false, 
+      error: 'AI service is currently unavailable. This may be due to the service sleeping on free tier. Please try again in a few minutes.' 
+    };
+  }
+}
+
+async function pollExternalJobStatus(supabase: any, jobId: string, externalJobId: string) {
+  const maxAttempts = 60; // 5 minutes with 5-second intervals
+  let attempts = 0;
+
+  while (attempts < maxAttempts) {
+    try {
+      const response = await fetch(`${AI_SERVICE_URL}/job-status/${externalJobId}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to get job status: ${response.status}`);
+      }
+
+      const jobStatus = await response.json();
+      
+      // Update our database with the external job status
+      await updateJobStatus(
+        supabase, 
+        jobId, 
+        jobStatus.status, 
+        jobStatus.progress || 0,
+        jobStatus.detected_moments || []
+      );
+
+      if (jobStatus.status === 'completed' || jobStatus.status === 'failed') {
+        if (jobStatus.status === 'completed' && jobStatus.edited_video_url) {
+          // Update project with edited video URL
+          await supabase
+            .from('projects')
+            .update({ edited_video_url: jobStatus.edited_video_url })
+            .eq('id', jobStatus.project_id);
+        }
+        break;
+      }
+
+      attempts++;
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+
+    } catch (error) {
+      console.error('Error polling job status:', error);
+      attempts++;
+      
+      if (attempts >= maxAttempts) {
+        await updateJobStatus(
+          supabase, 
+          jobId, 
+          'failed', 
+          0, 
+          [], 
+          'Timeout waiting for AI service response'
+        );
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  }
+}
+
+async function updateJobStatus(
+  supabase: any, 
+  jobId: string, 
+  status: string, 
+  progress: number, 
+  detectedMoments: WeddingMoment[], 
+  errorMessage?: string
+) {
+  const updateData: any = {
+    status,
+    progress,
+    detected_moments: detectedMoments,
+    updated_at: new Date().toISOString()
+  };
+
+  if (status === 'completed') {
+    updateData.completed_at = new Date().toISOString();
+  }
+
+  if (errorMessage) {
+    updateData.error_message = errorMessage;
+  }
+
+  await supabase
+    .from('processing_jobs')
+    .update(updateData)
+    .eq('id', jobId);
 }

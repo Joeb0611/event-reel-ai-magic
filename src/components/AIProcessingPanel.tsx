@@ -1,8 +1,7 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Brain, Play, Square, RefreshCw, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Brain, Play, Square, RefreshCw, CheckCircle, XCircle, Clock, AlertTriangle, Wifi, WifiOff } from 'lucide-react';
 import { useWeddingProcessing, WeddingMoment } from '@/hooks/useWeddingProcessing';
 
 interface AIProcessingPanelProps {
@@ -12,7 +11,7 @@ interface AIProcessingPanelProps {
 }
 
 const AIProcessingPanel = ({ projectId, hasVideos, onProcessingComplete }: AIProcessingPanelProps) => {
-  const { currentJob, isProcessing, startProcessing, cancelProcessing } = useWeddingProcessing(projectId);
+  const { currentJob, isProcessing, serviceStatus, startProcessing, cancelProcessing, checkServiceHealth } = useWeddingProcessing(projectId);
 
   const getStatusIcon = () => {
     switch (currentJob?.status) {
@@ -29,6 +28,8 @@ const AIProcessingPanel = ({ projectId, hasVideos, onProcessingComplete }: AIPro
 
   const getStatusText = () => {
     switch (currentJob?.status) {
+      case 'pending':
+        return 'Processing queued...';
       case 'processing':
         return `Processing... ${currentJob.progress}%`;
       case 'completed':
@@ -37,6 +38,32 @@ const AIProcessingPanel = ({ projectId, hasVideos, onProcessingComplete }: AIPro
         return 'Processing Failed';
       default:
         return 'Ready to Process';
+    }
+  };
+
+  const getServiceStatusIcon = () => {
+    switch (serviceStatus) {
+      case 'available':
+        return <Wifi className="w-4 h-4 text-green-500" />;
+      case 'sleeping':
+        return <WifiOff className="w-4 h-4 text-orange-500" />;
+      case 'checking':
+        return <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />;
+      default:
+        return <AlertTriangle className="w-4 h-4 text-red-500" />;
+    }
+  };
+
+  const getServiceStatusText = () => {
+    switch (serviceStatus) {
+      case 'available':
+        return 'AI Service Online';
+      case 'sleeping':
+        return 'AI Service Sleeping';
+      case 'checking':
+        return 'Checking Service...';
+      default:
+        return 'Service Error';
     }
   };
 
@@ -75,6 +102,35 @@ const AIProcessingPanel = ({ projectId, hasVideos, onProcessingComplete }: AIPro
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Service Status */}
+        <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
+          <div className="flex items-center gap-2">
+            {getServiceStatusIcon()}
+            <span className="text-sm font-medium">{getServiceStatusText()}</span>
+          </div>
+          <Button
+            onClick={checkServiceHealth}
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2"
+          >
+            <RefreshCw className="w-3 h-3" />
+          </Button>
+        </div>
+
+        {/* Service Sleeping Warning */}
+        {serviceStatus === 'sleeping' && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-orange-700 mb-1">
+              <AlertTriangle className="w-4 h-4" />
+              <span className="font-medium">Service Sleeping</span>
+            </div>
+            <p className="text-orange-600 text-sm">
+              The AI service is currently sleeping (free tier limitation). It will wake up automatically when you start processing. This may take 1-2 minutes.
+            </p>
+          </div>
+        )}
+
         {/* Status Section */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -85,13 +141,13 @@ const AIProcessingPanel = ({ projectId, hasVideos, onProcessingComplete }: AIPro
           {!currentJob || currentJob.status === 'failed' ? (
             <Button
               onClick={startProcessing}
-              disabled={isProcessing}
+              disabled={isProcessing || serviceStatus === 'checking'}
               className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
             >
               <Play className="w-4 h-4 mr-2" />
               {isProcessing ? 'Starting...' : 'Start AI Processing'}
             </Button>
-          ) : currentJob.status === 'processing' ? (
+          ) : currentJob.status === 'processing' || currentJob.status === 'pending' ? (
             <Button
               onClick={cancelProcessing}
               variant="outline"
@@ -104,11 +160,14 @@ const AIProcessingPanel = ({ projectId, hasVideos, onProcessingComplete }: AIPro
         </div>
 
         {/* Progress Bar */}
-        {currentJob?.status === 'processing' && (
+        {(currentJob?.status === 'processing' || currentJob?.status === 'pending') && (
           <div className="space-y-2">
             <Progress value={currentJob.progress} className="h-2" />
             <p className="text-sm text-gray-600">
-              Analyzing wedding videos for key moments...
+              {currentJob.status === 'pending' 
+                ? 'Waking up AI service and preparing analysis...'
+                : 'Analyzing wedding videos for key moments...'
+              }
             </p>
           </div>
         )}
