@@ -93,16 +93,46 @@ async function processWithExternalService(supabase: any, jobId: string, projectI
 
     console.log(`Processing ${videos?.length || 0} videos for project ${projectId}`);
 
+    // Convert file paths to accessible URLs
+    const videoUrls = [];
+    if (videos && videos.length > 0) {
+      for (const video of videos) {
+        try {
+          const { data: urlData } = await supabase.storage
+            .from('videos')
+            .createSignedUrl(video.file_path, 3600); // 1 hour expiry
+
+          if (urlData?.signedUrl) {
+            videoUrls.push(urlData.signedUrl);
+            console.log(`Generated URL for video ${video.name}: ${urlData.signedUrl}`);
+          } else {
+            console.error(`Failed to generate URL for video ${video.name} with path: ${video.file_path}`);
+          }
+        } catch (urlError) {
+          console.error(`Error generating URL for video ${video.name}:`, urlError);
+        }
+      }
+    }
+
+    if (videoUrls.length === 0) {
+      throw new Error('No accessible video URLs could be generated');
+    }
+
+    // Send data in the format expected by AI service
+    const aiServicePayload = {
+      video_urls: videoUrls,
+      preferences: {}
+    };
+
+    console.log(`Sending ${videoUrls.length} video URLs to AI service for project ${projectId}`);
+
     // Send videos to external AI service
     const processResponse = await fetch(`${AI_SERVICE_URL}/process-wedding-videos`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        projectId,
-        videos: videos || []
-      })
+      body: JSON.stringify(aiServicePayload)
     });
 
     if (!processResponse.ok) {
