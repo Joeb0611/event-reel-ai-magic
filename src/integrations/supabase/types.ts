@@ -131,36 +131,45 @@ export type Database = {
           ai_analysis: Json | null
           edited: boolean | null
           file_path: string
+          guest_message: string | null
+          guest_name: string | null
           id: string
           name: string
           processing_job_id: string | null
           project_id: string
           size: number
           uploaded_at: string | null
+          uploaded_by_guest: boolean | null
           user_id: string
         }
         Insert: {
           ai_analysis?: Json | null
           edited?: boolean | null
           file_path: string
+          guest_message?: string | null
+          guest_name?: string | null
           id?: string
           name: string
           processing_job_id?: string | null
           project_id: string
           size: number
           uploaded_at?: string | null
+          uploaded_by_guest?: boolean | null
           user_id: string
         }
         Update: {
           ai_analysis?: Json | null
           edited?: boolean | null
           file_path?: string
+          guest_message?: string | null
+          guest_name?: string | null
           id?: string
           name?: string
           processing_job_id?: string | null
           project_id?: string
           size?: number
           uploaded_at?: string | null
+          uploaded_by_guest?: boolean | null
           user_id?: string
         }
         Relationships: [

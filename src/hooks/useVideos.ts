@@ -13,6 +13,9 @@ export interface VideoFile {
   project_id: string;
   user_id: string;
   url?: string;
+  guest_name?: string;
+  guest_message?: string;
+  uploaded_by_guest?: boolean;
 }
 
 export const useVideos = (projectId: string | null) => {
@@ -37,8 +40,11 @@ export const useVideos = (projectId: string | null) => {
 
       const videosWithUrls = await Promise.all(
         (data || []).map(async (video) => {
+          // Determine which bucket to use based on upload type
+          const bucket = video.uploaded_by_guest ? 'guest-uploads' : 'videos';
+          
           const { data: urlData } = await supabase.storage
-            .from('videos')
+            .from(bucket)
             .createSignedUrl(video.file_path, 3600);
           
           return {

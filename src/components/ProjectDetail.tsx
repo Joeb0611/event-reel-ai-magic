@@ -3,11 +3,13 @@ import { useState } from 'react';
 import { Plus, Video, Calendar, Clock, Edit3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import VideoManager from '@/components/VideoManager';
 import VideoUpload from '@/components/VideoUpload';
 import AIProcessingPanel from '@/components/AIProcessingPanel';
 import ProcessingTimeline from '@/components/ProcessingTimeline';
 import ProcessingDashboard from '@/components/ProcessingDashboard';
+import QRCodeManager from '@/components/QRCodeManager';
 import { Project } from '@/hooks/useProjects';
 import { VideoFile } from '@/hooks/useVideos';
 import { useWeddingProcessing } from '@/hooks/useWeddingProcessing';
@@ -32,6 +34,10 @@ const ProjectDetail = ({
   const [showVideoUpload, setShowVideoUpload] = useState(false);
   const { currentJob } = useWeddingProcessing(project.id);
 
+  const isWeddingProject = project.bride_name && project.groom_name;
+  const guestVideos = projectVideos.filter(v => v.uploaded_by_guest);
+  const userVideos = projectVideos.filter(v => !v.uploaded_by_guest);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -50,6 +56,11 @@ const ProjectDetail = ({
           Add Videos
         </Button>
       </div>
+
+      {/* QR Code Manager for Wedding Projects */}
+      {isWeddingProject && project.qr_code && (
+        <QRCodeManager project={project} />
+      )}
 
       {/* Video Manager Component */}
       <VideoManager 
@@ -86,6 +97,11 @@ const ProjectDetail = ({
               <Video className="w-4 h-4" />
               {projectVideos.length} videos
             </div>
+            {guestVideos.length > 0 && (
+              <Badge variant="secondary">
+                {guestVideos.length} guest upload{guestVideos.length !== 1 ? 's' : ''}
+              </Badge>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -117,33 +133,84 @@ const ProjectDetail = ({
                   </Button>
                 )}
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {projectVideos.map((video) => (
-                  <Card key={video.id} className="border-gray-200">
-                    <CardContent className="p-4">
-                      <div className="aspect-video bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                        {video.url ? (
-                          <video
-                            src={video.url}
-                            className="w-full h-full object-cover rounded-lg"
-                            controls
-                          />
-                        ) : (
-                          <Video className="w-8 h-8 text-gray-400" />
-                        )}
-                      </div>
-                      <p className="font-medium text-sm truncate mb-1">{video.name}</p>
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>{(video.size / (1024 * 1024)).toFixed(1)} MB</span>
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {new Date(video.uploaded_at).toLocaleTimeString()}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              
+              {/* Guest Uploads Section */}
+              {guestVideos.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="text-md font-medium mb-3 text-purple-700">
+                    Guest Uploads ({guestVideos.length})
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {guestVideos.map((video) => (
+                      <Card key={video.id} className="border-purple-200 bg-purple-50">
+                        <CardContent className="p-4">
+                          <div className="aspect-video bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
+                            {video.url ? (
+                              <video
+                                src={video.url}
+                                className="w-full h-full object-cover rounded-lg"
+                                controls
+                              />
+                            ) : (
+                              <Video className="w-8 h-8 text-gray-400" />
+                            )}
+                          </div>
+                          <p className="font-medium text-sm truncate mb-1">{video.name}</p>
+                          {video.guest_name && (
+                            <p className="text-xs text-purple-600 mb-1">From: {video.guest_name}</p>
+                          )}
+                          {video.guest_message && (
+                            <p className="text-xs text-gray-600 mb-2 italic">"{video.guest_message}"</p>
+                          )}
+                          <div className="flex items-center justify-between text-xs text-gray-500">
+                            <span>{(video.size / (1024 * 1024)).toFixed(1)} MB</span>
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {new Date(video.uploaded_at).toLocaleTimeString()}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* User Uploads Section */}
+              {userVideos.length > 0 && (
+                <div>
+                  <h4 className="text-md font-medium mb-3 text-blue-700">
+                    Your Uploads ({userVideos.length})
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {userVideos.map((video) => (
+                      <Card key={video.id} className="border-gray-200">
+                        <CardContent className="p-4">
+                          <div className="aspect-video bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
+                            {video.url ? (
+                              <video
+                                src={video.url}
+                                className="w-full h-full object-cover rounded-lg"
+                                controls
+                              />
+                            ) : (
+                              <Video className="w-8 h-8 text-gray-400" />
+                            )}
+                          </div>
+                          <p className="font-medium text-sm truncate mb-1">{video.name}</p>
+                          <div className="flex items-center justify-between text-xs text-gray-500">
+                            <span>{(video.size / (1024 * 1024)).toFixed(1)} MB</span>
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {new Date(video.uploaded_at).toLocaleTimeString()}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <div className="text-center py-8">
