@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -102,6 +103,7 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
 
         uploadedVideos.push({
           ...videoData,
+          created_at: videoData.uploaded_at, // Map uploaded_at to created_at for compatibility
           url: urlData?.signedUrl
         });
       }
