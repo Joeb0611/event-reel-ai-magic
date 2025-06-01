@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import ProjectModal from '@/components/ProjectModal';
+import WeddingProjectModal, { WeddingProjectData } from '@/components/WeddingProjectModal';
 import LoadingScreen from '@/components/LoadingScreen';
 import AppHeader from '@/components/AppHeader';
 import ProjectsList from '@/components/ProjectsList';
@@ -15,11 +16,13 @@ const Index = () => {
   const navigate = useNavigate();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [isWeddingModalOpen, setIsWeddingModalOpen] = useState(false);
 
   const { 
     projects, 
     loadingProjects, 
-    createProject, 
+    createProject,
+    createWeddingProject, 
     triggerAIEditing,
     updateProject 
   } = useProjects();
@@ -38,6 +41,11 @@ const Index = () => {
   const handleCreateProject = async (name: string, description: string) => {
     await createProject(name, description);
     setIsProjectModalOpen(false);
+  };
+
+  const handleCreateWeddingProject = async (projectData: WeddingProjectData) => {
+    await createWeddingProject(projectData);
+    setIsWeddingModalOpen(false);
   };
 
   const handleSignOut = async () => {
@@ -70,6 +78,7 @@ const Index = () => {
           <ProjectsList
             projects={projects}
             onCreateProject={() => setIsProjectModalOpen(true)}
+            onCreateWeddingProject={() => setIsWeddingModalOpen(true)}
             onSelectProject={setSelectedProject}
             onEditProject={triggerAIEditing}
           />
@@ -88,6 +97,12 @@ const Index = () => {
           isOpen={isProjectModalOpen}
           onClose={() => setIsProjectModalOpen(false)}
           onCreateProject={handleCreateProject}
+        />
+
+        <WeddingProjectModal
+          isOpen={isWeddingModalOpen}
+          onClose={() => setIsWeddingModalOpen(false)}
+          onCreateProject={handleCreateWeddingProject}
         />
       </div>
     </div>

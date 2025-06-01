@@ -80,28 +80,49 @@ export type Database = {
       }
       projects: {
         Row: {
+          bride_name: string | null
           created_at: string | null
           description: string | null
           edited_video_url: string | null
+          groom_name: string | null
           id: string
+          location: string | null
           name: string
+          privacy_settings: Json | null
+          qr_code: string | null
+          theme: string | null
           user_id: string
+          wedding_date: string | null
         }
         Insert: {
+          bride_name?: string | null
           created_at?: string | null
           description?: string | null
           edited_video_url?: string | null
+          groom_name?: string | null
           id?: string
+          location?: string | null
           name: string
+          privacy_settings?: Json | null
+          qr_code?: string | null
+          theme?: string | null
           user_id: string
+          wedding_date?: string | null
         }
         Update: {
+          bride_name?: string | null
           created_at?: string | null
           description?: string | null
           edited_video_url?: string | null
+          groom_name?: string | null
           id?: string
+          location?: string | null
           name?: string
+          privacy_settings?: Json | null
+          qr_code?: string | null
+          theme?: string | null
           user_id?: string
+          wedding_date?: string | null
         }
         Relationships: []
       }
