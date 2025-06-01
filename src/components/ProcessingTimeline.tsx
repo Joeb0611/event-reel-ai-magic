@@ -55,17 +55,17 @@ const ProcessingTimeline = ({ moments }: ProcessingTimelineProps) => {
                     {formatTime(moment.timestamp)}
                   </Badge>
                   <Badge variant="secondary" className="text-xs">
-                    {moment.duration}s
+                    {moment.duration || 0}s
                   </Badge>
                   <span className="text-sm font-medium capitalize">
-                    {moment.subtype.replace('_', ' ')}
+                    {(moment.subtype || 'moment').replace('_', ' ')}
                   </span>
                 </div>
-                <p className="text-xs text-gray-600">{moment.description}</p>
+                <p className="text-xs text-gray-600">{moment.description || 'No description available'}</p>
               </div>
               <div className="text-right">
                 <div className="text-xs text-gray-500 mb-1">
-                  {Math.round(moment.confidence * 100)}%
+                  {Math.round((moment.confidence || 0) * 100)}%
                 </div>
                 <Play className="w-4 h-4 text-blue-500" />
               </div>
@@ -76,7 +76,7 @@ const ProcessingTimeline = ({ moments }: ProcessingTimelineProps) => {
         {sortedMoments.length > 0 && (
           <div className="mt-4 p-3 bg-blue-100 rounded-lg">
             <p className="text-sm text-blue-700">
-              <strong>Total highlight duration:</strong> {sortedMoments.reduce((acc, moment) => acc + moment.duration, 0)}s
+              <strong>Total highlight duration:</strong> {sortedMoments.reduce((acc, moment) => acc + (moment.duration || 0), 0)}s
               <span className="ml-2">•</span>
               <strong className="ml-2">Clips selected:</strong> {sortedMoments.length}
             </p>
