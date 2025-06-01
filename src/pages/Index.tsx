@@ -7,7 +7,7 @@ import WeddingProjectModal, { WeddingProjectData } from '@/components/WeddingPro
 import LoadingScreen from '@/components/LoadingScreen';
 import AppHeader from '@/components/AppHeader';
 import ProjectsList from '@/components/ProjectsList';
-import ProjectDetail from '@/components/ProjectDetail';
+import ProjectDashboard from '@/components/ProjectDashboard';
 import { useProjects, Project } from '@/hooks/useProjects';
 import { useVideos } from '@/hooks/useVideos';
 
@@ -83,7 +83,7 @@ const Index = () => {
             onEditProject={triggerAIEditing}
           />
         ) : (
-          <ProjectDetail
+          <ProjectDashboard
             project={selectedProject}
             projectVideos={projectVideos}
             onBack={() => setSelectedProject(null)}
