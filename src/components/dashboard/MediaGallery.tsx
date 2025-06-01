@@ -1,10 +1,25 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Filter, Grid, List, Star, Video, Image, Clock, User } from 'lucide-react';
+import { Plus, Filter, Grid, List, Star, Video, Image, Clock, User, Trash2, MoreVertical } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import VideoUpload from '@/components/VideoUpload';
 import { VideoFile } from '@/hooks/useVideos';
 
@@ -13,6 +28,7 @@ interface MediaGalleryProps {
   mustIncludeItems: Set<string>;
   onToggleMustInclude: (videoId: string) => void;
   onVideosUploaded: (videos: VideoFile[]) => void;
+  onDeleteVideo: (videoId: string) => void;
   projectId: string;
   projectName: string;
 }
@@ -22,6 +38,7 @@ const MediaGallery = ({
   mustIncludeItems, 
   onToggleMustInclude,
   onVideosUploaded,
+  onDeleteVideo,
   projectId,
   projectName 
 }: MediaGalleryProps) => {
@@ -29,6 +46,7 @@ const MediaGallery = ({
   const [filter, setFilter] = useState('all');
   const [sortBy, setSortBy] = useState('date');
   const [viewMode, setViewMode] = useState('grid');
+  const [deleteVideoId, setDeleteVideoId] = useState<string | null>(null);
 
   const filteredVideos = projectVideos.filter(video => {
     switch (filter) {
@@ -55,6 +73,13 @@ const MediaGallery = ({
 
   const isVideo = (filename: string) => {
     return filename.toLowerCase().includes('.mp4') || filename.toLowerCase().includes('.mov');
+  };
+
+  const handleDeleteVideo = () => {
+    if (deleteVideoId) {
+      onDeleteVideo(deleteVideoId);
+      setDeleteVideoId(null);
+    }
   };
 
   return (
@@ -169,17 +194,34 @@ const MediaGallery = ({
                         </div>
                       )}
                       
-                      {/* Must Include Toggle */}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className={`absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity ${
-                          mustIncludeItems.has(video.id) ? 'opacity-100 bg-yellow-500 text-white' : 'bg-white/80'
-                        }`}
-                        onClick={() => onToggleMustInclude(video.id)}
-                      >
-                        <Star className={`w-4 h-4 ${mustIncludeItems.has(video.id) ? 'fill-current' : ''}`} />
-                      </Button>
+                      {/* Action buttons */}
+                      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={mustIncludeItems.has(video.id) ? 'bg-yellow-500 text-white' : 'bg-white/80'}
+                          onClick={() => onToggleMustInclude(video.id)}
+                        >
+                          <Star className={`w-4 h-4 ${mustIncludeItems.has(video.id) ? 'fill-current' : ''}`} />
+                        </Button>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="bg-white/80">
+                              <MoreVertical className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem 
+                              onClick={() => setDeleteVideoId(video.id)}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                     
                     <div className="space-y-2">
@@ -242,14 +284,33 @@ const MediaGallery = ({
                       )}
                     </div>
                     
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onToggleMustInclude(video.id)}
-                      className={mustIncludeItems.has(video.id) ? 'text-yellow-600' : 'text-gray-400'}
-                    >
-                      <Star className={`w-4 h-4 ${mustIncludeItems.has(video.id) ? 'fill-current' : ''}`} />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onToggleMustInclude(video.id)}
+                        className={mustIncludeItems.has(video.id) ? 'text-yellow-600' : 'text-gray-400'}
+                      >
+                        <Star className={`w-4 h-4 ${mustIncludeItems.has(video.id) ? 'fill-current' : ''}`} />
+                      </Button>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            onClick={() => setDeleteVideoId(video.id)}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -290,6 +351,27 @@ const MediaGallery = ({
           projectName={projectName}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteVideoId} onOpenChange={() => setDeleteVideoId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Media</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this media file? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteVideo}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogHeader>
+      </AlertDialog>
     </div>
   );
 };

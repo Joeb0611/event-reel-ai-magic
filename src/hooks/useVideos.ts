@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -67,6 +66,53 @@ export const useVideos = (projectId: string | null) => {
     }
   };
 
+  const deleteVideo = async (videoId: string) => {
+    try {
+      // Get the video details first
+      const { data: video, error: fetchError } = await supabase
+        .from('videos')
+        .select('file_path, uploaded_by_guest')
+        .eq('id', videoId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // Delete from storage
+      const bucket = video.uploaded_by_guest ? 'guest-uploads' : 'videos';
+      const { error: storageError } = await supabase.storage
+        .from(bucket)
+        .remove([video.file_path]);
+
+      if (storageError) {
+        console.error('Storage deletion error:', storageError);
+        // Continue with database deletion even if storage fails
+      }
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('videos')
+        .delete()
+        .eq('id', videoId);
+
+      if (dbError) throw dbError;
+
+      // Update local state
+      setProjectVideos(prev => prev.filter(v => v.id !== videoId));
+      
+      toast({
+        title: "Media Deleted",
+        description: "Media file has been deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting video:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete media file",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleVideosUploaded = (uploadedVideos: VideoFile[]) => {
     setProjectVideos([...uploadedVideos, ...projectVideos]);
     toast({
@@ -78,5 +124,6 @@ export const useVideos = (projectId: string | null) => {
   return {
     projectVideos,
     handleVideosUploaded,
+    deleteVideo,
   };
 };

@@ -19,6 +19,7 @@ interface ProjectDashboardProps {
   onTriggerAIEditing: (project: Project) => void;
   onVideosUploaded: (videos: VideoFile[]) => void;
   onVideoDeleted: () => void;
+  onDeleteVideo: (videoId: string) => void;
 }
 
 const ProjectDashboard = ({
@@ -27,7 +28,8 @@ const ProjectDashboard = ({
   onBack,
   onTriggerAIEditing,
   onVideosUploaded,
-  onVideoDeleted
+  onVideoDeleted,
+  onDeleteVideo
 }: ProjectDashboardProps) => {
   const { isMobile } = useIsMobile();
   const [activeTab, setActiveTab] = useState('overview');
@@ -94,6 +96,7 @@ const ProjectDashboard = ({
               mustIncludeItems={mustIncludeItems}
               onToggleMustInclude={toggleMustInclude}
               onVideosUploaded={onVideosUploaded}
+              onDeleteVideo={onDeleteVideo}
               projectId={project.id}
               projectName={project.name}
             />
@@ -128,7 +131,7 @@ const ProjectDashboard = ({
     );
   }
 
-  // Desktop version remains the same
+  // Desktop version
   return (
     <div className="space-y-6">
       {/* Desktop Header */}
@@ -188,6 +191,7 @@ const ProjectDashboard = ({
             mustIncludeItems={mustIncludeItems}
             onToggleMustInclude={toggleMustInclude}
             onVideosUploaded={onVideosUploaded}
+            onDeleteVideo={onDeleteVideo}
             projectId={project.id}
             projectName={project.name}
           />

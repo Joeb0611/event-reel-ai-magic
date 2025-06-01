@@ -221,6 +221,60 @@ export const useProjects = () => {
     ));
   };
 
+  const deleteProject = async (projectId: string) => {
+    if (!user) return;
+
+    try {
+      // First, delete all videos associated with the project
+      const { data: videos } = await supabase
+        .from('videos')
+        .select('file_path, uploaded_by_guest')
+        .eq('project_id', projectId);
+
+      // Delete files from storage
+      if (videos && videos.length > 0) {
+        for (const video of videos) {
+          const bucket = video.uploaded_by_guest ? 'guest-uploads' : 'videos';
+          await supabase.storage
+            .from(bucket)
+            .remove([video.file_path]);
+        }
+      }
+
+      // Delete video records
+      const { error: videosError } = await supabase
+        .from('videos')
+        .delete()
+        .eq('project_id', projectId);
+
+      if (videosError) throw videosError;
+
+      // Delete the project
+      const { error: projectError } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectId)
+        .eq('user_id', user.id);
+
+      if (projectError) throw projectError;
+
+      // Update local state
+      setProjects(prev => prev.filter(p => p.id !== projectId));
+      
+      toast({
+        title: "Project Deleted",
+        description: "Project and all associated media have been deleted",
+      });
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete project",
+        variant: "destructive",
+      });
+    }
+  };
+
   return {
     projects,
     loadingProjects,
@@ -228,5 +282,6 @@ export const useProjects = () => {
     createWeddingProject,
     triggerAIEditing,
     updateProject,
+    deleteProject,
   };
 };

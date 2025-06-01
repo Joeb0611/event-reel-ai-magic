@@ -24,12 +24,14 @@ const Index = () => {
     createProject,
     createWeddingProject, 
     triggerAIEditing,
-    updateProject 
+    updateProject,
+    deleteProject
   } = useProjects();
 
   const { 
     projectVideos, 
-    handleVideosUploaded 
+    handleVideosUploaded,
+    deleteVideo
   } = useVideos(selectedProject?.id || null);
 
   useEffect(() => {
@@ -81,6 +83,7 @@ const Index = () => {
             onCreateWeddingProject={() => setIsWeddingModalOpen(true)}
             onSelectProject={setSelectedProject}
             onEditProject={triggerAIEditing}
+            onDeleteProject={deleteProject}
           />
         ) : (
           <ProjectDashboard
@@ -90,6 +93,7 @@ const Index = () => {
             onTriggerAIEditing={triggerAIEditing}
             onVideosUploaded={handleVideosUploaded}
             onVideoDeleted={handleVideoDeleted}
+            onDeleteVideo={deleteVideo}
           />
         )}
 

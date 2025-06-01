@@ -11,14 +11,16 @@ interface ProjectsListProps {
   onCreateWeddingProject: () => void;
   onSelectProject: (project: Project) => void;
   onEditProject: (project: Project) => void;
+  onDeleteProject: (projectId: string) => void;
 }
 
-const ProjectsList = ({ 
-  projects, 
-  onCreateProject, 
+const ProjectsList = ({
+  projects,
+  onCreateProject,
   onCreateWeddingProject,
-  onSelectProject, 
-  onEditProject 
+  onSelectProject,
+  onEditProject,
+  onDeleteProject,
 }: ProjectsListProps) => {
   return (
     <>
