@@ -9,6 +9,7 @@ export interface VideoFile {
   file_path: string;
   size: number;
   uploaded_at: string;
+  created_at: string;
   edited: boolean;
   project_id: string;
   user_id: string;
@@ -49,6 +50,7 @@ export const useVideos = (projectId: string | null) => {
           
           return {
             ...video,
+            created_at: video.uploaded_at, // Map uploaded_at to created_at for compatibility
             url: urlData?.signedUrl
           };
         })
