@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Image, Video, Users, Clock, Edit3, Star } from 'lucide-react';
 import { Project } from '@/hooks/useProjects';
 import { VideoFile } from '@/hooks/useVideos';
+import EnhancedAIProcessingPanel from '@/components/EnhancedAIProcessingPanel';
 
 interface ProjectStatsProps {
   project: Project;
@@ -23,7 +24,6 @@ const ProjectStats = ({
   const guestVideos = projectVideos.filter(v => v.uploaded_by_guest);
   const userVideos = projectVideos.filter(v => !v.uploaded_by_guest);
   const totalSize = projectVideos.reduce((sum, video) => sum + video.size, 0);
-  const estimatedDuration = mustIncludeCount * 5; // Rough estimate: 5 seconds per item
 
   const stats = [
     {
@@ -92,80 +92,20 @@ const ProjectStats = ({
                   <strong>{mustIncludeCount}</strong> items marked as must-include
                 </p>
                 <p className="text-sm text-yellow-600">
-                  Estimated duration: ~{estimatedDuration} seconds
+                  These will be prioritized in your AI-generated highlight reel
                 </p>
               </div>
-              <Button
-                onClick={() => onTriggerAIEditing(project)}
-                className="bg-yellow-600 hover:bg-yellow-700"
-              >
-                <Edit3 className="w-4 h-4 mr-2" />
-                Create Highlight Reel
-              </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* AI Processing Section */}
-      {project.edited_video_url ? (
-        <Card className="border-green-200 bg-green-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-800">
-              <Edit3 className="w-5 h-5" />
-              Highlight Reel Ready
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-green-700 mb-3">
-              Your wedding highlight reel has been created and is ready to download!
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" className="border-green-200 text-green-600">
-                Preview
-              </Button>
-              <Button className="bg-green-600 hover:bg-green-700">
-                Download
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : projectVideos.length > 0 ? (
-        <Card className="border-blue-200 bg-blue-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-blue-800">
-              <Clock className="w-5 h-5" />
-              Ready for Processing
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-blue-700 mb-3">
-              You have {projectVideos.length} media files ready for AI processing.
-            </p>
-            <Button
-              onClick={() => onTriggerAIEditing(project)}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Edit3 className="w-4 h-4 mr-2" />
-              Generate Highlight Reel
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="border-gray-200 bg-gray-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-800">
-              <Clock className="w-5 h-5" />
-              Collecting Content
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-700">
-              Share your QR code with guests to start collecting photos and videos.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      {/* Enhanced AI Processing Panel */}
+      <EnhancedAIProcessingPanel
+        projectId={project.id}
+        hasVideos={projectVideos.length > 0}
+        onProcessingComplete={() => onTriggerAIEditing(project)}
+      />
     </div>
   );
 };
