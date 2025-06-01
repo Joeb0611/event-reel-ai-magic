@@ -56,6 +56,8 @@ serve(async (req) => {
       throw jobError;
     }
 
+    console.log(`Created processing job: ${job.id} for project ${projectId}`);
+
     // Start processing with external AI service
     EdgeRuntime.waitUntil(processWithExternalService(supabaseClient, job.id, projectId));
 
@@ -140,8 +142,15 @@ async function processWithExternalService(supabase: any, jobId: string, projectI
       throw new Error(`AI Service error: ${processResponse.status} - ${errorText}`);
     }
 
-    const { jobId: externalJobId } = await processResponse.json();
+    const responseData = await processResponse.json();
+    console.log('AI Service response:', responseData);
+    
+    const externalJobId = responseData.job_id || responseData.jobId;
     console.log(`External AI job started: ${externalJobId}`);
+
+    if (!externalJobId) {
+      throw new Error('AI service did not return a valid job ID');
+    }
 
     // Poll the external service for updates
     await pollExternalJobStatus(supabase, jobId, externalJobId);
@@ -185,8 +194,12 @@ async function pollExternalJobStatus(supabase: any, jobId: string, externalJobId
   const maxAttempts = 60; // 5 minutes with 5-second intervals
   let attempts = 0;
 
+  console.log(`Starting to poll external job status for: ${externalJobId}`);
+
   while (attempts < maxAttempts) {
     try {
+      console.log(`Polling attempt ${attempts + 1}/${maxAttempts} for job: ${externalJobId}`);
+      
       const response = await fetch(`${AI_SERVICE_URL}/job-status/${externalJobId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
@@ -197,6 +210,7 @@ async function pollExternalJobStatus(supabase: any, jobId: string, externalJobId
       }
 
       const jobStatus = await response.json();
+      console.log(`Job status response for ${externalJobId}:`, jobStatus);
       
       // Update our database with the external job status
       await updateJobStatus(
@@ -208,6 +222,8 @@ async function pollExternalJobStatus(supabase: any, jobId: string, externalJobId
       );
 
       if (jobStatus.status === 'completed' || jobStatus.status === 'failed') {
+        console.log(`Job ${externalJobId} finished with status: ${jobStatus.status}`);
+        
         if (jobStatus.status === 'completed' && jobStatus.edited_video_url) {
           // Update project with edited video URL
           await supabase
@@ -222,7 +238,7 @@ async function pollExternalJobStatus(supabase: any, jobId: string, externalJobId
       await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
 
     } catch (error) {
-      console.error('Error polling job status:', error);
+      console.error(`Error polling job status for ${externalJobId}:`, error);
       attempts++;
       
       if (attempts >= maxAttempts) {
