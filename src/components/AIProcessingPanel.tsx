@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -189,17 +190,17 @@ const AIProcessingPanel = ({ projectId, hasVideos, onProcessingComplete }: AIPro
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getMomentTypeColor(moment.type)}`}>
-                        {moment.type}
+                        {moment.type || 'unknown'}
                       </span>
                       <span className="text-sm font-medium capitalize">
-                        {moment.subtype.replace('_', ' ')}
+                        {(moment.subtype || 'moment').replace('_', ' ')}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-600">{moment.description}</p>
+                    <p className="text-xs text-gray-600">{moment.description || 'No description available'}</p>
                   </div>
                   <div className="text-right text-xs text-gray-500">
-                    <div>{Math.round(moment.confidence * 100)}% confidence</div>
-                    <div>{moment.duration}s clip</div>
+                    <div>{Math.round((moment.confidence || 0) * 100)}% confidence</div>
+                    <div>{moment.duration || 0}s clip</div>
                   </div>
                 </div>
               ))}
