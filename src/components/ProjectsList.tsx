@@ -52,14 +52,11 @@ const ProjectsList = ({
           {projects.map((project) => (
             <ProjectCard
               key={project.id}
-              project={{
-                ...project,
-                createdAt: new Date(project.created_at),
-                videos: [],
-                editedVideoUrl: project.edited_video_url
-              }}
-              onClick={() => onSelectProject(project)}
+              project={project}
+              videoCount={0}
+              onSelect={() => onSelectProject(project)}
               onEdit={() => onEditProject(project)}
+              onDelete={() => onDeleteProject(project.id)}
             />
           ))}
         </div>

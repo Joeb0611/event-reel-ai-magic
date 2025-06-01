@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +9,7 @@ import MobileGuestUpload from '@/components/mobile/MobileGuestUpload';
 import LoadingScreen from '@/components/LoadingScreen';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { validateProjectQRCode } from '@/utils/validation';
 
 const GuestUpload = () => {
   const { qrCode } = useParams<{ qrCode: string }>();
@@ -25,11 +27,21 @@ const GuestUpload = () => {
 
   const fetchProjectByQRCode = async (code: string) => {
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('qr_code', code)
-        .single();
+      // Validate QR code format first
+      if (!validateProjectQRCode(code)) {
+        toast({
+          title: "Invalid QR code",
+          description: "The QR code format is invalid.",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Use the secure function to get project data
+      const { data, error } = await supabase.rpc('get_project_by_qr', {
+        qr_code_param: code
+      });
 
       if (error) {
         console.error('Error fetching project:', error);
@@ -38,26 +50,27 @@ const GuestUpload = () => {
           description: "This QR code is not valid or the project is no longer available.",
           variant: "destructive",
         });
+        setLoading(false);
         return;
       }
 
-      // Check if guest uploads are enabled
-      const privacySettings = typeof data.privacy_settings === 'object' && data.privacy_settings !== null
-        ? data.privacy_settings as { public_qr: boolean; guest_upload: boolean }
-        : { public_qr: true, guest_upload: true };
-
-      if (!privacySettings.guest_upload) {
+      if (!data || data.length === 0) {
         toast({
-          title: "Uploads disabled",
-          description: "Guest uploads are currently disabled for this project.",
+          title: "Project not found",
+          description: "This QR code is not valid or guest uploads are disabled.",
           variant: "destructive",
         });
+        setLoading(false);
         return;
       }
 
+      const projectData = data[0];
       setProject({
-        ...data,
-        privacy_settings: privacySettings
+        ...projectData,
+        created_at: new Date().toISOString(), // Set a default created_at
+        user_id: '', // Not needed for guest access
+        qr_code: code,
+        description: projectData.name || '', // Use name as description if missing
       });
     } catch (error) {
       console.error('Error:', error);

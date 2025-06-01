@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from 'react';
 import { Upload, Camera, X, FileImage, FileVideo, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { Project } from '@/hooks/useProjects';
 import { GuestUploadData } from './GuestUploadInterface';
+import { validateFileType, validateFileSize, sanitizeFilename, validateGuestUploadData } from '@/utils/validation';
 
 interface GuestFileUploadProps {
   project: Project;
@@ -38,18 +38,13 @@ const GuestFileUpload = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  const allowedTypes = [
-    'image/jpeg', 'image/jpg', 'image/png', 'image/heic', 'image/heif',
-    'video/mp4', 'video/mov', 'video/quicktime', 'video/avi'
-  ];
-
   const maxFileSize = 100 * 1024 * 1024; // 100MB
 
   const validateFile = (file: File): string | null => {
-    if (!allowedTypes.includes(file.type.toLowerCase())) {
+    if (!validateFileType(file)) {
       return 'File type not supported. Please use JPG, PNG, MP4, MOV, or HEIC files.';
     }
-    if (file.size > maxFileSize) {
+    if (!validateFileSize(file, maxFileSize)) {
       return 'File too large. Maximum size is 100MB.';
     }
     return null;
@@ -70,6 +65,13 @@ const GuestFileUpload = ({
 
   const addFiles = useCallback(async (newFiles: FileList | File[]) => {
     const fileArray = Array.from(newFiles);
+    
+    // Limit number of files to prevent abuse
+    if (files.length + fileArray.length > 20) {
+      onUploadError('Maximum 20 files allowed per session');
+      return;
+    }
+    
     const processedFiles: FileWithPreview[] = [];
 
     for (const file of fileArray) {
@@ -86,7 +88,7 @@ const GuestFileUpload = ({
     }
 
     setFiles(prev => [...prev, ...processedFiles]);
-  }, []);
+  }, [files.length, onUploadError]);
 
   const removeFile = useCallback((fileId: string) => {
     setFiles(prev => prev.filter(f => f.id !== fileId));
@@ -130,11 +132,29 @@ const GuestFileUpload = ({
   }, [addFiles]);
 
   const uploadFile = async (file: FileWithPreview): Promise<boolean> => {
-    const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
-    const fileName = `guest-${Date.now()}-${Math.random()}.${fileExt}`;
-    const filePath = `${project.id}/${fileName}`;
-
     try {
+      // Validate guest upload data
+      const validation = validateGuestUploadData(guestData);
+      if (!validation.isValid) {
+        console.error('Invalid guest data:', validation.errors);
+        return false;
+      }
+
+      // First validate that the project allows guest uploads
+      const { data: isValid } = await supabase.rpc('validate_guest_upload', {
+        project_qr_code: project.qr_code
+      });
+
+      if (!isValid) {
+        console.error('Guest uploads not allowed for this project');
+        return false;
+      }
+
+      const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
+      const sanitizedName = sanitizeFilename(file.name);
+      const fileName = `guest-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `${project.id}/${fileName}`;
+
       // Upload to storage
       const { error: uploadError } = await supabase.storage
         .from('guest-uploads')
@@ -142,18 +162,18 @@ const GuestFileUpload = ({
 
       if (uploadError) throw uploadError;
 
-      // Create video record
+      // Create video record with sanitized data
       const { error: dbError } = await supabase
         .from('videos')
         .insert({
-          name: file.name,
+          name: sanitizedName,
           file_path: filePath,
           size: file.size,
           project_id: project.id,
           user_id: '00000000-0000-0000-0000-000000000000', // Anonymous user ID
           uploaded_by_guest: true,
-          guest_name: guestData.guestName,
-          guest_message: guestData.guestMessage,
+          guest_name: guestData.guestName?.trim().substring(0, 100) || null,
+          guest_message: guestData.guestMessage?.trim().substring(0, 500) || null,
         });
 
       if (dbError) throw dbError;
@@ -226,7 +246,7 @@ const GuestFileUpload = ({
           Drop files here or click to browse
         </h3>
         <p className="text-sm text-gray-500 mb-4">
-          Support for JPG, PNG, MP4, MOV, HEIC files up to 100MB each
+          Support for JPG, PNG, MP4, MOV, HEIC files up to 100MB each (max 20 files)
         </p>
         
         <div className="flex justify-center gap-4">
