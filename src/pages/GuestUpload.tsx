@@ -1,16 +1,18 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Project } from '@/hooks/useProjects';
 import GuestWelcome from '@/components/guest/GuestWelcome';
 import GuestUploadInterface from '@/components/guest/GuestUploadInterface';
+import MobileGuestUpload from '@/components/mobile/MobileGuestUpload';
 import LoadingScreen from '@/components/LoadingScreen';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const GuestUpload = () => {
   const { qrCode } = useParams<{ qrCode: string }>();
   const { toast } = useToast();
+  const { isMobile } = useIsMobile();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
@@ -84,6 +86,22 @@ const GuestUpload = () => {
     );
   }
 
+  // Use mobile-optimized interface for mobile devices
+  if (isMobile) {
+    return !showUpload ? (
+      <GuestWelcome 
+        project={project} 
+        onStartUpload={() => setShowUpload(true)} 
+      />
+    ) : (
+      <MobileGuestUpload 
+        project={project} 
+        onBack={() => setShowUpload(false)} 
+      />
+    );
+  }
+
+  // Use desktop interface for larger screens
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
       {!showUpload ? (
