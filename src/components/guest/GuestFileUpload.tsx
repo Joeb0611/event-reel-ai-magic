@@ -140,10 +140,10 @@ const GuestFileUpload = ({
         return false;
       }
 
-      // First validate that the project allows guest uploads
+      // First validate that the project allows guest uploads with proper typing
       const { data: isValid } = await supabase.rpc('validate_guest_upload', {
         project_qr_code: project.qr_code
-      });
+      }) as { data: boolean | null; error: any };
 
       if (!isValid) {
         console.error('Guest uploads not allowed for this project');

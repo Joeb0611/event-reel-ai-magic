@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +9,18 @@ import LoadingScreen from '@/components/LoadingScreen';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { validateProjectQRCode } from '@/utils/validation';
+
+// Define the type for the RPC function response
+interface ProjectByQRResponse {
+  id: string;
+  name: string;
+  bride_name?: string;
+  groom_name?: string;
+  privacy_settings?: {
+    guest_upload?: boolean;
+    public_qr?: boolean;
+  };
+}
 
 const GuestUpload = () => {
   const { qrCode } = useParams<{ qrCode: string }>();
@@ -38,10 +49,10 @@ const GuestUpload = () => {
         return;
       }
 
-      // Use the secure function to get project data
+      // Use the secure function to get project data with proper typing
       const { data, error } = await supabase.rpc('get_project_by_qr', {
         qr_code_param: code
-      });
+      }) as { data: ProjectByQRResponse[] | null; error: any };
 
       if (error) {
         console.error('Error fetching project:', error);
@@ -66,11 +77,18 @@ const GuestUpload = () => {
 
       const projectData = data[0];
       setProject({
-        ...projectData,
-        created_at: new Date().toISOString(), // Set a default created_at
-        user_id: '', // Not needed for guest access
+        id: projectData.id,
+        name: projectData.name || '',
+        created_at: new Date().toISOString(),
+        user_id: '',
         qr_code: code,
-        description: projectData.name || '', // Use name as description if missing
+        description: projectData.name || '',
+        bride_name: projectData.bride_name,
+        groom_name: projectData.groom_name,
+        privacy_settings: {
+          public_qr: projectData.privacy_settings?.public_qr ?? true,
+          guest_upload: projectData.privacy_settings?.guest_upload ?? true,
+        },
       });
     } catch (error) {
       console.error('Error:', error);
