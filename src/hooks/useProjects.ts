@@ -63,7 +63,16 @@ export const useProjects = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProjects(data || []);
+      
+      // Transform the data to ensure privacy_settings is properly typed
+      const transformedData = (data || []).map(project => ({
+        ...project,
+        privacy_settings: typeof project.privacy_settings === 'object' && project.privacy_settings !== null
+          ? project.privacy_settings as { public_qr: boolean; guest_upload: boolean }
+          : { public_qr: true, guest_upload: true }
+      }));
+      
+      setProjects(transformedData);
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast({
@@ -95,7 +104,14 @@ export const useProjects = () => {
 
       if (error) throw error;
 
-      setProjects([data, ...projects]);
+      const transformedProject = {
+        ...data,
+        privacy_settings: typeof data.privacy_settings === 'object' && data.privacy_settings !== null
+          ? data.privacy_settings as { public_qr: boolean; guest_upload: boolean }
+          : { public_qr: true, guest_upload: true }
+      };
+
+      setProjects([transformedProject, ...projects]);
       toast({
         title: "Success",
         description: "Project created successfully",
@@ -137,13 +153,20 @@ export const useProjects = () => {
 
       if (error) throw error;
 
-      setProjects([data, ...projects]);
+      const transformedProject = {
+        ...data,
+        privacy_settings: typeof data.privacy_settings === 'object' && data.privacy_settings !== null
+          ? data.privacy_settings as { public_qr: boolean; guest_upload: boolean }
+          : { public_qr: true, guest_upload: true }
+      };
+
+      setProjects([transformedProject, ...projects]);
       toast({
         title: "Wedding Project Created! 💕",
         description: `${projectData.name} is ready for guest uploads`,
       });
       
-      return data;
+      return transformedProject;
     } catch (error) {
       console.error('Error creating wedding project:', error);
       toast({

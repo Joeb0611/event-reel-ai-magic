@@ -178,7 +178,7 @@ const WeddingProjectModal = ({ isOpen, onClose, onCreateProject }: WeddingProjec
                 <Checkbox
                   id="publicQR"
                   checked={publicQR}
-                  onCheckedChange={setPublicQR}
+                  onCheckedChange={(checked) => setPublicQR(checked === true)}
                 />
                 <Label htmlFor="publicQR" className="text-sm">
                   Allow public access via QR code (guests don't need accounts)
@@ -188,7 +188,7 @@ const WeddingProjectModal = ({ isOpen, onClose, onCreateProject }: WeddingProjec
                 <Checkbox
                   id="guestUpload"
                   checked={guestUpload}
-                  onCheckedChange={setGuestUpload}
+                  onCheckedChange={(checked) => setGuestUpload(checked === true)}
                 />
                 <Label htmlFor="guestUpload" className="text-sm">
                   Enable guest photo/video uploads
