@@ -9,200 +9,125 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      processing_jobs: {
+      media_assets: {
         Row: {
-          completed_at: string | null
-          created_at: string
-          detected_moments: Json | null
-          error_message: string | null
-          id: string
-          progress: number | null
-          project_id: string
-          started_at: string | null
-          status: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string
-          detected_moments?: Json | null
-          error_message?: string | null
-          id?: string
-          progress?: number | null
-          project_id: string
-          started_at?: string | null
-          status?: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string
-          detected_moments?: Json | null
-          error_message?: string | null
-          id?: string
-          progress?: number | null
-          project_id?: string
-          started_at?: string | null
-          status?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string | null
-          email: string | null
-          full_name: string | null
-          id: string
-          updated_at: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string | null
-          email?: string | null
-          full_name?: string | null
-          id: string
-          updated_at?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string | null
-          email?: string | null
-          full_name?: string | null
-          id?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      projects: {
-        Row: {
-          bride_name: string | null
-          created_at: string | null
           description: string | null
-          edited_video_url: string | null
-          groom_name: string | null
-          id: string
-          location: string | null
-          name: string
-          privacy_settings: Json | null
-          qr_code: string | null
-          theme: string | null
-          user_id: string
-          wedding_date: string | null
-        }
-        Insert: {
-          bride_name?: string | null
-          created_at?: string | null
-          description?: string | null
-          edited_video_url?: string | null
-          groom_name?: string | null
-          id?: string
-          location?: string | null
-          name: string
-          privacy_settings?: Json | null
-          qr_code?: string | null
-          theme?: string | null
-          user_id: string
-          wedding_date?: string | null
-        }
-        Update: {
-          bride_name?: string | null
-          created_at?: string | null
-          description?: string | null
-          edited_video_url?: string | null
-          groom_name?: string | null
-          id?: string
-          location?: string | null
-          name?: string
-          privacy_settings?: Json | null
-          qr_code?: string | null
-          theme?: string | null
-          user_id?: string
-          wedding_date?: string | null
-        }
-        Relationships: []
-      }
-      videos: {
-        Row: {
-          ai_analysis: Json | null
-          edited: boolean | null
+          file_name: string
           file_path: string
-          guest_message: string | null
-          guest_name: string | null
+          file_size: number | null
+          file_type: string
           id: string
-          name: string
-          processing_job_id: string | null
-          project_id: string
-          size: number
-          uploaded_at: string | null
-          uploaded_by_guest: boolean | null
+          project_id: string | null
+          tags: string[] | null
+          upload_date: string | null
           user_id: string
         }
         Insert: {
-          ai_analysis?: Json | null
-          edited?: boolean | null
+          description?: string | null
+          file_name: string
           file_path: string
-          guest_message?: string | null
-          guest_name?: string | null
+          file_size?: number | null
+          file_type: string
           id?: string
-          name: string
-          processing_job_id?: string | null
-          project_id: string
-          size: number
-          uploaded_at?: string | null
-          uploaded_by_guest?: boolean | null
+          project_id?: string | null
+          tags?: string[] | null
+          upload_date?: string | null
           user_id: string
         }
         Update: {
-          ai_analysis?: Json | null
-          edited?: boolean | null
+          description?: string | null
+          file_name?: string
           file_path?: string
-          guest_message?: string | null
-          guest_name?: string | null
+          file_size?: number | null
+          file_type?: string
           id?: string
-          name?: string
-          processing_job_id?: string | null
-          project_id?: string
-          size?: number
-          uploaded_at?: string | null
-          uploaded_by_guest?: boolean | null
+          project_id?: string | null
+          tags?: string[] | null
+          upload_date?: string | null
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "videos_processing_job_id_fkey"
-            columns: ["processing_job_id"]
+            foreignKeyName: "media_assets_project_id_fkey"
+            columns: ["project_id"]
             isOneToOne: false
-            referencedRelation: "processing_jobs"
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
+      }
+      projects: {
+        Row: {
+          budget: number | null
+          created_at: string | null
+          description: string | null
+          guest_count: number | null
+          id: string
+          title: string
+          updated_at: string | null
+          user_id: string
+          venue: string | null
+          wedding_date: string | null
+        }
+        Insert: {
+          budget?: number | null
+          created_at?: string | null
+          description?: string | null
+          guest_count?: number | null
+          id?: string
+          title: string
+          updated_at?: string | null
+          user_id: string
+          venue?: string | null
+          wedding_date?: string | null
+        }
+        Update: {
+          budget?: number | null
+          created_at?: string | null
+          description?: string | null
+          guest_count?: number | null
+          id?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+          venue?: string | null
+          wedding_date?: string | null
+        }
+        Relationships: []
+      }
+      user_profiles: {
+        Row: {
+          birthday: string | null
+          created_at: string | null
+          id: string
+          partner_name: string | null
+          updated_at: string | null
+          user_name: string
+        }
+        Insert: {
+          birthday?: string | null
+          created_at?: string | null
+          id: string
+          partner_name?: string | null
+          updated_at?: string | null
+          user_name: string
+        }
+        Update: {
+          birthday?: string | null
+          created_at?: string | null
+          id?: string
+          partner_name?: string | null
+          updated_at?: string | null
+          user_name?: string
+        }
+        Relationships: []
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      get_project_by_qr: {
-        Args: { qr_code_param: string }
-        Returns: {
-          id: string
-          name: string
-          bride_name: string
-          groom_name: string
-          wedding_date: string
-          location: string
-          privacy_settings: Json
-        }[]
-      }
-      validate_guest_upload: {
-        Args: { project_qr_code: string }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
