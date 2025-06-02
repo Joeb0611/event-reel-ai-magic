@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,11 +23,14 @@ interface ProjectByQRResponse {
   };
 }
 
+// Extend Project type to include qr_code
+type GuestProject = Project & { qr_code: string };
+
 const GuestUpload = () => {
   const { qrCode } = useParams<{ qrCode: string }>();
   const { toast } = useToast();
   const { isMobile } = useIsMobile();
-  const [project, setProject] = useState<Project | null>(null);
+  const [project, setProject] = useState<GuestProject | null>(null);
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
 
