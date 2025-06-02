@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from 'react';
 import { Upload, Camera, X, FileImage, FileVideo, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { Project } from '@/hooks/useProjects';
 import { GuestUploadData } from './GuestUploadInterface';
-import { validateFileType, validateFileSize, sanitizeFilename, validateGuestUploadData } from '@/utils/validation';
+import { validateFileType, validateFileSize, sanitizeFilename, validateGuestUploadData, GuestUploadValidationResponse } from '@/utils/validation';
 
 interface GuestFileUploadProps {
   project: Project & { qr_code?: string }; // Extend to include qr_code
@@ -143,12 +142,12 @@ const GuestFileUpload = ({
 
       // First validate that the project allows guest uploads with proper typing
       if (project.qr_code) {
-        const { data: isValid, error: validationError } = await supabase.rpc(
+        const validationResult: GuestUploadValidationResponse = await supabase.rpc(
           'validate_guest_upload' as any,
           { project_qr_code: project.qr_code }
-        );
+        ) as GuestUploadValidationResponse;
 
-        if (validationError || !isValid) {
+        if (validationResult.error || !validationResult.data) {
           console.error('Guest uploads not allowed for this project');
           return false;
         }

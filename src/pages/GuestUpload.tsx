@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +8,7 @@ import MobileGuestUpload from '@/components/mobile/MobileGuestUpload';
 import LoadingScreen from '@/components/LoadingScreen';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { validateProjectQRCode } from '@/utils/validation';
+import { validateProjectQRCode, ProjectByQRResponse } from '@/utils/validation';
 
 // Define the type for the RPC function response
 interface ProjectByQRResponse {
@@ -21,6 +20,8 @@ interface ProjectByQRResponse {
     guest_upload?: boolean;
     public_qr?: boolean;
   };
+  wedding_date?: string;
+  location?: string;
 }
 
 // Extend Project type to include qr_code
@@ -54,10 +55,10 @@ const GuestUpload = () => {
       }
 
       // Use the secure function to get project data with proper typing
-      const { data, error } = await supabase.rpc(
+      const { data, error }: { data: ProjectByQRResponse[] | null; error: any } = await supabase.rpc(
         'get_project_by_qr' as any,
         { qr_code_param: code }
-      );
+      ) as { data: ProjectByQRResponse[] | null; error: any };
 
       if (error) {
         console.error('Error fetching project:', error);
@@ -90,6 +91,8 @@ const GuestUpload = () => {
         description: projectData.name || '',
         bride_name: projectData.bride_name,
         groom_name: projectData.groom_name,
+        wedding_date: projectData.wedding_date,
+        location: projectData.location,
         privacy_settings: {
           public_qr: projectData.privacy_settings?.public_qr ?? true,
           guest_upload: projectData.privacy_settings?.guest_upload ?? true,

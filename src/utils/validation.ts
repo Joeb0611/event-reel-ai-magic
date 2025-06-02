@@ -53,3 +53,22 @@ export const validateGuestUploadData = (data: {
     errors
   };
 };
+
+// Define proper TypeScript interfaces for guest upload functionality
+export interface ProjectByQRResponse {
+  id: string;
+  name: string;
+  bride_name?: string;
+  groom_name?: string;
+  wedding_date?: string;
+  location?: string;
+  privacy_settings?: {
+    public_qr?: boolean;
+    guest_upload?: boolean;
+  };
+}
+
+export interface GuestUploadValidationResponse {
+  data: boolean | null;
+  error: any;
+}
