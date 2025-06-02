@@ -67,8 +67,3 @@ export interface ProjectByQRResponse {
     guest_upload?: boolean;
   };
 }
-
-export interface GuestUploadValidationResponse {
-  data: boolean | null;
-  error: any;
-}

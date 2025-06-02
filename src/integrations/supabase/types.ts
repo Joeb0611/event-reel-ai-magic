@@ -187,7 +187,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_project_by_qr: {
+        Args: { qr_code_param: string }
+        Returns: {
+          id: string
+          name: string
+          bride_name: string
+          groom_name: string
+          wedding_date: string
+          location: string
+          privacy_settings: Json
+        }[]
+      }
+      validate_guest_upload: {
+        Args: { project_qr_code: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
