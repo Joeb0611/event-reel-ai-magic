@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { Project } from '@/hooks/useProjects';
 import { GuestUploadData } from './GuestUploadInterface';
-import { validateFileType, validateFileSize, sanitizeFilename, validateGuestUploadData, GuestUploadValidationResponse } from '@/utils/validation';
+import { validateFileType, validateFileSize, sanitizeFilename, validateGuestUploadData } from '@/utils/validation';
 
 interface GuestFileUploadProps {
   project: Project & { qr_code?: string }; // Extend to include qr_code
@@ -142,10 +142,9 @@ const GuestFileUpload = ({
 
       // First validate that the project allows guest uploads with proper typing
       if (project.qr_code) {
-        const validationResult = await supabase.rpc(
-          'validate_guest_upload',
-          { project_qr_code: project.qr_code }
-        ) as GuestUploadValidationResponse;
+        const validationResult = await supabase.rpc('validate_guest_upload', { 
+          project_qr_code: project.qr_code 
+        });
 
         if (validationResult.error || !validationResult.data) {
           console.error('Guest uploads not allowed for this project');

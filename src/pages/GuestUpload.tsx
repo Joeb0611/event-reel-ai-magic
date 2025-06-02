@@ -41,13 +41,12 @@ const GuestUpload = () => {
       }
 
       // Use the secure function to get project data with proper typing
-      const { data, error }: { data: ProjectByQRResponse[] | null; error: any } = await supabase.rpc(
-        'get_project_by_qr',
-        { qr_code_param: code }
-      ) as { data: ProjectByQRResponse[] | null; error: any };
+      const result = await supabase.rpc('get_project_by_qr', { 
+        qr_code_param: code 
+      });
 
-      if (error) {
-        console.error('Error fetching project:', error);
+      if (result.error) {
+        console.error('Error fetching project:', result.error);
         toast({
           title: "Project not found",
           description: "This QR code is not valid or the project is no longer available.",
@@ -57,6 +56,8 @@ const GuestUpload = () => {
         return;
       }
 
+      const data = result.data as ProjectByQRResponse[];
+      
       if (!data || data.length === 0) {
         toast({
           title: "Project not found",
