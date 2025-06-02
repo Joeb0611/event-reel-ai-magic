@@ -142,8 +142,8 @@ const GuestFileUpload = ({
 
       // First validate that the project allows guest uploads with proper typing
       if (project.qr_code) {
-        const validationResult: GuestUploadValidationResponse = await supabase.rpc(
-          'validate_guest_upload' as any,
+        const validationResult = await supabase.rpc(
+          'validate_guest_upload',
           { project_qr_code: project.qr_code }
         ) as GuestUploadValidationResponse;
 

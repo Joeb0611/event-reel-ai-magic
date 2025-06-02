@@ -10,20 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { validateProjectQRCode, ProjectByQRResponse } from '@/utils/validation';
 
-// Define the type for the RPC function response
-interface ProjectByQRResponse {
-  id: string;
-  name: string;
-  bride_name?: string;
-  groom_name?: string;
-  privacy_settings?: {
-    guest_upload?: boolean;
-    public_qr?: boolean;
-  };
-  wedding_date?: string;
-  location?: string;
-}
-
 // Extend Project type to include qr_code
 type GuestProject = Project & { qr_code: string };
 
@@ -56,7 +42,7 @@ const GuestUpload = () => {
 
       // Use the secure function to get project data with proper typing
       const { data, error }: { data: ProjectByQRResponse[] | null; error: any } = await supabase.rpc(
-        'get_project_by_qr' as any,
+        'get_project_by_qr',
         { qr_code_param: code }
       ) as { data: ProjectByQRResponse[] | null; error: any };
 
