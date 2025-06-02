@@ -54,9 +54,10 @@ const GuestUpload = () => {
       }
 
       // Use the secure function to get project data with proper typing
-      const { data, error } = await supabase.rpc('get_project_by_qr', {
-        qr_code_param: code
-      }) as { data: ProjectByQRResponse[] | null; error: any };
+      const { data, error } = await supabase.rpc(
+        'get_project_by_qr' as any,
+        { qr_code_param: code }
+      );
 
       if (error) {
         console.error('Error fetching project:', error);
