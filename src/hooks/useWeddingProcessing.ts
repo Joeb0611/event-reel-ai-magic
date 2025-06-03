@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { AI_SERVICE_CONFIG, AIServiceError } from '@/config/aiService';
+import { AI_SERVICE_CONFIG } from '@/config/aiService';
 import { parseWeddingMoments, stringifyWeddingMoments, WeddingMoment } from '@/utils/typeConverters';
 
 export interface ProcessingJob {
@@ -128,9 +128,8 @@ export const useWeddingProcessing = (projectId: string | null) => {
       console.error('Error starting processing:', error);
       
       let errorMessage = "Failed to start AI processing. Please try again.";
-      let variant: "destructive" | "default" = "destructive";
       
-      if (error.message?.includes('sleeping') || error.message?.includes('unavailable')) {
+      if (error instanceof Error && (error.message?.includes('sleeping') || error.message?.includes('unavailable'))) {
         errorMessage = "AI service is currently sleeping (free tier). Please try again in a few minutes.";
         setServiceStatus('sleeping');
         setTimeout(checkServiceHealth, 30000);
@@ -139,7 +138,7 @@ export const useWeddingProcessing = (projectId: string | null) => {
       toast({
         title: "Error",
         description: errorMessage,
-        variant,
+        variant: "destructive",
       });
     } finally {
       setIsProcessing(false);
