@@ -1,15 +1,17 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 
 export interface Project {
   id: string;
   name: string;
+  title?: string;
   description: string;
   created_at: string;
-  edited_video_url?: string;
+  updated_at: string;
   user_id: string;
+  qr_code?: string;
   bride_name?: string;
   groom_name?: string;
   wedding_date?: string;
@@ -19,41 +21,30 @@ export interface Project {
     public_qr: boolean;
     guest_upload: boolean;
   };
-  qr_code?: string;
+  edited_video_url?: string;
+  budget?: number;
+  guest_count?: number;
+  venue?: string;
 }
 
 export interface WeddingProjectData {
   name: string;
   description: string;
-  brideName: string;
-  groomName: string;
-  weddingDate: Date | null;
+  bride_name: string;
+  groom_name: string;
+  wedding_date: string;
   location: string;
   theme: string;
-  privacySettings: {
-    public_qr: boolean;
-    guest_upload: boolean;
-  };
 }
 
 export const useProjects = () => {
-  const { user } = useAuth();
   const { toast } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
 
   useEffect(() => {
-    if (user) {
-      fetchProjects();
-    }
-  }, [user]);
-
-  const generateUniqueQRCode = (): string => {
-    // Generate a unique QR code using timestamp and random string
-    const timestamp = Date.now().toString(36);
-    const randomStr = Math.random().toString(36).substring(2, 8);
-    return `wedding_${timestamp}_${randomStr}`;
-  };
+    fetchProjects();
+  }, []);
 
   const fetchProjects = async () => {
     try {
@@ -63,16 +54,7 @@ export const useProjects = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      // Transform the data to ensure privacy_settings is properly typed
-      const transformedData = (data || []).map(project => ({
-        ...project,
-        privacy_settings: typeof project.privacy_settings === 'object' && project.privacy_settings !== null
-          ? project.privacy_settings as { public_qr: boolean; guest_upload: boolean }
-          : { public_qr: true, guest_upload: true }
-      }));
-      
-      setProjects(transformedData);
+      setProjects(data || []);
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast({
@@ -86,36 +68,33 @@ export const useProjects = () => {
   };
 
   const createProject = async (name: string, description: string) => {
-    if (!user) return;
-
     try {
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) throw new Error('Not authenticated');
+
+      const qrCode = `project-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+      
       const { data, error } = await supabase
         .from('projects')
-        .insert([
-          {
-            name,
-            description,
-            user_id: user.id,
-            qr_code: generateUniqueQRCode(),
-          },
-        ])
+        .insert([{
+          name,
+          title: name, // Also set title for backward compatibility
+          description,
+          user_id: user.data.user.id,
+          qr_code: qrCode,
+        }])
         .select()
         .single();
 
       if (error) throw error;
 
-      const transformedProject = {
-        ...data,
-        privacy_settings: typeof data.privacy_settings === 'object' && data.privacy_settings !== null
-          ? data.privacy_settings as { public_qr: boolean; guest_upload: boolean }
-          : { public_qr: true, guest_upload: true }
-      };
-
-      setProjects([transformedProject, ...projects]);
+      setProjects([data, ...projects]);
       toast({
         title: "Success",
         description: "Project created successfully",
       });
+
+      return data;
     } catch (error) {
       console.error('Error creating project:', error);
       toast({
@@ -127,46 +106,38 @@ export const useProjects = () => {
   };
 
   const createWeddingProject = async (projectData: WeddingProjectData) => {
-    if (!user) return;
-
     try {
-      const qrCode = generateUniqueQRCode();
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) throw new Error('Not authenticated');
+
+      const qrCode = `wedding-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
       
       const { data, error } = await supabase
         .from('projects')
-        .insert([
-          {
-            name: projectData.name,
-            description: projectData.description,
-            bride_name: projectData.brideName,
-            groom_name: projectData.groomName,
-            wedding_date: projectData.weddingDate?.toISOString().split('T')[0] || null,
-            location: projectData.location,
-            theme: projectData.theme,
-            privacy_settings: projectData.privacySettings,
-            qr_code: qrCode,
-            user_id: user.id,
-          },
-        ])
+        .insert([{
+          name: projectData.name,
+          title: projectData.name, // Also set title for backward compatibility
+          description: projectData.description,
+          bride_name: projectData.bride_name,
+          groom_name: projectData.groom_name,
+          wedding_date: projectData.wedding_date,
+          location: projectData.location,
+          privacy_settings: { public_qr: true, guest_upload: true },
+          qr_code: qrCode,
+          user_id: user.data.user.id,
+        }])
         .select()
         .single();
 
       if (error) throw error;
 
-      const transformedProject = {
-        ...data,
-        privacy_settings: typeof data.privacy_settings === 'object' && data.privacy_settings !== null
-          ? data.privacy_settings as { public_qr: boolean; guest_upload: boolean }
-          : { public_qr: true, guest_upload: true }
-      };
-
-      setProjects([transformedProject, ...projects]);
+      setProjects([data, ...projects]);
       toast({
-        title: "Wedding Project Created! 💕",
-        description: `${projectData.name} is ready for guest uploads`,
+        title: "Success",
+        description: "Wedding project created successfully",
       });
-      
-      return transformedProject;
+
+      return data;
     } catch (error) {
       console.error('Error creating wedding project:', error);
       toast({
@@ -177,93 +148,45 @@ export const useProjects = () => {
     }
   };
 
-  const triggerAIEditing = async (project: Project) => {
-    console.log('Triggering AI editing for project:', project.name);
-    
-    toast({
-      title: "AI Processing",
-      description: "Starting AI video editing...",
-    });
+  const updateProject = async (updatedProject: Project) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update(updatedProject)
+        .eq('id', updatedProject.id);
 
-    setTimeout(async () => {
-      try {
-        const { error } = await supabase
-          .from('projects')
-          .update({ edited_video_url: 'https://example.com/edited-video.mp4' })
-          .eq('id', project.id);
+      if (error) throw error;
 
-        if (error) throw error;
-
-        setProjects(prev => prev.map(p => 
-          p.id === project.id 
-            ? { ...p, edited_video_url: 'https://example.com/edited-video.mp4' }
-            : p
-        ));
-
-        toast({
-          title: "Success",
-          description: "AI editing completed!",
-        });
-      } catch (error) {
-        console.error('Error updating project:', error);
-        toast({
-          title: "Error",
-          description: "Failed to complete AI editing",
-          variant: "destructive",
-        });
-      }
-    }, 3000);
-  };
-
-  const updateProject = (updatedProject: Project) => {
-    setProjects(prev => prev.map(p => 
-      p.id === updatedProject.id ? updatedProject : p
-    ));
+      setProjects(projects.map(p => p.id === updatedProject.id ? updatedProject : p));
+      
+      toast({
+        title: "Success",
+        description: "Project updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating project:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update project",
+        variant: "destructive",
+      });
+    }
   };
 
   const deleteProject = async (projectId: string) => {
-    if (!user) return;
-
     try {
-      // First, delete all videos associated with the project
-      const { data: videos } = await supabase
-        .from('videos')
-        .select('file_path, uploaded_by_guest')
-        .eq('project_id', projectId);
-
-      // Delete files from storage
-      if (videos && videos.length > 0) {
-        for (const video of videos) {
-          const bucket = video.uploaded_by_guest ? 'guest-uploads' : 'videos';
-          await supabase.storage
-            .from(bucket)
-            .remove([video.file_path]);
-        }
-      }
-
-      // Delete video records
-      const { error: videosError } = await supabase
-        .from('videos')
-        .delete()
-        .eq('project_id', projectId);
-
-      if (videosError) throw videosError;
-
-      // Delete the project
-      const { error: projectError } = await supabase
+      const { error } = await supabase
         .from('projects')
         .delete()
-        .eq('id', projectId)
-        .eq('user_id', user.id);
+        .eq('id', projectId);
 
-      if (projectError) throw projectError;
+      if (error) throw error;
 
-      // Update local state
-      setProjects(prev => prev.filter(p => p.id !== projectId));
+      setProjects(projects.filter(p => p.id !== projectId));
       
       toast({
-        title: "Project Deleted",
-        description: "Project and all associated media have been deleted",
+        title: "Success",
+        description: "Project deleted successfully",
       });
     } catch (error) {
       console.error('Error deleting project:', error);
@@ -275,13 +198,30 @@ export const useProjects = () => {
     }
   };
 
+  const triggerAIEditing = async (project: Project) => {
+    try {
+      // This would trigger AI processing in a real implementation
+      toast({
+        title: "AI Processing Started",
+        description: "Your highlight reel is being generated...",
+      });
+    } catch (error) {
+      console.error('Error triggering AI editing:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start AI editing",
+        variant: "destructive",
+      });
+    }
+  };
+
   return {
     projects,
     loadingProjects,
     createProject,
     createWeddingProject,
-    triggerAIEditing,
     updateProject,
     deleteProject,
+    triggerAIEditing,
   };
 };

@@ -40,10 +40,11 @@ export const useVideos = (projectId: string | null) => {
           .eq('file_type', 'video')
           .order('upload_date', { ascending: false }),
         
-        // Try to query videos table directly (it might work once types refresh)
-        supabase.rpc('select', { 
-          query: `SELECT * FROM videos WHERE project_id = '${projectId}' ORDER BY uploaded_at DESC` 
-        }).then(result => ({ data: [], error: null })).catch(() => ({ data: [], error: null }))
+        supabase
+          .from('videos')
+          .select('*')
+          .eq('project_id', projectId)
+          .order('uploaded_at', { ascending: false })
       ]);
 
       const allVideos: VideoFile[] = [];
@@ -63,6 +64,25 @@ export const useVideos = (projectId: string | null) => {
           uploaded_by_guest: false
         }));
         allVideos.push(...mediaVideos);
+      }
+
+      // Process videos data
+      if (videosResult.data) {
+        const videoData = videosResult.data.map((video) => ({
+          id: video.id,
+          name: video.name,
+          file_path: video.file_path,
+          size: video.size,
+          uploaded_at: video.uploaded_at,
+          created_at: video.uploaded_at,
+          edited: video.edited || false,
+          project_id: video.project_id,
+          user_id: video.user_id,
+          guest_name: video.guest_name,
+          guest_message: video.guest_message,
+          uploaded_by_guest: video.uploaded_by_guest || false
+        }));
+        allVideos.push(...videoData);
       }
 
       // Add signed URLs
@@ -96,9 +116,16 @@ export const useVideos = (projectId: string | null) => {
     try {
       // Try to delete from videos table first, fallback to media_assets
       let deleteResult = await supabase
-        .from('media_assets')
+        .from('videos')
         .delete()
         .eq('id', videoId);
+
+      if (deleteResult.error) {
+        deleteResult = await supabase
+          .from('media_assets')
+          .delete()
+          .eq('id', videoId);
+      }
 
       if (deleteResult.error) {
         console.error('Delete error:', deleteResult.error);

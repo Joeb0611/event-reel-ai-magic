@@ -8,6 +8,7 @@ import LoadingScreen from '@/components/LoadingScreen';
 import AppHeader from '@/components/AppHeader';
 import ProjectsList from '@/components/ProjectsList';
 import ProjectDashboard from '@/components/ProjectDashboard';
+import WelcomeScreen from '@/components/WelcomeScreen';
 import { useProjects, Project } from '@/hooks/useProjects';
 import { useVideos } from '@/hooks/useVideos';
 
@@ -17,6 +18,7 @@ const Index = () => {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isWeddingModalOpen, setIsWeddingModalOpen] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
 
   const { 
     projects, 
@@ -40,14 +42,23 @@ const Index = () => {
     }
   }, [user, loading, navigate]);
 
+  // Show welcome screen for new users (no projects)
+  useEffect(() => {
+    if (!loadingProjects && projects.length > 0) {
+      setShowWelcome(false);
+    }
+  }, [projects, loadingProjects]);
+
   const handleCreateProject = async (name: string, description: string) => {
     await createProject(name, description);
     setIsProjectModalOpen(false);
+    setShowWelcome(false);
   };
 
   const handleCreateWeddingProject = async (projectData: WeddingProjectData) => {
     await createWeddingProject(projectData);
     setIsWeddingModalOpen(false);
+    setShowWelcome(false);
   };
 
   const handleSignOut = async () => {
@@ -63,12 +74,22 @@ const Index = () => {
     }
   };
 
+  const handleGetStarted = () => {
+    setShowWelcome(false);
+    setIsWeddingModalOpen(true);
+  };
+
   if (loading || loadingProjects) {
     return <LoadingScreen />;
   }
 
   if (!user) {
     return null;
+  }
+
+  // Show welcome screen for new users
+  if (showWelcome && projects.length === 0) {
+    return <WelcomeScreen onGetStarted={handleGetStarted} />;
   }
 
   return (
