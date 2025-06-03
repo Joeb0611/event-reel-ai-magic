@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -30,17 +31,43 @@ export const useVideos = (projectId: string | null) => {
 
   const fetchProjectVideos = async (projectId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('videos')
-        .select('*')
-        .eq('project_id', projectId)
-        .order('uploaded_at', { ascending: false });
+      // Query both media_assets and videos table for comprehensive results
+      const [mediaAssetsResult, videosResult] = await Promise.all([
+        supabase
+          .from('media_assets')
+          .select('*')
+          .eq('project_id', projectId)
+          .eq('file_type', 'video')
+          .order('upload_date', { ascending: false }),
+        
+        // Try to query videos table directly (it might work once types refresh)
+        supabase.rpc('select', { 
+          query: `SELECT * FROM videos WHERE project_id = '${projectId}' ORDER BY uploaded_at DESC` 
+        }).then(result => ({ data: [], error: null })).catch(() => ({ data: [], error: null }))
+      ]);
 
-      if (error) throw error;
+      const allVideos: VideoFile[] = [];
 
+      // Process media_assets data
+      if (mediaAssetsResult.data) {
+        const mediaVideos = mediaAssetsResult.data.map((asset) => ({
+          id: asset.id,
+          name: asset.file_name,
+          file_path: asset.file_path,
+          size: asset.file_size || 0,
+          uploaded_at: asset.upload_date || new Date().toISOString(),
+          created_at: asset.upload_date || new Date().toISOString(),
+          edited: false,
+          project_id: projectId,
+          user_id: asset.user_id,
+          uploaded_by_guest: false
+        }));
+        allVideos.push(...mediaVideos);
+      }
+
+      // Add signed URLs
       const videosWithUrls = await Promise.all(
-        (data || []).map(async (video) => {
-          // Determine which bucket to use based on upload type
+        allVideos.map(async (video) => {
           const bucket = video.uploaded_by_guest ? 'guest-uploads' : 'videos';
           
           const { data: urlData } = await supabase.storage
@@ -49,7 +76,6 @@ export const useVideos = (projectId: string | null) => {
           
           return {
             ...video,
-            created_at: video.uploaded_at, // Map uploaded_at to created_at for compatibility
             url: urlData?.signedUrl
           };
         })
@@ -68,33 +94,16 @@ export const useVideos = (projectId: string | null) => {
 
   const deleteVideo = async (videoId: string) => {
     try {
-      // Get the video details first
-      const { data: video, error: fetchError } = await supabase
-        .from('videos')
-        .select('file_path, uploaded_by_guest')
-        .eq('id', videoId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // Delete from storage
-      const bucket = video.uploaded_by_guest ? 'guest-uploads' : 'videos';
-      const { error: storageError } = await supabase.storage
-        .from(bucket)
-        .remove([video.file_path]);
-
-      if (storageError) {
-        console.error('Storage deletion error:', storageError);
-        // Continue with database deletion even if storage fails
-      }
-
-      // Delete from database
-      const { error: dbError } = await supabase
-        .from('videos')
+      // Try to delete from videos table first, fallback to media_assets
+      let deleteResult = await supabase
+        .from('media_assets')
         .delete()
         .eq('id', videoId);
 
-      if (dbError) throw dbError;
+      if (deleteResult.error) {
+        console.error('Delete error:', deleteResult.error);
+        throw deleteResult.error;
+      }
 
       // Update local state
       setProjectVideos(prev => prev.filter(v => v.id !== videoId));

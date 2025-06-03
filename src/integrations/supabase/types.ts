@@ -58,11 +58,18 @@ export type Database = {
       }
       projects: {
         Row: {
+          bride_name: string | null
           budget: number | null
           created_at: string | null
           description: string | null
+          edited_video_url: string | null
+          groom_name: string | null
           guest_count: number | null
           id: string
+          location: string | null
+          name: string | null
+          privacy_settings: Json | null
+          qr_code: string | null
           title: string
           updated_at: string | null
           user_id: string
@@ -70,11 +77,18 @@ export type Database = {
           wedding_date: string | null
         }
         Insert: {
+          bride_name?: string | null
           budget?: number | null
           created_at?: string | null
           description?: string | null
+          edited_video_url?: string | null
+          groom_name?: string | null
           guest_count?: number | null
           id?: string
+          location?: string | null
+          name?: string | null
+          privacy_settings?: Json | null
+          qr_code?: string | null
           title: string
           updated_at?: string | null
           user_id: string
@@ -82,11 +96,18 @@ export type Database = {
           wedding_date?: string | null
         }
         Update: {
+          bride_name?: string | null
           budget?: number | null
           created_at?: string | null
           description?: string | null
+          edited_video_url?: string | null
+          groom_name?: string | null
           guest_count?: number | null
           id?: string
+          location?: string | null
+          name?: string | null
+          privacy_settings?: Json | null
+          qr_code?: string | null
           title?: string
           updated_at?: string | null
           user_id?: string
@@ -121,6 +142,56 @@ export type Database = {
           user_name?: string
         }
         Relationships: []
+      }
+      videos: {
+        Row: {
+          edited: boolean | null
+          file_path: string
+          guest_message: string | null
+          guest_name: string | null
+          id: string
+          name: string
+          project_id: string
+          size: number
+          uploaded_at: string
+          uploaded_by_guest: boolean | null
+          user_id: string
+        }
+        Insert: {
+          edited?: boolean | null
+          file_path: string
+          guest_message?: string | null
+          guest_name?: string | null
+          id?: string
+          name: string
+          project_id: string
+          size?: number
+          uploaded_at?: string
+          uploaded_by_guest?: boolean | null
+          user_id: string
+        }
+        Update: {
+          edited?: boolean | null
+          file_path?: string
+          guest_message?: string | null
+          guest_name?: string | null
+          id?: string
+          name?: string
+          project_id?: string
+          size?: number
+          uploaded_at?: string
+          uploaded_by_guest?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "videos_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

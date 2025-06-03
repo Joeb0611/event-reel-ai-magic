@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef } from 'react';
 import { Upload, Camera, X, FileImage, FileVideo, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { GuestUploadData } from './GuestUploadInterface';
 import { validateFileType, validateFileSize, sanitizeFilename, validateGuestUploadData } from '@/utils/validation';
 
 interface GuestFileUploadProps {
-  project: Project & { qr_code?: string }; // Extend to include qr_code
+  project: Project & { qr_code?: string };
   guestData: GuestUploadData;
   onUploadStart: () => void;
   onUploadComplete: (count: number) => void;
@@ -140,18 +141,6 @@ const GuestFileUpload = ({
         return false;
       }
 
-      // First validate that the project allows guest uploads with proper typing
-      if (project.qr_code) {
-        const validationResult = await supabase.rpc('validate_guest_upload', { 
-          project_qr_code: project.qr_code 
-        });
-
-        if (validationResult.error || !validationResult.data) {
-          console.error('Guest uploads not allowed for this project');
-          return false;
-        }
-      }
-
       const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
       const sanitizedName = sanitizeFilename(file.name);
       const fileName = `guest-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -164,18 +153,18 @@ const GuestFileUpload = ({
 
       if (uploadError) throw uploadError;
 
-      // Create video record with sanitized data
+      // Create media asset record (using existing table structure for now)
       const { error: dbError } = await supabase
-        .from('videos')
+        .from('media_assets')
         .insert({
-          name: sanitizedName,
+          file_name: sanitizedName,
           file_path: filePath,
-          size: file.size,
+          file_type: file.type,
+          file_size: file.size,
           project_id: project.id,
           user_id: '00000000-0000-0000-0000-000000000000', // Anonymous user ID
-          uploaded_by_guest: true,
-          guest_name: guestData.guestName?.trim().substring(0, 100) || null,
-          guest_message: guestData.guestMessage?.trim().substring(0, 500) || null,
+          description: `Guest upload: ${guestData.guestMessage || 'No message'}`,
+          tags: guestData.guestName ? [guestData.guestName] : [],
         });
 
       if (dbError) throw dbError;

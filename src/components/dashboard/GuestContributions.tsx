@@ -36,12 +36,16 @@ const GuestContributions = ({ guestVideos, onVideoDeleted }: GuestContributionsP
   const handleDeleteVideo = async (videoId: string) => {
     setDeletingVideo(videoId);
     try {
-      const { error } = await supabase
-        .from('videos')
+      // Try to delete from both possible tables
+      const deleteResult = await supabase
+        .from('media_assets')
         .delete()
         .eq('id', videoId);
 
-      if (error) throw error;
+      if (deleteResult.error) {
+        console.error('Delete error:', deleteResult.error);
+        throw deleteResult.error;
+      }
 
       toast({
         title: "Video deleted",

@@ -76,16 +76,18 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
           throw uploadError;
         }
 
-        // Save video metadata to database
+        // Save video metadata to media_assets table (using existing table structure)
         const { data: videoData, error: dbError } = await supabase
-          .from('videos')
+          .from('media_assets')
           .insert([
             {
               user_id: user.id,
               project_id: projectId,
-              name: file.name,
+              file_name: file.name,
               file_path: fileName,
-              size: file.size,
+              file_type: file.type,
+              file_size: file.size,
+              description: `Video uploaded for ${projectName}`,
             },
           ])
           .select()
@@ -101,10 +103,19 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
           .from('videos')
           .createSignedUrl(fileName, 3600);
 
+        // Transform to VideoFile format
         uploadedVideos.push({
-          ...videoData,
-          created_at: videoData.uploaded_at, // Map uploaded_at to created_at for compatibility
-          url: urlData?.signedUrl
+          id: videoData.id,
+          name: videoData.file_name,
+          file_path: videoData.file_path,
+          size: videoData.file_size || 0,
+          uploaded_at: videoData.upload_date || new Date().toISOString(),
+          created_at: videoData.upload_date || new Date().toISOString(),
+          edited: false,
+          project_id: projectId,
+          user_id: user.id,
+          url: urlData?.signedUrl,
+          uploaded_by_guest: false
         });
       }
 

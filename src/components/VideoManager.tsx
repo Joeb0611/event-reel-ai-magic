@@ -42,10 +42,13 @@ const VideoManager = ({ project, onVideoDeleted }: VideoManagerProps) => {
     
     setIsDeleting(true);
     try {
-      // Remove the edited video URL from the project
+      // Remove the edited video URL from the project using the correct column name
       const { error } = await supabase
         .from('projects')
-        .update({ edited_video_url: null })
+        .update({ 
+          edited_video_url: null,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', project.id);
 
       if (error) throw error;

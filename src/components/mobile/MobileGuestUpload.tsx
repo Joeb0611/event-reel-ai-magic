@@ -64,18 +64,18 @@ const MobileGuestUpload = ({ project, onBack }: MobileGuestUploadProps) => {
 
         if (uploadError) throw uploadError;
 
-        // Create video record
+        // Create media asset record (using existing table structure)
         const { error: dbError } = await supabase
-          .from('videos')
+          .from('media_assets')
           .insert({
-            name: file.name,
+            file_name: file.name,
             file_path: filePath,
-            size: file.size,
+            file_type: file.type,
+            file_size: file.size,
             project_id: project.id,
             user_id: '00000000-0000-0000-0000-000000000000',
-            uploaded_by_guest: true,
-            guest_name: guestData.guestName,
-            guest_message: guestData.guestMessage,
+            description: `Guest upload: ${guestData.guestMessage || 'No message'}`,
+            tags: guestData.guestName ? [guestData.guestName] : [],
           });
 
         if (dbError) throw dbError;
