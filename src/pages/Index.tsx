@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -12,39 +11,32 @@ import { useProjects, Project } from '@/hooks/useProjects';
 import { useVideos } from '@/hooks/useVideos';
 import { Heart, Menu, LogOut, Settings, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 const Index = () => {
-  const { user, loading, signOut } = useAuth();
+  const {
+    user,
+    loading,
+    signOut
+  } = useAuth();
   const navigate = useNavigate();
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isWeddingModalOpen, setIsWeddingModalOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
-
-  const { 
-    projects, 
-    loadingProjects, 
+  const {
+    projects,
+    loadingProjects,
     createProject,
-    createWeddingProject, 
+    createWeddingProject,
     triggerAIEditing,
     updateProject,
     deleteProject
   } = useProjects();
-
-  const { 
-    projectVideos, 
+  const {
+    projectVideos,
     handleVideosUploaded,
     deleteVideo
   } = useVideos(selectedProject?.id || null);
-
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
@@ -57,41 +49,37 @@ const Index = () => {
       setShowWelcome(false);
     }
   }, [projects, loadingProjects]);
-
   const handleCreateProject = async (name: string, description: string) => {
     await createProject(name, description);
     setIsProjectModalOpen(false);
     setShowWelcome(false);
   };
-
   const handleCreateWeddingProject = async (projectData: WeddingProjectData) => {
     await createWeddingProject(projectData);
     setIsWeddingModalOpen(false);
     setShowWelcome(false);
   };
-
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
   };
-
   const handleVideoDeleted = () => {
     if (selectedProject) {
-      const updatedProject = { ...selectedProject, edited_video_url: null };
+      const updatedProject = {
+        ...selectedProject,
+        edited_video_url: null
+      };
       setSelectedProject(updatedProject);
       updateProject(updatedProject);
     }
   };
-
   const handleGetStarted = () => {
     setShowWelcome(false);
     setIsWeddingModalOpen(true);
   };
-
   if (loading || loadingProjects) {
     return <LoadingScreen />;
   }
-
   if (!user) {
     return null;
   }
@@ -103,26 +91,15 @@ const Index = () => {
 
   // Show project dashboard if a project is selected
   if (selectedProject) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
+    return <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
         <div className="container mx-auto px-4 py-8">
-          <ProjectDashboard
-            project={selectedProject}
-            projectVideos={projectVideos}
-            onBack={() => setSelectedProject(null)}
-            onTriggerAIEditing={triggerAIEditing}
-            onVideosUploaded={handleVideosUploaded}
-            onVideoDeleted={handleVideoDeleted}
-            onDeleteVideo={deleteVideo}
-          />
+          <ProjectDashboard project={selectedProject} projectVideos={projectVideos} onBack={() => setSelectedProject(null)} onTriggerAIEditing={triggerAIEditing} onVideosUploaded={handleVideosUploaded} onVideoDeleted={handleVideoDeleted} onDeleteVideo={deleteVideo} />
         </div>
-      </div>
-    );
+      </div>;
   }
 
   // Main home page with welcome screen design
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-purple-100">
+  return <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-purple-100">
       {/* Header with hamburger menu */}
       <div className="absolute top-4 right-4 z-10">
         <DropdownMenu>
@@ -172,48 +149,26 @@ const Index = () => {
             </h1>
             
             <p className="text-lg text-gray-600">
-              {projects.length === 0 
-                ? "Turn your wedding moments into cinematic memories"
-                : `Welcome back! You have ${projects.length} project${projects.length === 1 ? '' : 's'}`
-              }
+              {projects.length === 0 ? "Turn your wedding moments into cinematic memories" : `Welcome back! You have ${projects.length} project${projects.length === 1 ? '' : 's'}`}
             </p>
           </div>
 
           {/* Projects list if any exist */}
-          {projects.length > 0 && (
-            <div className="space-y-4 max-h-60 overflow-y-auto">
-              {projects.map((project) => (
-                <div
-                  key={project.id}
-                  className="bg-white/80 backdrop-blur-sm border-0 shadow-lg rounded-lg p-4 cursor-pointer hover:shadow-xl transition-all duration-300"
-                  onClick={() => setSelectedProject(project)}
-                >
+          {projects.length > 0 && <div className="space-y-4 max-h-60 overflow-y-auto">
+              {projects.map(project => <div key={project.id} className="bg-white/80 backdrop-blur-sm border-0 shadow-lg rounded-lg p-4 cursor-pointer hover:shadow-xl transition-all duration-300" onClick={() => setSelectedProject(project)}>
                   <h3 className="font-semibold text-gray-900">{project.name}</h3>
                   <p className="text-sm text-gray-600 mt-1">
-                    {project.bride_name && project.groom_name 
-                      ? `${project.bride_name} & ${project.groom_name}`
-                      : project.description
-                    }
+                    {project.bride_name && project.groom_name ? `${project.bride_name} & ${project.groom_name}` : project.description}
                   </p>
-                  {project.wedding_date && (
-                    <p className="text-xs text-gray-500 mt-1">
+                  {project.wedding_date && <p className="text-xs text-gray-500 mt-1">
                       {new Date(project.wedding_date).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                    </p>}
+                </div>)}
+            </div>}
 
           {/* Create Project Button */}
           <div className="space-y-4">
-            <Button
-              onClick={() => setIsWeddingModalOpen(true)}
-              size="lg"
-              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white py-4 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              Create New Wedding Project
-            </Button>
+            <Button onClick={() => setIsWeddingModalOpen(true)} size="lg" className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white py-4 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">Create New Project</Button>
             
             <p className="text-sm text-gray-500">
               Create beautiful wedding memories in minutes
@@ -222,19 +177,9 @@ const Index = () => {
         </div>
       </div>
 
-      <ProjectModal
-        isOpen={isProjectModalOpen}
-        onClose={() => setIsProjectModalOpen(false)}
-        onCreateProject={handleCreateProject}
-      />
+      <ProjectModal isOpen={isProjectModalOpen} onClose={() => setIsProjectModalOpen(false)} onCreateProject={handleCreateProject} />
 
-      <WeddingProjectModal
-        isOpen={isWeddingModalOpen}
-        onClose={() => setIsWeddingModalOpen(false)}
-        onCreateProject={handleCreateWeddingProject}
-      />
-    </div>
-  );
+      <WeddingProjectModal isOpen={isWeddingModalOpen} onClose={() => setIsWeddingModalOpen(false)} onCreateProject={handleCreateWeddingProject} />
+    </div>;
 };
-
 export default Index;
