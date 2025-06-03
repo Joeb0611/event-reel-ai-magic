@@ -15,6 +15,21 @@ export interface WeddingMoment {
   description: string;
 }
 
+// Type guard function to validate WeddingMoment objects
+function isWeddingMoment(obj: any): obj is WeddingMoment {
+  return (
+    obj &&
+    typeof obj === 'object' &&
+    typeof obj.type === 'string' &&
+    ['ceremony', 'reception', 'emotional', 'group'].includes(obj.type) &&
+    typeof obj.subtype === 'string' &&
+    typeof obj.timestamp === 'number' &&
+    typeof obj.duration === 'number' &&
+    typeof obj.confidence === 'number' &&
+    typeof obj.description === 'string'
+  );
+}
+
 // Convert Json type to PrivacySettings
 export function parsePrivacySettings(json: Json | null | undefined): PrivacySettings {
   const defaultSettings: PrivacySettings = { public_qr: true, guest_upload: true };
@@ -45,18 +60,17 @@ export function parseWeddingMoments(json: Json | null | undefined): WeddingMomen
   if (!json) return [];
   
   try {
+    let parsed: any;
+    
     if (typeof json === 'string') {
-      return JSON.parse(json) as WeddingMoment[];
+      parsed = JSON.parse(json);
+    } else {
+      parsed = json;
     }
     
-    if (Array.isArray(json)) {
-      // Type assertion with proper validation
-      return json.filter(item => 
-        item && 
-        typeof item === 'object' && 
-        'type' in item && 
-        'timestamp' in item
-      ) as WeddingMoment[];
+    if (Array.isArray(parsed)) {
+      // Filter and validate each item using the type guard
+      return parsed.filter(isWeddingMoment);
     }
   } catch (error) {
     console.error('Error parsing wedding moments:', error);
