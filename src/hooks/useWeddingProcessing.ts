@@ -20,6 +20,9 @@ export interface ProcessingJob {
   updated_at: string;
 }
 
+// Re-export WeddingMoment for other components
+export type { WeddingMoment };
+
 export const useWeddingProcessing = (projectId: string | null) => {
   const { user } = useAuth();
   const { toast } = useToast();

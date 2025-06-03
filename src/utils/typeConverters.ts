@@ -50,7 +50,13 @@ export function parseWeddingMoments(json: Json | null | undefined): WeddingMomen
     }
     
     if (Array.isArray(json)) {
-      return json as WeddingMoment[];
+      // Type assertion with proper validation
+      return json.filter(item => 
+        item && 
+        typeof item === 'object' && 
+        'type' in item && 
+        'timestamp' in item
+      ) as WeddingMoment[];
     }
   } catch (error) {
     console.error('Error parsing wedding moments:', error);
