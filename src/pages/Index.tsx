@@ -12,6 +12,8 @@ import { useVideos } from '@/hooks/useVideos';
 import { Heart, Menu, LogOut, Settings, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import ProjectCard from '@/components/ProjectCard';
+
 const Index = () => {
   const {
     user,
@@ -37,6 +39,15 @@ const Index = () => {
     handleVideosUploaded,
     deleteVideo
   } = useVideos(selectedProject?.id || null);
+
+  const handleDeleteProject = async (projectId: string) => {
+    await deleteProject(projectId);
+    // If we're currently viewing the deleted project, go back to project list
+    if (selectedProject && selectedProject.id === projectId) {
+      setSelectedProject(null);
+    }
+  };
+
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
@@ -155,15 +166,16 @@ const Index = () => {
 
           {/* Projects list if any exist */}
           {projects.length > 0 && <div className="space-y-4 max-h-60 overflow-y-auto">
-              {projects.map(project => <div key={project.id} className="bg-white/80 backdrop-blur-sm border-0 shadow-lg rounded-lg p-4 cursor-pointer hover:shadow-xl transition-all duration-300" onClick={() => setSelectedProject(project)}>
-                  <h3 className="font-semibold text-gray-900">{project.name}</h3>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {project.bride_name && project.groom_name ? `${project.bride_name} & ${project.groom_name}` : project.description}
-                  </p>
-                  {project.wedding_date && <p className="text-xs text-gray-500 mt-1">
-                      {new Date(project.wedding_date).toLocaleDateString()}
-                    </p>}
-                </div>)}
+              {projects.map(project => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  videoCount={0}
+                  onSelect={() => setSelectedProject(project)}
+                  onEdit={() => triggerAIEditing(project)}
+                  onDelete={() => handleDeleteProject(project.id)}
+                />
+              ))}
             </div>}
 
           {/* Create Project Button */}
@@ -182,4 +194,5 @@ const Index = () => {
       <WeddingProjectModal isOpen={isWeddingModalOpen} onClose={() => setIsWeddingModalOpen(false)} onCreateProject={handleCreateWeddingProject} />
     </div>;
 };
+
 export default Index;

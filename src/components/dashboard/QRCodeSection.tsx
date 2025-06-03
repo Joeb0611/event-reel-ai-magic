@@ -28,7 +28,9 @@ const QRCodeSection = ({ project }: QRCodeSectionProps) => {
   const { toast } = useToast();
   const { isMobile } = useIsMobile();
   const [copied, setCopied] = useState(false);
-  const [guestUploadsEnabled, setGuestUploadsEnabled] = useState(true);
+  const [guestUploadsEnabled, setGuestUploadsEnabled] = useState(
+    project.privacy_settings?.guest_upload ?? true
+  );
 
   const guestUploadUrl = `${window.location.origin}/guest/${project.qr_code || 'demo'}`;
 
@@ -59,7 +61,6 @@ const QRCodeSection = ({ project }: QRCodeSectionProps) => {
           url: guestUploadUrl,
         });
       } catch (error) {
-        // User cancelled or error occurred
         handleCopyLink();
       }
     } else {
@@ -67,45 +68,45 @@ const QRCodeSection = ({ project }: QRCodeSectionProps) => {
     }
   };
 
-  const handleDownloadQR = () => {
-    // Create a simple QR code placeholder for download
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 300;
-    canvas.height = 300;
+  const generateQRCodeDataURL = async (text: string, size: number = 300): Promise<string> => {
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(text)}&format=png&margin=10`;
     
-    if (ctx) {
-      // Simple QR-like pattern
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(0, 0, 300, 300);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(10, 10, 280, 280);
-      
-      // Add text
-      ctx.fillStyle = '#000000';
-      ctx.font = '16px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('QR Code Placeholder', 150, 150);
-      ctx.fillText(project.name, 150, 170);
+    try {
+      const response = await fetch(qrUrl);
+      const blob = await response.blob();
+      return URL.createObjectURL(blob);
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+      throw error;
     }
+  };
+
+  const handleDownloadQR = async () => {
+    if (!project.qr_code) return;
     
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${project.name}-qr-code.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        
-        toast({
-          title: "QR Code Downloaded",
-          description: "QR code has been saved to your device",
-        });
-      }
-    });
+    try {
+      const qrDataURL = await generateQRCodeDataURL(guestUploadUrl, 512);
+      
+      const link = document.createElement('a');
+      link.href = qrDataURL;
+      link.download = `${project.name}-QR-Code.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      URL.revokeObjectURL(qrDataURL);
+      
+      toast({
+        title: "QR Code Downloaded",
+        description: "QR code has been saved to your device",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to download QR code",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -131,13 +132,27 @@ const QRCodeSection = ({ project }: QRCodeSectionProps) => {
         <CardContent className="space-y-6">
           {/* QR Code */}
           <div className="flex flex-col items-center space-y-4">
-            <div className="w-48 h-48 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
-              <div className="text-center">
-                <QrCode className="w-16 h-16 text-gray-400 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">QR Code</p>
-                <p className="text-xs text-gray-400 mt-1">Scan to upload</p>
+            {project.qr_code ? (
+              <div className="w-48 h-48 bg-white border-2 border-gray-200 rounded-lg flex items-center justify-center p-2">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(guestUploadUrl)}&format=png&margin=5`}
+                  alt="QR Code for guest uploads"
+                  className="w-full h-full object-contain"
+                  onError={(e) => {
+                    console.error('QR code failed to load');
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
               </div>
-            </div>
+            ) : (
+              <div className="w-48 h-48 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                  <QrCode className="w-16 h-16 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">QR Code</p>
+                  <p className="text-xs text-gray-400 mt-1">Will be generated</p>
+                </div>
+              </div>
+            )}
             
             {/* Project Info */}
             <div className="text-center space-y-1">
@@ -166,7 +181,7 @@ const QRCodeSection = ({ project }: QRCodeSectionProps) => {
                 onClick={handleShare}
                 variant="outline"
                 className="w-full"
-                disabled={!guestUploadsEnabled}
+                disabled={!guestUploadsEnabled || !project.qr_code}
               >
                 {isMobile ? (
                   <>
@@ -194,7 +209,7 @@ const QRCodeSection = ({ project }: QRCodeSectionProps) => {
                 onClick={handleDownloadQR}
                 variant="outline"
                 className="w-full"
-                disabled={!guestUploadsEnabled}
+                disabled={!guestUploadsEnabled || !project.qr_code}
               >
                 <Download className="w-4 h-4 mr-2" />
                 Download QR
@@ -206,7 +221,7 @@ const QRCodeSection = ({ project }: QRCodeSectionProps) => {
               <Label className="text-sm font-medium">Guest Upload Link</Label>
               <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
                 <Globe className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                <code className="text-xs font-mono text-gray-700 flex-1 truncate">
+                <code className="text-xs font-mono text-gray-700 flex-1 break-all">
                   {guestUploadUrl}
                 </code>
               </div>
