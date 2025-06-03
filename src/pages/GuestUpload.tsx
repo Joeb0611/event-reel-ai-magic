@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,8 +10,8 @@ import LoadingScreen from '@/components/LoadingScreen';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { validateProjectQRCode, ProjectByQRResponse } from '@/utils/validation';
+import { parsePrivacySettings } from '@/utils/typeConverters';
 
-// Extend Project type to include qr_code
 type GuestProject = Project & { qr_code: string };
 
 const GuestUpload = () => {
@@ -29,7 +30,6 @@ const GuestUpload = () => {
 
   const fetchProjectByQRCode = async (code: string) => {
     try {
-      // Validate QR code format first
       if (!validateProjectQRCode(code)) {
         toast({
           title: "Invalid QR code",
@@ -40,7 +40,6 @@ const GuestUpload = () => {
         return;
       }
 
-      // Use the secure function to get project data with proper typing
       const result = await supabase.rpc('get_project_by_qr', { 
         qr_code_param: code 
       });
@@ -73,6 +72,7 @@ const GuestUpload = () => {
         id: projectData.id,
         name: projectData.name || '',
         created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         user_id: '',
         qr_code: code,
         description: projectData.name || '',
@@ -80,10 +80,7 @@ const GuestUpload = () => {
         groom_name: projectData.groom_name,
         wedding_date: projectData.wedding_date,
         location: projectData.location,
-        privacy_settings: {
-          public_qr: projectData.privacy_settings?.public_qr ?? true,
-          guest_upload: projectData.privacy_settings?.guest_upload ?? true,
-        },
+        privacy_settings: parsePrivacySettings(projectData.privacy_settings),
       });
     } catch (error) {
       console.error('Error:', error);
@@ -112,7 +109,6 @@ const GuestUpload = () => {
     );
   }
 
-  // Use mobile-optimized interface for mobile devices
   if (isMobile) {
     return !showUpload ? (
       <GuestWelcome 
@@ -127,7 +123,6 @@ const GuestUpload = () => {
     );
   }
 
-  // Use desktop interface for larger screens
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
       {!showUpload ? (

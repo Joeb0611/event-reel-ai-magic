@@ -1,17 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { AI_SERVICE_CONFIG, AIServiceError } from '@/config/aiService';
-
-export interface WeddingMoment {
-  type: 'ceremony' | 'reception' | 'emotional' | 'group';
-  subtype: string;
-  timestamp: number;
-  duration: number;
-  confidence: number;
-  description: string;
-}
+import { parseWeddingMoments, stringifyWeddingMoments, WeddingMoment } from '@/utils/typeConverters';
 
 export interface ProcessingJob {
   id: string;
@@ -57,7 +50,7 @@ export const useWeddingProcessing = (projectId: string | null) => {
       setServiceStatus('checking');
       const response = await fetch(`${AI_SERVICE_CONFIG.baseUrl}${AI_SERVICE_CONFIG.endpoints.health}`, {
         method: 'GET',
-        signal: AbortSignal.timeout(10000) // 10 second timeout
+        signal: AbortSignal.timeout(10000)
       });
 
       if (response.ok) {
@@ -86,11 +79,10 @@ export const useWeddingProcessing = (projectId: string | null) => {
       if (error) throw error;
       
       if (data) {
-        // Type cast the database response to match our interface
         const typedJob: ProcessingJob = {
           ...data,
           status: data.status as ProcessingJob['status'],
-          detected_moments: (data.detected_moments as unknown as WeddingMoment[]) || [],
+          detected_moments: parseWeddingMoments(data.detected_moments),
           progress: data.progress || 0
         };
         setCurrentJob(typedJob);
@@ -105,7 +97,6 @@ export const useWeddingProcessing = (projectId: string | null) => {
   const startProcessing = async () => {
     if (!projectId || !user) return;
 
-    // Check service health before starting
     if (serviceStatus === 'sleeping') {
       toast({
         title: "AI Service Unavailable",
@@ -128,7 +119,6 @@ export const useWeddingProcessing = (projectId: string | null) => {
         description: "Your wedding videos are being analyzed by our AI service.",
       });
 
-      // Start polling for updates
       setTimeout(fetchCurrentJob, 1000);
 
     } catch (error) {
@@ -140,7 +130,6 @@ export const useWeddingProcessing = (projectId: string | null) => {
       if (error.message?.includes('sleeping') || error.message?.includes('unavailable')) {
         errorMessage = "AI service is currently sleeping (free tier). Please try again in a few minutes.";
         setServiceStatus('sleeping');
-        // Retry health check in 30 seconds
         setTimeout(checkServiceHealth, 30000);
       }
       

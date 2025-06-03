@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { parsePrivacySettings, stringifyPrivacySettings, PrivacySettings } from '@/utils/typeConverters';
 
 export interface Project {
   id: string;
@@ -17,10 +18,7 @@ export interface Project {
   wedding_date?: string;
   location?: string;
   theme?: string;
-  privacy_settings?: {
-    public_qr: boolean;
-    guest_upload: boolean;
-  };
+  privacy_settings?: PrivacySettings;
   edited_video_url?: string;
   budget?: number;
   guest_count?: number;
@@ -54,7 +52,14 @@ export const useProjects = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProjects(data || []);
+      
+      // Convert database response to Project type
+      const convertedProjects: Project[] = (data || []).map(project => ({
+        ...project,
+        privacy_settings: parsePrivacySettings(project.privacy_settings),
+      }));
+      
+      setProjects(convertedProjects);
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast({
@@ -78,7 +83,7 @@ export const useProjects = () => {
         .from('projects')
         .insert([{
           name,
-          title: name, // Also set title for backward compatibility
+          title: name,
           description,
           user_id: user.data.user.id,
           qr_code: qrCode,
@@ -88,13 +93,18 @@ export const useProjects = () => {
 
       if (error) throw error;
 
-      setProjects([data, ...projects]);
+      const newProject: Project = {
+        ...data,
+        privacy_settings: parsePrivacySettings(data.privacy_settings),
+      };
+
+      setProjects([newProject, ...projects]);
       toast({
         title: "Success",
         description: "Project created successfully",
       });
 
-      return data;
+      return newProject;
     } catch (error) {
       console.error('Error creating project:', error);
       toast({
@@ -116,13 +126,13 @@ export const useProjects = () => {
         .from('projects')
         .insert([{
           name: projectData.name,
-          title: projectData.name, // Also set title for backward compatibility
+          title: projectData.name,
           description: projectData.description,
           bride_name: projectData.bride_name,
           groom_name: projectData.groom_name,
           wedding_date: projectData.wedding_date,
           location: projectData.location,
-          privacy_settings: { public_qr: true, guest_upload: true },
+          privacy_settings: stringifyPrivacySettings({ public_qr: true, guest_upload: true }),
           qr_code: qrCode,
           user_id: user.data.user.id,
         }])
@@ -131,13 +141,18 @@ export const useProjects = () => {
 
       if (error) throw error;
 
-      setProjects([data, ...projects]);
+      const newProject: Project = {
+        ...data,
+        privacy_settings: parsePrivacySettings(data.privacy_settings),
+      };
+
+      setProjects([newProject, ...projects]);
       toast({
         title: "Success",
         description: "Wedding project created successfully",
       });
 
-      return data;
+      return newProject;
     } catch (error) {
       console.error('Error creating wedding project:', error);
       toast({
@@ -150,9 +165,16 @@ export const useProjects = () => {
 
   const updateProject = async (updatedProject: Project) => {
     try {
+      const updateData = {
+        ...updatedProject,
+        privacy_settings: updatedProject.privacy_settings ? 
+          stringifyPrivacySettings(updatedProject.privacy_settings) : 
+          undefined,
+      };
+
       const { error } = await supabase
         .from('projects')
-        .update(updatedProject)
+        .update(updateData)
         .eq('id', updatedProject.id);
 
       if (error) throw error;
@@ -200,7 +222,6 @@ export const useProjects = () => {
 
   const triggerAIEditing = async (project: Project) => {
     try {
-      // This would trigger AI processing in a real implementation
       toast({
         title: "AI Processing Started",
         description: "Your highlight reel is being generated...",

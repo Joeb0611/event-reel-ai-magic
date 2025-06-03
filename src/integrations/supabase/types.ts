@@ -56,6 +56,56 @@ export type Database = {
           },
         ]
       }
+      processing_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          detected_moments: Json | null
+          error_message: string | null
+          id: string
+          progress: number
+          project_id: string
+          started_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          detected_moments?: Json | null
+          error_message?: string | null
+          id?: string
+          progress?: number
+          project_id: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          detected_moments?: Json | null
+          error_message?: string | null
+          id?: string
+          progress?: number
+          project_id?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processing_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           bride_name: string | null
@@ -198,7 +248,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_project_by_qr: {
+        Args: { qr_code_param: string }
+        Returns: {
+          id: string
+          name: string
+          bride_name: string
+          groom_name: string
+          wedding_date: string
+          location: string
+          privacy_settings: Json
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

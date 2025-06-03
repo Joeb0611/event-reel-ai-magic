@@ -1,16 +1,21 @@
 
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Checkbox } from '@/components/ui/checkbox';
-import { CalendarIcon, Heart } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { Textarea } from '@/components/ui/textarea';
+import { Heart, Calendar, MapPin, Users } from 'lucide-react';
+
+export interface WeddingProjectData {
+  name: string;
+  description: string;
+  bride_name: string;
+  groom_name: string;
+  wedding_date: string;
+  location: string;
+  theme: string;
+}
 
 interface WeddingProjectModalProps {
   isOpen: boolean;
@@ -18,193 +23,156 @@ interface WeddingProjectModalProps {
   onCreateProject: (projectData: WeddingProjectData) => void;
 }
 
-export interface WeddingProjectData {
-  name: string;
-  description: string;
-  brideName: string;
-  groomName: string;
-  weddingDate: Date | null;
-  location: string;
-  theme: string;
-  privacySettings: {
-    public_qr: boolean;
-    guest_upload: boolean;
-  };
-}
-
 const WeddingProjectModal = ({ isOpen, onClose, onCreateProject }: WeddingProjectModalProps) => {
-  const [brideName, setBrideName] = useState('');
-  const [groomName, setGroomName] = useState('');
-  const [weddingDate, setWeddingDate] = useState<Date | null>(null);
-  const [location, setLocation] = useState('');
-  const [theme, setTheme] = useState('');
-  const [description, setDescription] = useState('');
-  const [publicQR, setPublicQR] = useState(true);
-  const [guestUpload, setGuestUpload] = useState(true);
+  const [formData, setFormData] = useState<WeddingProjectData>({
+    name: '',
+    description: '',
+    bride_name: '',
+    groom_name: '',
+    wedding_date: '',
+    location: '',
+    theme: 'romantic'
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (brideName.trim() && groomName.trim()) {
-      const projectName = `${brideName} & ${groomName}'s Wedding`;
-      onCreateProject({
-        name: projectName,
-        description: description.trim(),
-        brideName: brideName.trim(),
-        groomName: groomName.trim(),
-        weddingDate,
-        location: location.trim(),
-        theme: theme.trim(),
-        privacySettings: {
-          public_qr: publicQR,
-          guest_upload: guestUpload,
-        },
-      });
-      // Reset form
-      setBrideName('');
-      setGroomName('');
-      setWeddingDate(null);
-      setLocation('');
-      setTheme('');
-      setDescription('');
-      setPublicQR(true);
-      setGuestUpload(true);
+    
+    if (!formData.name || !formData.bride_name || !formData.groom_name || !formData.wedding_date) {
+      return;
     }
+
+    onCreateProject(formData);
+    
+    // Reset form
+    setFormData({
+      name: '',
+      description: '',
+      bride_name: '',
+      groom_name: '',
+      wedding_date: '',
+      location: '',
+      theme: 'romantic'
+    });
+  };
+
+  const handleInputChange = (field: keyof WeddingProjectData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl flex items-center gap-2">
-            <Heart className="w-5 h-5 text-pink-500" />
-            Create Wedding Project
+          <DialogTitle className="text-2xl flex items-center gap-2 text-purple-600">
+            <Heart className="w-6 h-6" />
+            Create Your Wedding Project
           </DialogTitle>
           <DialogDescription>
-            Set up your wedding project to collect photos and videos from guests via QR code.
+            Set up your wedding memory collection to gather photos and videos from your special day
           </DialogDescription>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Couple Names */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="brideName">Bride's Name</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Project Name */}
+            <div className="md:col-span-2">
+              <Label htmlFor="name" className="text-sm font-medium">
+                Project Name *
+              </Label>
               <Input
-                id="brideName"
-                value={brideName}
-                onChange={(e) => setBrideName(e.target.value)}
-                placeholder="Enter bride's name"
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                placeholder="e.g., Sarah & John's Wedding"
+                className="mt-1"
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="groomName">Groom's Name</Label>
+
+            {/* Bride & Groom Names */}
+            <div>
+              <Label htmlFor="bride_name" className="text-sm font-medium">
+                Bride's Name *
+              </Label>
               <Input
-                id="groomName"
-                value={groomName}
-                onChange={(e) => setGroomName(e.target.value)}
-                placeholder="Enter groom's name"
+                id="bride_name"
+                value={formData.bride_name}
+                onChange={(e) => handleInputChange('bride_name', e.target.value)}
+                placeholder="Bride's name"
+                className="mt-1"
                 required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="groom_name" className="text-sm font-medium">
+                Groom's Name *
+              </Label>
+              <Input
+                id="groom_name"
+                value={formData.groom_name}
+                onChange={(e) => handleInputChange('groom_name', e.target.value)}
+                placeholder="Groom's name"
+                className="mt-1"
+                required
+              />
+            </div>
+
+            {/* Wedding Date */}
+            <div>
+              <Label htmlFor="wedding_date" className="text-sm font-medium flex items-center gap-1">
+                <Calendar className="w-4 h-4" />
+                Wedding Date *
+              </Label>
+              <Input
+                id="wedding_date"
+                type="date"
+                value={formData.wedding_date}
+                onChange={(e) => handleInputChange('wedding_date', e.target.value)}
+                className="mt-1"
+                required
+              />
+            </div>
+
+            {/* Location */}
+            <div>
+              <Label htmlFor="location" className="text-sm font-medium flex items-center gap-1">
+                <MapPin className="w-4 h-4" />
+                Location
+              </Label>
+              <Input
+                id="location"
+                value={formData.location}
+                onChange={(e) => handleInputChange('location', e.target.value)}
+                placeholder="Wedding venue/location"
+                className="mt-1"
+              />
+            </div>
+
+            {/* Description */}
+            <div className="md:col-span-2">
+              <Label htmlFor="description" className="text-sm font-medium">
+                Description
+              </Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                placeholder="Tell us about your special day..."
+                className="mt-1 min-h-[80px]"
               />
             </div>
           </div>
 
-          {/* Wedding Date */}
-          <div className="space-y-2">
-            <Label>Wedding Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !weddingDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {weddingDate ? format(weddingDate, "PPP") : "Select wedding date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={weddingDate || undefined}
-                  onSelect={setWeddingDate}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Location */}
-          <div className="space-y-2">
-            <Label htmlFor="location">Wedding Location</Label>
-            <Input
-              id="location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g., Central Park, New York"
-            />
-          </div>
-
-          {/* Theme */}
-          <div className="space-y-2">
-            <Label htmlFor="theme">Wedding Theme/Style</Label>
-            <Input
-              id="theme"
-              value={theme}
-              onChange={(e) => setTheme(e.target.value)}
-              placeholder="e.g., Rustic, Modern, Garden Party"
-            />
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Additional Details</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Special instructions or details for guests"
-              rows={3}
-            />
-          </div>
-
-          {/* Privacy Settings */}
-          <div className="space-y-4">
-            <Label className="text-base font-medium">Privacy Settings</Label>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="publicQR"
-                  checked={publicQR}
-                  onCheckedChange={(checked) => setPublicQR(checked === true)}
-                />
-                <Label htmlFor="publicQR" className="text-sm">
-                  Allow public access via QR code (guests don't need accounts)
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="guestUpload"
-                  checked={guestUpload}
-                  onCheckedChange={(checked) => setGuestUpload(checked === true)}
-                />
-                <Label htmlFor="guestUpload" className="text-sm">
-                  Enable guest photo/video uploads
-                </Label>
-              </div>
-            </div>
-          </div>
-
+          {/* Action Buttons */}
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               Cancel
             </Button>
             <Button 
-              type="submit" 
-              className="flex-1 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
-              disabled={!brideName.trim() || !groomName.trim()}
+              type="submit"
+              className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+              disabled={!formData.name || !formData.bride_name || !formData.groom_name || !formData.wedding_date}
             >
               Create Wedding Project
             </Button>
