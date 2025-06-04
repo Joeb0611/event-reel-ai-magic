@@ -442,7 +442,7 @@ const MediaGallery = ({
             </div>
             
             {/* Media Content */}
-            <div className="flex-1 flex items-center justify-center p-4 bg-black min-h-[60vh]">
+            <div className="flex-1 flex items-center justify-center p-4 bg-white min-h-[60vh]">
               {selectedMedia?.url && (
                 isVideo(selectedMedia.name) ? (
                   <video
