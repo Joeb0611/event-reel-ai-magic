@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -10,75 +9,69 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, User, Settings, CreditCard, LogOut, KeyRound } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-
 const AccountSettings = () => {
-  const { user, signOut } = useAuth();
+  const {
+    user,
+    signOut
+  } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
-
   const handleSignOut = async () => {
     try {
       await signOut();
       navigate('/auth');
       toast({
         title: "Signed out successfully",
-        description: "You have been logged out of your account.",
+        description: "You have been logged out of your account."
       });
     } catch (error) {
       toast({
         title: "Error signing out",
         description: "There was a problem signing you out. Please try again.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const handlePasswordReset = async () => {
     if (!user?.email) {
       toast({
         title: "Error",
         description: "No email address found for your account.",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     setResetLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/auth`,
+      const {
+        error
+      } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/auth`
       });
-
       if (error) throw error;
-
       toast({
         title: "Password reset email sent",
-        description: "Check your email for instructions to reset your password.",
+        description: "Check your email for instructions to reset your password."
       });
     } catch (error: any) {
       toast({
         title: "Error sending reset email",
         description: error.message || "There was a problem sending the reset email.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setResetLoading(false);
     }
   };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 safe-area-pb">
+  return <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 safe-area-pb">
       <div className="container mx-auto px-4 py-6 md:py-8 max-w-4xl">
         {/* Header */}
         <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-8">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => navigate('/')}
-            className="bg-white/80 backdrop-blur-sm touch-target flex-shrink-0"
-          >
+          <Button variant="outline" size="icon" onClick={() => navigate('/')} className="bg-white/80 backdrop-blur-sm touch-target flex-shrink-0">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
@@ -99,26 +92,12 @@ const AccountSettings = () => {
               <div className="grid gap-4">
                 <div>
                   <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={user?.email || ''}
-                    disabled
-                    className="bg-gray-50 mt-1"
-                  />
+                  <Input id="email" type="email" value={user?.email || ''} disabled className="bg-gray-50 mt-1" />
                   <p className="text-xs md:text-sm text-gray-500 mt-1">
                     Email cannot be changed at this time
                   </p>
                 </div>
-                <div>
-                  <Label htmlFor="user-id" className="text-sm font-medium">User ID</Label>
-                  <Input
-                    id="user-id"
-                    value={user?.id || ''}
-                    disabled
-                    className="bg-gray-50 font-mono text-xs mt-1"
-                  />
-                </div>
+                
               </div>
             </CardContent>
           </Card>
@@ -139,13 +118,7 @@ const AccountSettings = () => {
                     Send a password reset email to {user?.email}
                   </p>
                 </div>
-                <Button
-                  onClick={handlePasswordReset}
-                  disabled={resetLoading}
-                  variant="outline"
-                  className="flex items-center gap-2 touch-target w-full sm:w-auto shrink-0"
-                  size="sm"
-                >
+                <Button onClick={handlePasswordReset} disabled={resetLoading} variant="outline" className="flex items-center gap-2 touch-target w-full sm:w-auto shrink-0" size="sm">
                   <KeyRound className="w-4 h-4" />
                   <span className="text-sm">{resetLoading ? 'Sending...' : 'Reset Password'}</span>
                 </Button>
@@ -167,11 +140,7 @@ const AccountSettings = () => {
                   <h3 className="font-medium text-blue-900 text-sm md:text-base">Current Plan</h3>
                   <p className="text-xs md:text-sm text-blue-700">Memory Starter (Free)</p>
                 </div>
-                <Button
-                  onClick={() => navigate('/subscription')}
-                  className="bg-blue-600 hover:bg-blue-700 touch-target w-full sm:w-auto text-sm"
-                  size="sm"
-                >
+                <Button onClick={() => navigate('/subscription')} className="bg-blue-600 hover:bg-blue-700 touch-target w-full sm:w-auto text-sm" size="sm">
                   Manage Subscription
                 </Button>
               </div>
@@ -195,13 +164,7 @@ const AccountSettings = () => {
                     Sign out of your MemoryWeave account
                   </p>
                 </div>
-                <Button
-                  variant="destructive"
-                  onClick={handleSignOut}
-                  disabled={loading}
-                  className="flex items-center gap-2 touch-target w-full sm:w-auto"
-                  size="sm"
-                >
+                <Button variant="destructive" onClick={handleSignOut} disabled={loading} className="flex items-center gap-2 touch-target w-full sm:w-auto" size="sm">
                   <LogOut className="w-4 h-4" />
                   <span className="text-sm">Sign Out</span>
                 </Button>
@@ -210,8 +173,6 @@ const AccountSettings = () => {
           </Card>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default AccountSettings;
