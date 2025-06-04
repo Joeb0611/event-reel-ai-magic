@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Check, Crown, Star, Zap } from 'lucide-react';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 
 interface PricingTier {
   id: string;
@@ -89,6 +90,7 @@ const pricingTiers: PricingTier[] = [
 
 const Subscription = () => {
   const navigate = useNavigate();
+  const { subscription, loading: subscriptionLoading, refreshSubscription } = useSubscription();
   const [loading, setLoading] = useState<string | null>(null);
 
   const handleUpgrade = async (tierId: string) => {
@@ -103,6 +105,30 @@ const Subscription = () => {
       setLoading(null);
     }, 2000);
   };
+
+  const getCurrentPlanId = () => {
+    return subscription?.tier || 'free';
+  };
+
+  const updatePricingTiers = () => {
+    const currentPlan = getCurrentPlanId();
+    return pricingTiers.map(tier => ({
+      ...tier,
+      buttonText: tier.id === currentPlan ? 'Current Plan' : tier.buttonText,
+      buttonVariant: tier.id === currentPlan ? 'outline' as const : tier.buttonVariant
+    }));
+  };
+
+  if (subscriptionLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading subscription details...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
@@ -123,20 +149,29 @@ const Subscription = () => {
             </h1>
             <p className="text-gray-600 mt-2">
               Select the perfect plan for your wedding memories
+              {subscription && (
+                <span className="ml-2 text-sm text-purple-600 font-medium">
+                  (Current: {subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1)})
+                </span>
+              )}
             </p>
           </div>
         </div>
 
         {/* Pricing Cards */}
         <div className="grid md:grid-cols-3 gap-6 max-w-7xl mx-auto">
-          {pricingTiers.map((tier) => {
+          {updatePricingTiers().map((tier) => {
             const Icon = tier.icon;
+            const isCurrentPlan = tier.id === getCurrentPlanId();
+            
             return (
               <Card
                 key={tier.id}
                 className={`relative ${
                   tier.popular
                     ? 'border-2 border-purple-500 shadow-xl scale-105'
+                    : isCurrentPlan
+                    ? 'border-2 border-green-500 shadow-lg'
                     : 'border border-gray-200'
                 } bg-white`}
               >
@@ -148,13 +183,21 @@ const Subscription = () => {
                   </div>
                 )}
                 
+                {isCurrentPlan && (
+                  <div className="absolute -top-3 right-4">
+                    <Badge className="bg-green-500 text-white px-3 py-1 text-xs font-medium">
+                      Active
+                    </Badge>
+                  </div>
+                )}
+                
                 <CardHeader className="text-center pb-4">
                   <div className="flex justify-center mb-4">
                     <div className={`p-3 rounded-full ${
-                      tier.popular ? 'bg-purple-100' : 'bg-gray-100'
+                      tier.popular ? 'bg-purple-100' : isCurrentPlan ? 'bg-green-100' : 'bg-gray-100'
                     }`}>
                       <Icon className={`w-6 h-6 ${
-                        tier.popular ? 'text-purple-600' : 'text-gray-600'
+                        tier.popular ? 'text-purple-600' : isCurrentPlan ? 'text-green-600' : 'text-gray-600'
                       }`} />
                     </div>
                   </div>
@@ -195,11 +238,13 @@ const Subscription = () => {
 
                   <Button
                     onClick={() => handleUpgrade(tier.id)}
-                    disabled={loading === tier.id || tier.id === 'free'}
+                    disabled={loading === tier.id || isCurrentPlan}
                     variant={tier.buttonVariant}
                     className={`w-full mt-6 ${
                       tier.popular
                         ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                        : isCurrentPlan
+                        ? 'bg-green-600 text-white cursor-default'
                         : ''
                     }`}
                   >

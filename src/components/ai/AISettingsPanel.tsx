@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Star } from 'lucide-react';
 import VideoStyleSelector from './VideoStyleSelector';
@@ -7,6 +6,9 @@ import ContentFocusSelector from './ContentFocusSelector';
 import MusicStyleSelector from './MusicStyleSelector';
 import MustIncludeToggle from './MustIncludeToggle';
 import CustomMusicUpload from './CustomMusicUpload';
+import FeatureGate from '@/components/FeatureGate';
+import SubscriptionGuard from '@/components/SubscriptionGuard';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 
 export interface WeddingAISettings {
   videoStyle: 'romantic' | 'cinematic' | 'documentary' | 'energetic';
@@ -21,10 +23,12 @@ interface AISettingsPanelProps {
   settings: WeddingAISettings;
   onSettingsChange: (settings: WeddingAISettings) => void;
   mustIncludeCount?: number;
-  isPremium?: boolean;
+  projectId?: string;
 }
 
-const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0, isPremium = false }: AISettingsPanelProps) => {
+const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0, projectId }: AISettingsPanelProps & { projectId?: string }) => {
+  const { getProjectTier } = useSubscription();
+  
   const updateSetting = <K extends keyof WeddingAISettings>(
     key: K,
     value: WeddingAISettings[K]
@@ -34,6 +38,10 @@ const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0, isP
       [key]: value
     });
   };
+
+  const currentTier = projectId ? getProjectTier(projectId) : 'free';
+  const isPremium = currentTier === 'premium' || currentTier === 'professional';
+  const isProfessional = currentTier === 'professional';
 
   return (
     <div className="space-y-8">
@@ -51,17 +59,21 @@ const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0, isP
       </Card>
 
       {/* Video Style */}
-      <VideoStyleSelector
-        value={settings.videoStyle}
-        onChange={(value) => updateSetting('videoStyle', value)}
-      />
+      <FeatureGate feature="all_styles" projectId={projectId}>
+        <VideoStyleSelector
+          value={settings.videoStyle}
+          onChange={(value) => updateSetting('videoStyle', value)}
+        />
+      </FeatureGate>
 
       {/* Duration */}
-      <DurationSelector
-        value={settings.duration}
-        onChange={(value) => updateSetting('duration', value)}
-        isPremium={isPremium}
-      />
+      <SubscriptionGuard feature="duration_1min" projectId={projectId}>
+        <DurationSelector
+          value={settings.duration}
+          onChange={(value) => updateSetting('duration', value)}
+          isPremium={isPremium}
+        />
+      </SubscriptionGuard>
 
       {/* Content Focus */}
       <ContentFocusSelector
@@ -84,11 +96,13 @@ const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0, isP
       />
 
       {/* Custom Music Upload */}
-      <CustomMusicUpload
-        checked={settings.useCustomMusic}
-        onChange={(checked) => updateSetting('useCustomMusic', checked)}
-        isPremium={isPremium}
-      />
+      <FeatureGate feature="custom_music" projectId={projectId}>
+        <CustomMusicUpload
+          checked={settings.useCustomMusic}
+          onChange={(checked) => updateSetting('useCustomMusic', checked)}
+          isPremium={isPremium}
+        />
+      </FeatureGate>
     </div>
   );
 };

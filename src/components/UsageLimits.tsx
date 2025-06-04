@@ -1,37 +1,22 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Crown, AlertTriangle, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 
-interface UsageLimitsProps {
-  currentProjects: number;
-  maxProjects: number;
-  currentUploads: number;
-  maxUploads: number;
-  plan: 'free' | 'premium' | 'professional';
-}
-
-const UsageLimits = ({ 
-  currentProjects, 
-  maxProjects, 
-  currentUploads, 
-  maxUploads, 
-  plan 
-}: UsageLimitsProps) => {
+const UsageLimits = () => {
+  const { subscription, loading } = useSubscription();
   const navigate = useNavigate();
   
-  const projectsPercentage = (currentProjects / maxProjects) * 100;
-  const uploadsPercentage = (currentUploads / maxUploads) * 100;
-  
-  const isNearLimit = projectsPercentage >= 80 || uploadsPercentage >= 80;
-  const isAtLimit = projectsPercentage >= 100 || uploadsPercentage >= 100;
-
-  if (plan !== 'free') {
-    return null; // Don't show usage limits for paid plans
+  if (loading || !subscription || subscription.tier !== 'free') {
+    return null; // Don't show usage limits for paid plans or while loading
   }
+
+  const projectsPercentage = (subscription.projects_used / subscription.projects_limit) * 100;
+  const isNearLimit = projectsPercentage >= 80;
+  const isAtLimit = projectsPercentage >= 100;
 
   return (
     <Card className={`border-l-4 ${
@@ -63,7 +48,7 @@ const UsageLimits = ({
             <span className={`font-medium ${
               projectsPercentage >= 100 ? 'text-red-600' : 'text-gray-600'
             }`}>
-              {currentProjects} / {maxProjects}
+              {subscription.projects_used} / {subscription.projects_limit}
             </span>
           </div>
           <Progress 
@@ -71,26 +56,6 @@ const UsageLimits = ({
             className={`h-2 ${
               projectsPercentage >= 100 ? '[&>div]:bg-red-500' : 
               projectsPercentage >= 80 ? '[&>div]:bg-yellow-500' : 
-              '[&>div]:bg-blue-500'
-            }`}
-          />
-        </div>
-
-        {/* Uploads Usage */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span>Guest Uploads</span>
-            <span className={`font-medium ${
-              uploadsPercentage >= 100 ? 'text-red-600' : 'text-gray-600'
-            }`}>
-              {currentUploads} / {maxUploads}
-            </span>
-          </div>
-          <Progress 
-            value={uploadsPercentage} 
-            className={`h-2 ${
-              uploadsPercentage >= 100 ? '[&>div]:bg-red-500' : 
-              uploadsPercentage >= 80 ? '[&>div]:bg-yellow-500' : 
               '[&>div]:bg-blue-500'
             }`}
           />

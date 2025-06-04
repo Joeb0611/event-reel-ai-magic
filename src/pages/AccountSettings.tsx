@@ -9,17 +9,21 @@ import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, User, Settings, CreditCard, LogOut, KeyRound } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useSubscription } from '@/contexts/SubscriptionContext';
+
 const AccountSettings = () => {
   const {
     user,
     signOut
   } = useAuth();
+  const { subscription, loading: subscriptionLoading } = useSubscription();
   const navigate = useNavigate();
   const {
     toast
   } = useToast();
   const [loading, setLoading] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+
   const handleSignOut = async () => {
     try {
       await signOut();
@@ -36,6 +40,7 @@ const AccountSettings = () => {
       });
     }
   };
+
   const handlePasswordReset = async () => {
     if (!user?.email) {
       toast({
@@ -67,6 +72,25 @@ const AccountSettings = () => {
       setResetLoading(false);
     }
   };
+
+  const getSubscriptionDisplayName = () => {
+    if (!subscription) return 'Memory Starter (Free)';
+    
+    const tierNames = {
+      free: 'Memory Starter (Free)',
+      premium: 'Memory Maker (Premium)',
+      professional: 'Memory Master (Professional)'
+    };
+    
+    return tierNames[subscription.tier] || 'Memory Starter (Free)';
+  };
+
+  const getSubscriptionColor = () => {
+    if (!subscription || subscription.tier === 'free') return 'blue';
+    if (subscription.tier === 'premium') return 'purple';
+    return 'indigo';
+  };
+
   return <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 safe-area-pb">
       <div className="container mx-auto px-4 py-6 md:py-8 max-w-4xl">
         {/* Header */}
@@ -135,15 +159,32 @@ const AccountSettings = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex-1">
-                  <h3 className="font-medium text-blue-900 text-sm md:text-base">Current Plan</h3>
-                  <p className="text-xs md:text-sm text-blue-700">Memory Starter (Free)</p>
+              {subscriptionLoading ? (
+                <div className="flex items-center justify-center p-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
                 </div>
-                <Button onClick={() => navigate('/subscription')} className="bg-blue-600 hover:bg-blue-700 touch-target w-full sm:w-auto text-sm" size="sm">
-                  Manage Subscription
-                </Button>
-              </div>
+              ) : (
+                <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-${getSubscriptionColor()}-50 rounded-lg border border-${getSubscriptionColor()}-200`}>
+                  <div className="flex-1">
+                    <h3 className={`font-medium text-${getSubscriptionColor()}-900 text-sm md:text-base`}>Current Plan</h3>
+                    <p className={`text-xs md:text-sm text-${getSubscriptionColor()}-700`}>
+                      {getSubscriptionDisplayName()}
+                    </p>
+                    {subscription && subscription.tier !== 'free' && (
+                      <p className={`text-xs text-${getSubscriptionColor()}-600 mt-1`}>
+                        Projects used: {subscription.projects_used} / {subscription.projects_limit === -1 ? '∞' : subscription.projects_limit}
+                      </p>
+                    )}
+                  </div>
+                  <Button 
+                    onClick={() => navigate('/subscription')} 
+                    className={`bg-${getSubscriptionColor()}-600 hover:bg-${getSubscriptionColor()}-700 touch-target w-full sm:w-auto text-sm`} 
+                    size="sm"
+                  >
+                    Manage Subscription
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -175,4 +216,5 @@ const AccountSettings = () => {
       </div>
     </div>;
 };
+
 export default AccountSettings;
