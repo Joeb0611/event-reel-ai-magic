@@ -69,54 +69,54 @@ const AccountSettings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 safe-area-pb">
+      <div className="container mx-auto px-4 py-6 md:py-8 max-w-4xl">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-8">
           <Button
             variant="outline"
             size="icon"
             onClick={() => navigate('/')}
-            className="bg-white/80 backdrop-blur-sm"
+            className="bg-white/80 backdrop-blur-sm touch-target flex-shrink-0"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
             Account Settings
           </h1>
         </div>
 
-        <div className="grid gap-6">
+        <div className="grid gap-4 md:gap-6">
           {/* Profile Information */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5" />
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                <User className="w-4 h-4 md:w-5 md:h-5" />
                 Profile Information
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4">
                 <div>
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
                   <Input
                     id="email"
                     type="email"
                     value={user?.email || ''}
                     disabled
-                    className="bg-gray-50"
+                    className="bg-gray-50 mt-1"
                   />
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-xs md:text-sm text-gray-500 mt-1">
                     Email cannot be changed at this time
                   </p>
                 </div>
                 <div>
-                  <Label htmlFor="user-id">User ID</Label>
+                  <Label htmlFor="user-id" className="text-sm font-medium">User ID</Label>
                   <Input
                     id="user-id"
                     value={user?.id || ''}
                     disabled
-                    className="bg-gray-50 font-mono text-xs"
+                    className="bg-gray-50 font-mono text-xs mt-1"
                   />
                 </div>
               </div>
@@ -125,17 +125,17 @@ const AccountSettings = () => {
 
           {/* Password Reset */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <KeyRound className="w-5 h-5" />
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                <KeyRound className="w-4 h-4 md:w-5 md:h-5" />
                 Security
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
-                <div>
-                  <h3 className="font-medium text-gray-900">Reset Password</h3>
-                  <p className="text-sm text-gray-600">
+            <CardContent>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-gray-50 rounded-lg border">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium text-gray-900 text-sm md:text-base">Reset Password</h3>
+                  <p className="text-xs md:text-sm text-gray-600 break-words">
                     Send a password reset email to {user?.email}
                   </p>
                 </div>
@@ -143,10 +143,11 @@ const AccountSettings = () => {
                   onClick={handlePasswordReset}
                   disabled={resetLoading}
                   variant="outline"
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 touch-target w-full sm:w-auto shrink-0"
+                  size="sm"
                 >
                   <KeyRound className="w-4 h-4" />
-                  {resetLoading ? 'Sending...' : 'Reset Password'}
+                  <span className="text-sm">{resetLoading ? 'Sending...' : 'Reset Password'}</span>
                 </Button>
               </div>
             </CardContent>
@@ -154,21 +155,22 @@ const AccountSettings = () => {
 
           {/* Subscription Management */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5" />
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                <CreditCard className="w-4 h-4 md:w-5 md:h-5" />
                 Subscription & Billing
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div>
-                  <h3 className="font-medium text-blue-900">Current Plan</h3>
-                  <p className="text-sm text-blue-700">Memory Starter (Free)</p>
+            <CardContent>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex-1">
+                  <h3 className="font-medium text-blue-900 text-sm md:text-base">Current Plan</h3>
+                  <p className="text-xs md:text-sm text-blue-700">Memory Starter (Free)</p>
                 </div>
                 <Button
                   onClick={() => navigate('/subscription')}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  className="bg-blue-600 hover:bg-blue-700 touch-target w-full sm:w-auto text-sm"
+                  size="sm"
                 >
                   Manage Subscription
                 </Button>
@@ -178,18 +180,18 @@ const AccountSettings = () => {
 
           {/* Account Actions */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+                <Settings className="w-4 h-4 md:w-5 md:h-5" />
                 Account Actions
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <Separator />
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium text-red-900">Sign Out</h3>
-                  <p className="text-sm text-red-700">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex-1">
+                  <h3 className="font-medium text-red-900 text-sm md:text-base">Sign Out</h3>
+                  <p className="text-xs md:text-sm text-red-700">
                     Sign out of your MemoryWeave account
                   </p>
                 </div>
@@ -197,10 +199,11 @@ const AccountSettings = () => {
                   variant="destructive"
                   onClick={handleSignOut}
                   disabled={loading}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 touch-target w-full sm:w-auto"
+                  size="sm"
                 >
                   <LogOut className="w-4 h-4" />
-                  Sign Out
+                  <span className="text-sm">Sign Out</span>
                 </Button>
               </div>
             </CardContent>
