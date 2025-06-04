@@ -115,6 +115,8 @@ const Subscription = () => {
     setLoading(tierId);
     
     try {
+      console.log('Starting upgrade process for tier:', tierId);
+      
       // Create a Stripe checkout session for per-wedding purchase
       const { data, error } = await supabase.functions.invoke('create-payment', {
         body: {
@@ -136,11 +138,13 @@ const Subscription = () => {
         return;
       }
 
+      console.log('Payment session created:', data);
+
       if (data?.url) {
-        // Redirect to Stripe checkout
+        // Redirect to Stripe checkout in the same window
         window.location.href = data.url;
       } else {
-        throw new Error('No checkout URL received');
+        throw new Error('No checkout URL received from payment service');
       }
     } catch (error) {
       console.error('Error in handleUpgrade:', error);
