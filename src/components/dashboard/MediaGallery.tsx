@@ -23,8 +23,9 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
+  DialogOverlay,
+  DialogPortal,
+  DialogClose,
 } from '@/components/ui/dialog';
 import VideoUpload from '@/components/VideoUpload';
 import { VideoFile } from '@/hooks/useVideos';
@@ -418,69 +419,74 @@ const MediaGallery = ({
         </Card>
       )}
 
-      {/* Media Modal - Custom implementation to prevent navigation issues */}
+      {/* Custom Media Modal - No default close button */}
       <Dialog open={!!selectedMedia} onOpenChange={handleCloseModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
-          {/* Custom Header with Close Button */}
-          <div className="flex items-center justify-between p-4 border-b bg-white">
-            <DialogTitle className="text-lg truncate pr-4">
-              {selectedMedia?.name}
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCloseModal}
-              className="h-8 w-8 p-0 hover:bg-gray-100"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-          
-          {/* Media Content */}
-          <div className="flex-1 flex items-center justify-center p-4 bg-black">
-            {selectedMedia?.url && (
-              isVideo(selectedMedia.name) ? (
-                <video
-                  src={selectedMedia.url}
-                  controls
-                  autoPlay
-                  className="max-w-full max-h-full"
-                  style={{ aspectRatio: 'auto' }}
-                  onError={(e) => console.error('Video error:', e)}
-                >
-                  Your browser does not support the video tag.
-                </video>
-              ) : (
-                <img
-                  src={selectedMedia.url}
-                  alt={selectedMedia.name}
-                  className="max-w-full max-h-full object-contain"
-                  onError={(e) => console.error('Image error:', e)}
-                />
-              )
-            )}
-          </div>
-          
-          {/* Media Info */}
-          {selectedMedia && (
-            <div className="px-4 py-3 border-t bg-white">
-              <div className="flex items-center justify-between text-sm text-gray-600">
-                <span>{(selectedMedia.size / (1024 * 1024)).toFixed(1)} MB</span>
-                <span>{new Date(selectedMedia.uploaded_at).toLocaleString()}</span>
-              </div>
-              {selectedMedia.guest_name && (
-                <p className="text-sm text-purple-600 mt-1">
-                  From: {selectedMedia.guest_name}
-                </p>
-              )}
-              {selectedMedia.guest_message && (
-                <p className="text-sm text-gray-600 italic mt-1">
-                  "{selectedMedia.guest_message}"
-                </p>
+        <DialogPortal>
+          <DialogOverlay className="fixed inset-0 z-50 bg-black/80" />
+          <DialogContent className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-4xl translate-x-[-50%] translate-y-[-50%] gap-0 border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg max-h-[90vh] overflow-hidden p-0">
+            {/* Custom Header */}
+            <div className="flex items-center justify-between p-4 border-b bg-white">
+              <h2 className="text-lg font-semibold truncate pr-4">
+                {selectedMedia?.name}
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCloseModal}
+                className="h-8 w-8 p-0 hover:bg-gray-100"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {/* Media Content */}
+            <div className="flex-1 flex items-center justify-center p-4 bg-black min-h-[60vh]">
+              {selectedMedia?.url && (
+                isVideo(selectedMedia.name) ? (
+                  <video
+                    src={selectedMedia.url}
+                    controls
+                    autoPlay
+                    controlsList="nodownload"
+                    className="max-w-full max-h-full"
+                    style={{ aspectRatio: 'auto' }}
+                    onError={(e) => console.error('Video error:', e)}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                ) : (
+                  <img
+                    src={selectedMedia.url}
+                    alt={selectedMedia.name}
+                    className="max-w-full max-h-full object-contain"
+                    onError={(e) => console.error('Image error:', e)}
+                  />
+                )
               )}
             </div>
-          )}
-        </DialogContent>
+            
+            {/* Media Info */}
+            {selectedMedia && (
+              <div className="px-4 py-3 border-t bg-white">
+                <div className="flex items-center justify-between text-sm text-gray-600">
+                  <span>{(selectedMedia.size / (1024 * 1024)).toFixed(1)} MB</span>
+                  <span>{new Date(selectedMedia.uploaded_at).toLocaleString()}</span>
+                </div>
+                {selectedMedia.guest_name && (
+                  <p className="text-sm text-purple-600 mt-1">
+                    From: {selectedMedia.guest_name}
+                  </p>
+                )}
+                {selectedMedia.guest_message && (
+                  <p className="text-sm text-gray-600 italic mt-1">
+                    "{selectedMedia.guest_message}"
+                  </p>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </DialogPortal>
       </Dialog>
 
       {showVideoUpload && (
