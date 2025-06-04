@@ -10,6 +10,8 @@ import Auth from "./pages/Auth";
 import GuestUpload from "./pages/GuestUpload";
 import AccountSettings from "./pages/AccountSettings";
 import Subscription from "./pages/Subscription";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCanceled from "./pages/PaymentCanceled";
 import NotFound from "./pages/NotFound";
 import { SubscriptionProvider } from '@/contexts/SubscriptionContext';
 
@@ -31,6 +33,8 @@ function App() {
                   <Route path="/guest/:qrCode" element={<GuestUpload />} />
                   <Route path="/account-settings" element={<AccountSettings />} />
                   <Route path="/subscription" element={<Subscription />} />
+                  <Route path="/payment-success" element={<PaymentSuccess />} />
+                  <Route path="/payment-canceled" element={<PaymentCanceled />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

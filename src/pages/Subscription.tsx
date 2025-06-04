@@ -1,6 +1,6 @@
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -97,9 +97,16 @@ const pricingTiers: PricingTier[] = [
 
 const Subscription = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const projectId = searchParams.get('projectId');
   const { subscription, loading: subscriptionLoading, refreshSubscription } = useSubscription();
   const [loading, setLoading] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Refresh subscription data when component mounts
+  useEffect(() => {
+    refreshSubscription();
+  }, [refreshSubscription]);
 
   const handleUpgrade = async (tierId: string) => {
     if (tierId === 'free') return;
@@ -116,7 +123,8 @@ const Subscription = () => {
           tier: tierId,
           amount: tier.priceAmount,
           product_name: tier.name,
-          mode: 'payment' // One-time payment for per-wedding pricing
+          mode: 'payment', // One-time payment for per-wedding pricing
+          project_id: projectId // Pass the project ID if available
         }
       });
 
@@ -191,6 +199,7 @@ const Subscription = () => {
             </h1>
             <p className="text-gray-600 mt-2">
               Select the perfect plan for your wedding memories
+              {projectId && <span className="ml-2 text-sm text-purple-600">(Project upgrade)</span>}
               {subscription && (
                 <span className="ml-2 text-sm text-purple-600 font-medium">
                   (Current: {subscription.tier.charAt(0).toUpperCase() + subscription.tier.slice(1)})
