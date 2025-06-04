@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -9,10 +10,11 @@ import ProjectDashboard from '@/components/ProjectDashboard';
 import WelcomeScreen from '@/components/WelcomeScreen';
 import { useProjects, Project } from '@/hooks/useProjects';
 import { useVideos } from '@/hooks/useVideos';
-import { Heart, Menu, LogOut, Settings, User } from 'lucide-react';
+import { Heart, Menu, LogOut, Settings, User, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import ProjectCard from '@/components/ProjectCard';
+
 const Index = () => {
   const {
     user,
@@ -119,17 +121,12 @@ const Index = () => {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate('/account-settings')}>
               <User className="mr-2 h-4 w-4" />
-              <span>Profile</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
               <span>Account Settings</span>
             </DropdownMenuItem>
-            
-            <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
+            <DropdownMenuItem onClick={() => navigate('/subscription')}>
+              <CreditCard className="mr-2 h-4 w-4" />
               <span>Subscription</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
