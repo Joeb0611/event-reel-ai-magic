@@ -51,7 +51,7 @@ const ContentFocusSelector = ({ value, onChange }: ContentFocusSelectorProps) =>
                 </div>
                 <div className="flex-1">
                   <div className="font-medium mb-1">{option.label}</div>
-                  <div className="text-sm text-gray-600">{option.description}</div>
+                  <div className="text-sm text-gray-500">{option.description}</div>
                 </div>
               </Label>
             </div>
