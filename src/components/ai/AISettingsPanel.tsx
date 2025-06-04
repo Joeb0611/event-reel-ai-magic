@@ -59,6 +59,7 @@ const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0, isP
       <DurationSelector
         value={settings.duration}
         onChange={(value) => updateSetting('duration', value)}
+        isPremium={isPremium}
       />
 
       {/* Content Focus */}
