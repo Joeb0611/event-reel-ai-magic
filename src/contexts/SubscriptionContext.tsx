@@ -72,20 +72,35 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     try {
       setLoading(true);
 
-      // Fetch user subscription
+      // Fetch user subscription - handle case where user doesn't have a subscription yet
       const { data: subData, error: subError } = await supabase
         .from('user_subscriptions')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (subError && subError.code !== 'PGRST116') {
+      if (subError) {
         console.error('Error fetching subscription:', subError);
-        toast({
-          title: "Error loading subscription",
-          description: "Please try refreshing the page.",
-          variant: "destructive"
-        });
+        // Create a default free subscription if none exists
+        if (subError.code === 'PGRST116') {
+          // No subscription found, create default free subscription
+          setSubscription({
+            id: 'default',
+            user_id: user.id,
+            tier: 'free',
+            status: 'active',
+            projects_used: 0,
+            projects_limit: 1,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        } else {
+          toast({
+            title: "Error loading subscription",
+            description: "Please try refreshing the page.",
+            variant: "destructive"
+          });
+        }
       } else if (subData) {
         // Type cast with validation
         const validatedSubscription: UserSubscription = {
@@ -94,9 +109,21 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
           status: (subData.status as SubscriptionStatus) || 'active'
         };
         setSubscription(validatedSubscription);
+      } else {
+        // No subscription found, set default free subscription
+        setSubscription({
+          id: 'default',
+          user_id: user.id,
+          tier: 'free',
+          status: 'active',
+          projects_used: 0,
+          projects_limit: 1,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
       }
 
-      // Fetch wedding purchases
+      // Fetch wedding purchases - handle gracefully if table doesn't exist or no access
       const { data: purchaseData, error: purchaseError } = await supabase
         .from('per_wedding_purchases')
         .select('*')
@@ -104,6 +131,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (purchaseError) {
         console.error('Error fetching purchases:', purchaseError);
+        // Don't show error for purchases, just set empty array
+        setPurchases([]);
       } else if (purchaseData) {
         // Type cast with validation
         const validatedPurchases: WeddingPurchase[] = purchaseData.map(purchase => ({
@@ -112,9 +141,25 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
           status: (['pending', 'paid', 'failed', 'refunded'].includes(purchase.status)) ? purchase.status as 'pending' | 'paid' | 'failed' | 'refunded' : 'pending'
         }));
         setPurchases(validatedPurchases);
+      } else {
+        setPurchases([]);
       }
     } catch (error) {
       console.error('Error in refreshSubscription:', error);
+      // Set default values on error
+      if (user) {
+        setSubscription({
+          id: 'default',
+          user_id: user.id,
+          tier: 'free',
+          status: 'active',
+          projects_used: 0,
+          projects_limit: 1,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+      setPurchases([]);
     } finally {
       setLoading(false);
     }
@@ -158,7 +203,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const canCreateProject = (): boolean => {
-    if (!subscription) return false;
+    if (!subscription) return true; // Allow creation if no subscription data
     if (subscription.tier !== 'free') return true;
     return subscription.projects_used < subscription.projects_limit;
   };
