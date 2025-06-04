@@ -119,18 +119,12 @@ const Index = () => {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <User className="mr-2 h-4 w-4" />
-              <span>Profile</span>
-            </DropdownMenuItem>
+            
             <DropdownMenuItem>
               <Settings className="mr-2 h-4 w-4" />
               <span>Account Settings</span>
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Password Reset</span>
-            </DropdownMenuItem>
+            
             <DropdownMenuItem>
               <Settings className="mr-2 h-4 w-4" />
               <span>Subscription</span>
