@@ -115,8 +115,10 @@ const Subscription = () => {
     setLoading(tierId);
     
     try {
-      console.log('Starting upgrade process for tier:', tierId);
+      console.log('=== STARTING UPGRADE PROCESS ===');
+      console.log('Tier:', tierId);
       console.log('Project ID:', projectId);
+      console.log('Amount:', tier.priceAmount);
       
       // Create a Stripe checkout session for per-wedding purchase
       const { data, error } = await supabase.functions.invoke('create-payment', {
@@ -130,7 +132,8 @@ const Subscription = () => {
       });
 
       if (error) {
-        console.error('Error creating payment session:', error);
+        console.error('=== PAYMENT SESSION ERROR ===');
+        console.error('Error details:', error);
         toast({
           title: "Payment Error",
           description: error.message || "Unable to start payment process. Please try again.",
@@ -139,20 +142,30 @@ const Subscription = () => {
         return;
       }
 
-      console.log('Payment session created successfully:', data);
+      console.log('=== PAYMENT SESSION SUCCESS ===');
+      console.log('Response data:', data);
 
       if (data?.url) {
-        console.log('Redirecting to Stripe checkout URL:', data.url);
-        // Add a small delay to ensure the URL is valid
-        setTimeout(() => {
+        console.log('Redirecting to checkout URL:', data.url);
+        
+        // Validate the URL before redirecting
+        try {
+          new URL(data.url); // This will throw if URL is invalid
+          console.log('URL validation passed, redirecting...');
+          
+          // Redirect to Stripe checkout
           window.location.href = data.url;
-        }, 100);
+        } catch (urlError) {
+          console.error('Invalid checkout URL:', data.url);
+          throw new Error('Invalid checkout URL received');
+        }
       } else {
         console.error('No checkout URL in response:', data);
         throw new Error('No checkout URL received from payment service');
       }
     } catch (error) {
-      console.error('Error in handleUpgrade:', error);
+      console.error('=== UPGRADE ERROR ===');
+      console.error('Error details:', error);
       toast({
         title: "Upgrade Failed",
         description: error instanceof Error ? error.message : "Something went wrong. Please try again or contact support.",
