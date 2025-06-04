@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Filter, Grid, List, Star, Video, Image, Clock, User, Trash2, MoreVertical } from 'lucide-react';
+import { Plus, Filter, Grid, List, Star, Video, Image, Clock, User, Trash2, MoreVertical, Play } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +20,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import VideoUpload from '@/components/VideoUpload';
 import { VideoFile } from '@/hooks/useVideos';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -49,6 +55,7 @@ const MediaGallery = ({
   const [sortBy, setSortBy] = useState('date');
   const [viewMode, setViewMode] = useState(isMobile ? 'list' : 'grid');
   const [deleteVideoId, setDeleteVideoId] = useState<string | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<VideoFile | null>(null);
 
   const filteredVideos = projectVideos.filter(video => {
     switch (filter) {
@@ -87,6 +94,49 @@ const MediaGallery = ({
   const handleAddMediaClick = () => {
     console.log('Add Media button clicked');
     setShowVideoUpload(true);
+  };
+
+  const handleMediaClick = (media: VideoFile) => {
+    setSelectedMedia(media);
+  };
+
+  const MediaPreview = ({ video, onClick }: { video: VideoFile; onClick?: () => void }) => {
+    if (!video.url) {
+      return (
+        <div className="text-center">
+          {isVideo(video.name) ? (
+            <Video className="w-6 h-6 text-gray-400 mx-auto mb-1" />
+          ) : (
+            <Image className="w-6 h-6 text-gray-400 mx-auto mb-1" />
+          )}
+        </div>
+      );
+    }
+
+    if (isVideo(video.name)) {
+      return (
+        <div className="relative group cursor-pointer" onClick={onClick}>
+          <video
+            src={video.url}
+            className="w-full h-full object-cover rounded-lg"
+            muted
+            preload="metadata"
+          />
+          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+            <Play className="w-8 h-8 text-white" />
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <img
+          src={video.url}
+          alt={video.name}
+          className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+          onClick={onClick}
+        />
+      );
+    }
   };
 
   return (
@@ -196,29 +246,10 @@ const MediaGallery = ({
                   // Grid View
                   <>
                     <div className="aspect-video bg-gray-100 rounded-lg mb-2 flex items-center justify-center relative overflow-hidden">
-                      {video.url ? (
-                        isVideo(video.name) ? (
-                          <video
-                            src={video.url}
-                            className="w-full h-full object-cover rounded-lg"
-                            muted
-                          />
-                        ) : (
-                          <img
-                            src={video.url}
-                            alt={video.name}
-                            className="w-full h-full object-cover rounded-lg"
-                          />
-                        )
-                      ) : (
-                        <div className="text-center">
-                          {isVideo(video.name) ? (
-                            <Video className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                          ) : (
-                            <Image className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                          )}
-                        </div>
-                      )}
+                      <MediaPreview 
+                        video={video} 
+                        onClick={() => handleMediaClick(video)}
+                      />
                       
                       {/* Action buttons */}
                       <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -281,28 +312,11 @@ const MediaGallery = ({
                 ) : (
                   // List View
                   <div className="flex items-start gap-3">
-                    <div className={`${isMobile ? 'w-14 h-11' : 'w-12 h-9 sm:w-14 sm:h-10'} bg-gray-100 rounded flex items-center justify-center flex-shrink-0`}>
-                      {video.url ? (
-                        isVideo(video.name) ? (
-                          <video
-                            src={video.url}
-                            className="w-full h-full object-cover rounded"
-                            muted
-                          />
-                        ) : (
-                          <img
-                            src={video.url}
-                            alt={video.name}
-                            className="w-full h-full object-cover rounded"
-                          />
-                        )
-                      ) : (
-                        isVideo(video.name) ? (
-                          <Video className="w-4 h-4 text-gray-400" />
-                        ) : (
-                          <Image className="w-4 h-4 text-gray-400" />
-                        )
-                      )}
+                    <div className={`${isMobile ? 'w-14 h-11' : 'w-12 h-9 sm:w-14 sm:h-10'} bg-gray-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden`}>
+                      <MediaPreview 
+                        video={video} 
+                        onClick={() => handleMediaClick(video)}
+                      />
                     </div>
                     
                     <div className="flex-1 min-w-0 space-y-1">
@@ -397,6 +411,55 @@ const MediaGallery = ({
           </CardContent>
         </Card>
       )}
+
+      {/* Media Modal */}
+      <Dialog open={!!selectedMedia} onOpenChange={() => setSelectedMedia(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-2">
+          <DialogHeader className="px-4 py-2">
+            <DialogTitle className="text-lg truncate">
+              {selectedMedia?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 flex items-center justify-center p-4">
+            {selectedMedia?.url && (
+              isVideo(selectedMedia.name) ? (
+                <video
+                  src={selectedMedia.url}
+                  controls
+                  autoPlay
+                  className="max-w-full max-h-full rounded-lg"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              ) : (
+                <img
+                  src={selectedMedia.url}
+                  alt={selectedMedia.name}
+                  className="max-w-full max-h-full object-contain rounded-lg"
+                />
+              )
+            )}
+          </div>
+          {selectedMedia && (
+            <div className="px-4 py-2 border-t">
+              <div className="flex items-center justify-between text-sm text-gray-600">
+                <span>{(selectedMedia.size / (1024 * 1024)).toFixed(1)} MB</span>
+                <span>{new Date(selectedMedia.uploaded_at).toLocaleString()}</span>
+              </div>
+              {selectedMedia.guest_name && (
+                <p className="text-sm text-purple-600 mt-1">
+                  From: {selectedMedia.guest_name}
+                </p>
+              )}
+              {selectedMedia.guest_message && (
+                <p className="text-sm text-gray-600 italic mt-1">
+                  "{selectedMedia.guest_message}"
+                </p>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {showVideoUpload && (
         <VideoUpload
