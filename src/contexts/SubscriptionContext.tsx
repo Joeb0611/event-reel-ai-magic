@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -59,6 +60,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [purchases, setPurchases] = useState<WeddingPurchase[]>([]);
   const [loading, setLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
 
   const createDefaultSubscription = (userId: string): UserSubscription => ({
     id: 'default',
@@ -79,11 +81,20 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       return;
     }
 
+    // Prevent excessive retries
+    if (retryCount >= 3) {
+      console.log('Max retry attempts reached, using default subscription');
+      setSubscription(createDefaultSubscription(user.id));
+      setPurchases([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       console.log('Fetching subscription for user:', user.id);
 
-      // Fetch user subscription
+      // Fetch user subscription with proper error handling
       const { data: subData, error: subError } = await supabase
         .from('user_subscriptions')
         .select('*')
@@ -92,14 +103,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (subError) {
         console.error('Error fetching subscription:', subError);
-        // If no subscription exists, create a default one
-        if (subError.code === 'PGRST116' || subError.message?.includes('No rows found')) {
-          console.log('No subscription found, using default');
-          setSubscription(createDefaultSubscription(user.id));
-        } else {
-          console.log('Database error, using default subscription');
-          setSubscription(createDefaultSubscription(user.id));
-        }
+        // Create default subscription and don't retry on RLS or auth errors
+        setSubscription(createDefaultSubscription(user.id));
       } else if (subData) {
         console.log('Subscription found:', subData);
         const validatedSubscription: UserSubscription = {
@@ -134,8 +139,13 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         console.log('No purchases found');
         setPurchases([]);
       }
+
+      // Reset retry count on success
+      setRetryCount(0);
     } catch (error) {
       console.error('Error in refreshSubscription:', error);
+      setRetryCount(prev => prev + 1);
+      
       // Always provide a default subscription on error
       if (user) {
         setSubscription(createDefaultSubscription(user.id));
@@ -210,7 +220,14 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   useEffect(() => {
-    refreshSubscription();
+    if (user) {
+      refreshSubscription();
+    } else {
+      setSubscription(null);
+      setPurchases([]);
+      setLoading(false);
+      setRetryCount(0);
+    }
   }, [user]);
 
   const value: SubscriptionContextType = {

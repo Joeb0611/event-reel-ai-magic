@@ -20,8 +20,10 @@ const Subscription = () => {
 
   // Refresh subscription data when component mounts
   useEffect(() => {
-    refreshSubscription();
-  }, [refreshSubscription]);
+    if (!subscriptionLoading) {
+      refreshSubscription();
+    }
+  }, []);
 
   const pricingTiers = [
     {
@@ -157,7 +159,8 @@ const Subscription = () => {
     return subscription.tier || 'free';
   };
 
-  if (subscriptionLoading) {
+  // Show loading screen only if still loading and no subscription data
+  if (subscriptionLoading && !subscription) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center">
         <div className="text-center">
