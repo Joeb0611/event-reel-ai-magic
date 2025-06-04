@@ -13,7 +13,6 @@ import { Heart, Menu, LogOut, Settings, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import ProjectCard from '@/components/ProjectCard';
-
 const Index = () => {
   const {
     user,
@@ -39,7 +38,6 @@ const Index = () => {
     handleVideosUploaded,
     deleteVideo
   } = useVideos(selectedProject?.id || null);
-
   const handleDeleteProject = async (projectId: string) => {
     await deleteProject(projectId);
     // If we're currently viewing the deleted project, go back to project list
@@ -47,7 +45,6 @@ const Index = () => {
       setSelectedProject(null);
     }
   };
-
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth');
@@ -155,7 +152,7 @@ const Index = () => {
               <Heart className="w-10 h-10 text-white" />
             </div>
             
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent my-[7px] py-[7px]">
               MemoryWeave
             </h1>
             
@@ -166,16 +163,7 @@ const Index = () => {
 
           {/* Projects list if any exist */}
           {projects.length > 0 && <div className="space-y-4 max-h-60 overflow-y-auto">
-              {projects.map(project => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  videoCount={0}
-                  onSelect={() => setSelectedProject(project)}
-                  onEdit={() => triggerAIEditing(project)}
-                  onDelete={() => handleDeleteProject(project.id)}
-                />
-              ))}
+              {projects.map(project => <ProjectCard key={project.id} project={project} videoCount={0} onSelect={() => setSelectedProject(project)} onEdit={() => triggerAIEditing(project)} onDelete={() => handleDeleteProject(project.id)} />)}
             </div>}
 
           {/* Create Project Button */}
@@ -194,5 +182,4 @@ const Index = () => {
       <WeddingProjectModal isOpen={isWeddingModalOpen} onClose={() => setIsWeddingModalOpen(false)} onCreateProject={handleCreateWeddingProject} />
     </div>;
 };
-
 export default Index;
