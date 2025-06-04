@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,11 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Check, Crown, Star, Zap } from 'lucide-react';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface PricingTier {
   id: string;
   name: string;
   price: string;
+  priceAmount: number; // Price in cents for Stripe
   description: string;
   icon: React.ComponentType<{ className?: string }>;
   popular?: boolean;
@@ -24,6 +28,7 @@ const pricingTiers: PricingTier[] = [
     id: 'free',
     name: 'Memory Starter',
     price: 'Free',
+    priceAmount: 0,
     description: 'Perfect for trying out MemoryWeave',
     icon: Star,
     features: [
@@ -47,6 +52,7 @@ const pricingTiers: PricingTier[] = [
     id: 'premium',
     name: 'Memory Maker',
     price: '$99',
+    priceAmount: 9900, // $99 in cents
     description: 'Most popular choice for wedding couples',
     icon: Crown,
     popular: true,
@@ -70,6 +76,7 @@ const pricingTiers: PricingTier[] = [
     id: 'professional',
     name: 'Memory Master',
     price: '$199',
+    priceAmount: 19900, // $199 in cents
     description: 'Professional-grade features for perfect memories',
     icon: Zap,
     features: [
@@ -92,18 +99,53 @@ const Subscription = () => {
   const navigate = useNavigate();
   const { subscription, loading: subscriptionLoading, refreshSubscription } = useSubscription();
   const [loading, setLoading] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleUpgrade = async (tierId: string) => {
     if (tierId === 'free') return;
     
+    const tier = pricingTiers.find(t => t.id === tierId);
+    if (!tier) return;
+
     setLoading(tierId);
-    // TODO: Implement Stripe checkout
-    console.log(`Upgrading to ${tierId}`);
     
-    // Simulate loading
-    setTimeout(() => {
+    try {
+      // Create a Stripe checkout session for per-wedding purchase
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
+          tier: tierId,
+          amount: tier.priceAmount,
+          product_name: tier.name,
+          mode: 'payment' // One-time payment for per-wedding pricing
+        }
+      });
+
+      if (error) {
+        console.error('Error creating payment session:', error);
+        toast({
+          title: "Payment Error",
+          description: "Unable to start payment process. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data?.url) {
+        // Redirect to Stripe checkout
+        window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL received');
+      }
+    } catch (error) {
+      console.error('Error in handleUpgrade:', error);
+      toast({
+        title: "Upgrade Failed",
+        description: "Something went wrong. Please try again or contact support.",
+        variant: "destructive"
+      });
+    } finally {
       setLoading(null);
-    }, 2000);
+    }
   };
 
   const getCurrentPlanId = () => {
