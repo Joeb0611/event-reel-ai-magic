@@ -43,15 +43,15 @@ const ContentFocusSelector = ({ value, onChange }: ContentFocusSelectorProps) =>
               />
               <Label
                 htmlFor={`focus-${option.value}`}
-                className="flex items-start gap-4 p-4 rounded-lg border-2 cursor-pointer transition-all 
+                className="flex items-start gap-4 p-4 rounded-lg border-2 cursor-pointer transition-all
                   peer-checked:border-purple-500 peer-checked:bg-purple-50 hover:bg-gray-50"
               >
                 <div className="mt-1">
                   <div className="w-4 h-4 rounded-full border-2 border-gray-300 peer-checked:border-purple-500 peer-checked:bg-purple-500"></div>
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium mb-1">{option.label}</div>
-                  <div className="text-sm text-gray-500">{option.description}</div>
+                  <div className="text-sm font-medium mb-1">{option.label}</div>
+                  <div className="text-xs text-gray-500">{option.description}</div>
                 </div>
               </Label>
             </div>
