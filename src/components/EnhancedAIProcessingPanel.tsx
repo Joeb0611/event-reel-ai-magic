@@ -1,7 +1,10 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Brain } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Brain, Bug } from 'lucide-react';
 import AISettingsPanel, { WeddingAISettings } from '@/components/ai/AISettingsPanel';
 import ProcessingProgress from '@/components/ai/ProcessingProgress';
 import DetectedMomentsPreview from '@/components/ai/DetectedMomentsPreview';
@@ -23,6 +26,7 @@ const EnhancedAIProcessingPanel = ({
   const { currentJob, isProcessing, startProcessing, cancelProcessing } = useWeddingProcessing(projectId);
   
   const [showPreview, setShowPreview] = useState(false);
+  const [testPremium, setTestPremium] = useState(false);
   
   // AI Configuration State using the new interface
   const [aiSettings, setAiSettings] = useState<WeddingAISettings>({
@@ -105,11 +109,36 @@ const EnhancedAIProcessingPanel = ({
 
   return (
     <div className="space-y-6">
+      {/* Debug Toggle for Testing Premium Features */}
+      <Card className="border-dashed border-orange-300 bg-orange-50/50">
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bug className="w-4 h-4 text-orange-600" />
+              <div>
+                <Label htmlFor="debug-premium" className="text-sm font-medium text-orange-900">
+                  Test Premium Features
+                </Label>
+                <p className="text-xs text-orange-700">
+                  Enable this to test premium-only features during development
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="debug-premium"
+              checked={testPremium}
+              onCheckedChange={setTestPremium}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* AI Settings Panel */}
       <AISettingsPanel
         settings={aiSettings}
         onSettingsChange={setAiSettings}
         mustIncludeCount={mustIncludeCount}
+        isPremium={testPremium}
       />
 
       {/* Start Processing Button */}
