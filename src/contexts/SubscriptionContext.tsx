@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -61,6 +60,17 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [purchases, setPurchases] = useState<WeddingPurchase[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const createDefaultSubscription = (userId: string): UserSubscription => ({
+    id: 'default',
+    user_id: userId,
+    tier: 'free',
+    status: 'active',
+    projects_used: 0,
+    projects_limit: 1,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  });
+
   const refreshSubscription = async () => {
     if (!user) {
       setSubscription(null);
@@ -71,8 +81,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     try {
       setLoading(true);
+      console.log('Fetching subscription for user:', user.id);
 
-      // Fetch user subscription - handle case where user doesn't have a subscription yet
+      // Fetch user subscription
       const { data: subData, error: subError } = await supabase
         .from('user_subscriptions')
         .select('*')
@@ -81,28 +92,16 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (subError) {
         console.error('Error fetching subscription:', subError);
-        // Create a default free subscription if none exists
-        if (subError.code === 'PGRST116') {
-          // No subscription found, create default free subscription
-          setSubscription({
-            id: 'default',
-            user_id: user.id,
-            tier: 'free',
-            status: 'active',
-            projects_used: 0,
-            projects_limit: 1,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
+        // If no subscription exists, create a default one
+        if (subError.code === 'PGRST116' || subError.message?.includes('No rows found')) {
+          console.log('No subscription found, using default');
+          setSubscription(createDefaultSubscription(user.id));
         } else {
-          toast({
-            title: "Error loading subscription",
-            description: "Please try refreshing the page.",
-            variant: "destructive"
-          });
+          console.log('Database error, using default subscription');
+          setSubscription(createDefaultSubscription(user.id));
         }
       } else if (subData) {
-        // Type cast with validation
+        console.log('Subscription found:', subData);
         const validatedSubscription: UserSubscription = {
           ...subData,
           tier: (subData.tier as SubscriptionTier) || 'free',
@@ -110,20 +109,11 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         };
         setSubscription(validatedSubscription);
       } else {
-        // No subscription found, set default free subscription
-        setSubscription({
-          id: 'default',
-          user_id: user.id,
-          tier: 'free',
-          status: 'active',
-          projects_used: 0,
-          projects_limit: 1,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
+        console.log('No subscription data, using default');
+        setSubscription(createDefaultSubscription(user.id));
       }
 
-      // Fetch wedding purchases - handle gracefully if table doesn't exist or no access
+      // Fetch wedding purchases
       const { data: purchaseData, error: purchaseError } = await supabase
         .from('per_wedding_purchases')
         .select('*')
@@ -131,10 +121,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (purchaseError) {
         console.error('Error fetching purchases:', purchaseError);
-        // Don't show error for purchases, just set empty array
         setPurchases([]);
       } else if (purchaseData) {
-        // Type cast with validation
+        console.log('Purchases found:', purchaseData);
         const validatedPurchases: WeddingPurchase[] = purchaseData.map(purchase => ({
           ...purchase,
           tier: (purchase.tier === 'premium' || purchase.tier === 'professional') ? purchase.tier : 'premium',
@@ -142,22 +131,14 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }));
         setPurchases(validatedPurchases);
       } else {
+        console.log('No purchases found');
         setPurchases([]);
       }
     } catch (error) {
       console.error('Error in refreshSubscription:', error);
-      // Set default values on error
+      // Always provide a default subscription on error
       if (user) {
-        setSubscription({
-          id: 'default',
-          user_id: user.id,
-          tier: 'free',
-          status: 'active',
-          projects_used: 0,
-          projects_limit: 1,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        });
+        setSubscription(createDefaultSubscription(user.id));
       }
       setPurchases([]);
     } finally {
