@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,8 +15,6 @@ export interface PricingTierProps {
   popular?: boolean;
   features: string[];
   limitations?: string[];
-  buttonText: string;
-  buttonVariant: 'default' | 'outline' | 'secondary';
   isCurrentPlan: boolean;
   isLoading: string | null;
   onUpgrade: (tierId: string) => void;

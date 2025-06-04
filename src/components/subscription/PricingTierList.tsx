@@ -3,7 +3,7 @@ import React from 'react';
 import PricingTier, { PricingTierProps } from './PricingTier';
 
 interface PricingTierListProps {
-  tiers: Omit<PricingTierProps, 'isCurrentPlan' | 'isLoading' | 'onUpgrade'>[];
+  tiers: Omit<PricingTierProps, 'isCurrentPlan' | 'isLoading' | 'onUpgrade' | 'buttonText' | 'buttonVariant'>[];
   currentPlan: string;
   loading: string | null;
   onUpgrade: (tierId: string) => void;
