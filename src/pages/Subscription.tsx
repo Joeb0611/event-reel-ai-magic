@@ -146,19 +146,23 @@ const Subscription = () => {
       console.log('Response data:', data);
 
       if (data?.url) {
-        console.log('Redirecting to checkout URL:', data.url);
+        console.log('Checkout URL received:', data.url);
         
-        // Validate the URL before redirecting
-        try {
-          new URL(data.url); // This will throw if URL is invalid
-          console.log('URL validation passed, redirecting...');
-          
-          // Redirect to Stripe checkout
-          window.location.href = data.url;
-        } catch (urlError) {
-          console.error('Invalid checkout URL:', data.url);
-          throw new Error('Invalid checkout URL received');
-        }
+        // Create a form and submit it to navigate to Stripe checkout
+        // This is more reliable than window.location.href for external URLs
+        const form = document.createElement('form');
+        form.method = 'GET';
+        form.action = data.url;
+        form.target = '_self'; // Open in same window
+        
+        // Add the form to the document temporarily
+        document.body.appendChild(form);
+        
+        console.log('Submitting form to navigate to Stripe checkout...');
+        form.submit();
+        
+        // Clean up
+        document.body.removeChild(form);
       } else {
         console.error('No checkout URL in response:', data);
         throw new Error('No checkout URL received from payment service');

@@ -81,7 +81,7 @@ serve(async (req) => {
     }
 
     // Create checkout session parameters
-    const sessionParams = {
+    const sessionParams: any = {
       payment_method_types: ["card"],
       line_items: [
         {
@@ -99,6 +99,7 @@ serve(async (req) => {
       mode: mode,
       success_url: success_url,
       cancel_url: cancel_url,
+      allow_promotion_codes: true, // Allow promo codes
     };
 
     // Add customer information - use either existing customer ID or email for new customer
@@ -124,6 +125,12 @@ serve(async (req) => {
       url: session.url,
       paymentIntent: session.payment_intent
     });
+
+    // Verify the session URL is valid
+    if (!session.url) {
+      console.error("No URL returned from Stripe session creation");
+      throw new Error("Failed to create checkout session URL");
+    }
 
     // If user is authenticated and this is for a specific project, record the purchase intent
     if (user && project_id && mode === "payment") {
