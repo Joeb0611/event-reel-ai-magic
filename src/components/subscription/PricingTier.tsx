@@ -27,18 +27,33 @@ const PricingTier: React.FC<PricingTierProps> = ({
   id,
   name,
   price,
-  priceAmount,
   description,
   icon: Icon,
   popular = false,
   features,
   limitations,
-  buttonText,
-  buttonVariant,
   isCurrentPlan,
   isLoading,
   onUpgrade
 }) => {
+  // Determine button text based on current plan status
+  const getButtonText = () => {
+    if (isCurrentPlan) {
+      return 'Current Plan';
+    }
+    if (id === 'free') {
+      return 'Free Plan';
+    }
+    return `Upgrade to ${name}`;
+  };
+
+  // Determine button variant
+  const getButtonVariant = () => {
+    if (isCurrentPlan) return 'outline';
+    if (popular) return 'default';
+    return 'secondary';
+  };
+
   return (
     <Card
       className={`relative ${
@@ -112,8 +127,8 @@ const PricingTier: React.FC<PricingTierProps> = ({
 
         <Button
           onClick={() => onUpgrade(id)}
-          disabled={isLoading === id || isCurrentPlan}
-          variant={buttonVariant}
+          disabled={isLoading === id || (isCurrentPlan && id === 'free')}
+          variant={getButtonVariant()}
           className={`w-full mt-6 ${
             popular
               ? 'bg-purple-600 hover:bg-purple-700 text-white'
@@ -122,7 +137,7 @@ const PricingTier: React.FC<PricingTierProps> = ({
               : ''
           }`}
         >
-          {isLoading === id ? 'Processing...' : buttonText}
+          {isLoading === id ? 'Processing...' : getButtonText()}
         </Button>
       </CardContent>
     </Card>

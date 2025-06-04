@@ -44,9 +44,7 @@ const Subscription = () => {
         'MemoryWeave watermark included',
         'Limited AI styles',
         'No download rights'
-      ],
-      buttonText: 'Current Plan',
-      buttonVariant: 'outline' as const
+      ]
     },
     {
       id: 'premium',
@@ -68,9 +66,7 @@ const Subscription = () => {
         'Must-include content tagging',
         'Guest analytics',
         'No watermark'
-      ],
-      buttonText: 'Upgrade to Premium',
-      buttonVariant: 'default' as const
+      ]
     },
     {
       id: 'professional',
@@ -89,9 +85,7 @@ const Subscription = () => {
         'Guest recognition features',
         'Raw footage download',
         'Priority processing'
-      ],
-      buttonText: 'Upgrade to Professional',
-      buttonVariant: 'secondary' as const
+      ]
     }
   ];
 
@@ -159,7 +153,8 @@ const Subscription = () => {
   };
 
   const getCurrentPlanId = () => {
-    return subscription?.tier || 'free';
+    if (!subscription) return 'free';
+    return subscription.tier || 'free';
   };
 
   if (subscriptionLoading) {
