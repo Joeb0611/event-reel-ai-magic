@@ -116,6 +116,7 @@ const Subscription = () => {
     
     try {
       console.log('Starting upgrade process for tier:', tierId);
+      console.log('Project ID:', projectId);
       
       // Create a Stripe checkout session for per-wedding purchase
       const { data, error } = await supabase.functions.invoke('create-payment', {
@@ -132,25 +133,29 @@ const Subscription = () => {
         console.error('Error creating payment session:', error);
         toast({
           title: "Payment Error",
-          description: "Unable to start payment process. Please try again.",
+          description: error.message || "Unable to start payment process. Please try again.",
           variant: "destructive"
         });
         return;
       }
 
-      console.log('Payment session created:', data);
+      console.log('Payment session created successfully:', data);
 
       if (data?.url) {
-        // Redirect to Stripe checkout in the same window
-        window.location.href = data.url;
+        console.log('Redirecting to Stripe checkout URL:', data.url);
+        // Add a small delay to ensure the URL is valid
+        setTimeout(() => {
+          window.location.href = data.url;
+        }, 100);
       } else {
+        console.error('No checkout URL in response:', data);
         throw new Error('No checkout URL received from payment service');
       }
     } catch (error) {
       console.error('Error in handleUpgrade:', error);
       toast({
         title: "Upgrade Failed",
-        description: "Something went wrong. Please try again or contact support.",
+        description: error instanceof Error ? error.message : "Something went wrong. Please try again or contact support.",
         variant: "destructive"
       });
     } finally {
