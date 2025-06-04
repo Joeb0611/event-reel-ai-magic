@@ -7,14 +7,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, User, Settings, CreditCard, LogOut } from 'lucide-react';
+import { ArrowLeft, User, Settings, CreditCard, LogOut, KeyRound } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const AccountSettings = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const handleSignOut = async () => {
     try {
@@ -30,6 +32,39 @@ const AccountSettings = () => {
         description: "There was a problem signing you out. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!user?.email) {
+      toast({
+        title: "Error",
+        description: "No email address found for your account.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password reset email sent",
+        description: "Check your email for instructions to reset your password.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error sending reset email",
+        description: error.message || "There was a problem sending the reset email.",
+        variant: "destructive",
+      });
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -84,6 +119,35 @@ const AccountSettings = () => {
                     className="bg-gray-50 font-mono text-xs"
                   />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Password Reset */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <KeyRound className="w-5 h-5" />
+                Security
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
+                <div>
+                  <h3 className="font-medium text-gray-900">Reset Password</h3>
+                  <p className="text-sm text-gray-600">
+                    Send a password reset email to {user?.email}
+                  </p>
+                </div>
+                <Button
+                  onClick={handlePasswordReset}
+                  disabled={resetLoading}
+                  variant="outline"
+                  className="flex items-center gap-2"
+                >
+                  <KeyRound className="w-4 h-4" />
+                  {resetLoading ? 'Sending...' : 'Reset Password'}
+                </Button>
               </div>
             </CardContent>
           </Card>
