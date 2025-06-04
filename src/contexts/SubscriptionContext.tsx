@@ -109,7 +109,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         const validatedPurchases: WeddingPurchase[] = purchaseData.map(purchase => ({
           ...purchase,
           tier: (purchase.tier === 'premium' || purchase.tier === 'professional') ? purchase.tier : 'premium',
-          status: (['pending', 'paid', 'failed', 'refunded'].includes(purchase.status)) ? purchase.status : 'pending'
+          status: (['pending', 'paid', 'failed', 'refunded'].includes(purchase.status)) ? purchase.status as 'pending' | 'paid' | 'failed' | 'refunded' : 'pending'
         }));
         setPurchases(validatedPurchases);
       }
