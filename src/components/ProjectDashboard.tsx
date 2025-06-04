@@ -117,6 +117,7 @@ const ProjectDashboard = ({
             <EnhancedAIProcessingPanel
               projectId={project.id}
               hasVideos={projectVideos.length > 0}
+              mustIncludeCount={mustIncludeItems.size}
               onProcessingComplete={() => onTriggerAIEditing(project)}
             />
           )}
@@ -212,6 +213,7 @@ const ProjectDashboard = ({
           <EnhancedAIProcessingPanel
             projectId={project.id}
             hasVideos={projectVideos.length > 0}
+            mustIncludeCount={mustIncludeItems.size}
             onProcessingComplete={() => onTriggerAIEditing(project)}
           />
         </TabsContent>
