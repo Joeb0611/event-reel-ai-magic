@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,8 +60,7 @@ const pricingTiers: PricingTier[] = [
       'Advanced AI moment detection',
       'Must-include content tagging',
       'Guest analytics',
-      'No watermark',
-      'Email support'
+      'No watermark'
     ],
     buttonText: 'Upgrade to Premium',
     buttonVariant: 'default'
@@ -82,8 +80,7 @@ const pricingTiers: PricingTier[] = [
       'Custom branding',
       'Guest recognition features',
       'Raw footage download',
-      'Priority processing',
-      'Phone support'
+      'Priority processing'
     ],
     buttonText: 'Upgrade to Professional',
     buttonVariant: 'secondary'
