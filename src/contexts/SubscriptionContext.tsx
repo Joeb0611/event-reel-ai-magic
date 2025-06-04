@@ -86,8 +86,14 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
           description: "Please try refreshing the page.",
           variant: "destructive"
         });
-      } else {
-        setSubscription(subData);
+      } else if (subData) {
+        // Type cast with validation
+        const validatedSubscription: UserSubscription = {
+          ...subData,
+          tier: (subData.tier as SubscriptionTier) || 'free',
+          status: (subData.status as SubscriptionStatus) || 'active'
+        };
+        setSubscription(validatedSubscription);
       }
 
       // Fetch wedding purchases
@@ -98,8 +104,14 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (purchaseError) {
         console.error('Error fetching purchases:', purchaseError);
-      } else {
-        setPurchases(purchaseData || []);
+      } else if (purchaseData) {
+        // Type cast with validation
+        const validatedPurchases: WeddingPurchase[] = purchaseData.map(purchase => ({
+          ...purchase,
+          tier: (purchase.tier === 'premium' || purchase.tier === 'professional') ? purchase.tier : 'premium',
+          status: (['pending', 'paid', 'failed', 'refunded'].includes(purchase.status)) ? purchase.status : 'pending'
+        }));
+        setPurchases(validatedPurchases);
       }
     } catch (error) {
       console.error('Error in refreshSubscription:', error);

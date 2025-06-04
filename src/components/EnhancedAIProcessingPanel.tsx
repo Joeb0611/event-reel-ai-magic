@@ -138,7 +138,7 @@ const EnhancedAIProcessingPanel = ({
         settings={aiSettings}
         onSettingsChange={setAiSettings}
         mustIncludeCount={mustIncludeCount}
-        isPremium={testPremium}
+        projectId={projectId}
       />
 
       {/* Start Processing Button */}
