@@ -29,7 +29,7 @@ const pricingTiers: PricingTier[] = [
       '1 wedding project only',
       'Up to 25 guest uploads',
       'Basic photo/video collection with QR codes',
-      '1-minute AI highlight reel',
+      '30-second AI highlight reel',
       '720p video quality',
       'Romantic style only',
       'Stream only (no download)'
