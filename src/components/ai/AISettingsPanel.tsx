@@ -54,11 +54,11 @@ const videoStyleOptions = [
 ];
 
 const durationOptions = [
-  { value: '30s' as const, label: '30 seconds', estimate: '~2 min' },
-  { value: '1min' as const, label: '1 minute', estimate: '~3 min' },
-  { value: '2min' as const, label: '2 minutes', estimate: '~5 min' },
-  { value: '3min' as const, label: '3 minutes', estimate: '~8 min' },
-  { value: '5min' as const, label: '5 minutes', estimate: '~12 min' }
+  { value: '30s' as const, label: '30 seconds' },
+  { value: '1min' as const, label: '1 minute' },
+  { value: '2min' as const, label: '2 minutes' },
+  { value: '3min' as const, label: '3 minutes' },
+  { value: '5min' as const, label: '5 minutes' }
 ];
 
 const contentFocusOptions = [
@@ -77,6 +77,18 @@ const musicStyleOptions = [
   { value: 'modern' as const, label: 'Modern' },
   { value: 'cinematic' as const, label: 'Cinematic' }
 ];
+
+// Function to calculate processing time estimate based on duration
+const getProcessingEstimate = (duration: WeddingAISettings['duration']) => {
+  const estimates = {
+    '30s': 'Approximately 2-3 minutes',
+    '1min': 'Approximately 3-5 minutes', 
+    '2min': 'Approximately 5-8 minutes',
+    '3min': 'Approximately 8-12 minutes',
+    '5min': 'Approximately 12-18 minutes'
+  };
+  return estimates[duration];
+};
 
 const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0 }: AISettingsPanelProps) => {
   const updateSetting = <K extends keyof WeddingAISettings>(
@@ -152,7 +164,7 @@ const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0 }: A
           </CardTitle>
           <p className="text-sm text-gray-600">Select your preferred video length</p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <RadioGroup
             value={settings.duration}
             onValueChange={(value) => updateSetting('duration', value as WeddingAISettings['duration'])}
@@ -170,14 +182,25 @@ const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0 }: A
                   className="flex flex-col items-center p-4 rounded-lg border-2 cursor-pointer transition-all 
                     peer-checked:border-purple-500 peer-checked:bg-purple-50 hover:bg-gray-50"
                 >
-                  <span className="font-medium mb-1">{option.label}</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {option.estimate}
-                  </Badge>
+                  <span className="font-medium">{option.label}</span>
                 </Label>
               </div>
             ))}
           </RadioGroup>
+          
+          {/* Interactive Processing Time Estimate */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="w-4 h-4 text-blue-600" />
+              <span className="font-medium text-blue-900">Processing Time Estimate</span>
+            </div>
+            <p className="text-blue-700 text-sm">
+              {getProcessingEstimate(settings.duration)}
+            </p>
+            <p className="text-blue-600 text-xs mt-1">
+              Actual processing time may vary based on video quantity and complexity
+            </p>
+          </div>
         </CardContent>
       </Card>
 
