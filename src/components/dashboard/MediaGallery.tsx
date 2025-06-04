@@ -85,6 +85,11 @@ const MediaGallery = ({
     }
   };
 
+  const handleAddMediaClick = () => {
+    console.log('Add Media button clicked');
+    setShowVideoUpload(true);
+  };
+
   return (
     <div className="space-y-3">
       {/* Controls */}
@@ -93,7 +98,7 @@ const MediaGallery = ({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-base sm:text-lg">Media ({filteredVideos.length})</CardTitle>
             <Button
-              onClick={() => setShowVideoUpload(true)}
+              onClick={handleAddMediaClick}
               size={isMobile ? "default" : "sm"}
               className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 w-full sm:w-auto text-sm touch-target"
             >
