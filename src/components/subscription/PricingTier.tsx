@@ -19,7 +19,7 @@ export interface PricingTierProps {
   buttonText: string;
   buttonVariant: 'default' | 'outline' | 'secondary';
   isCurrentPlan: boolean;
-  isLoading: boolean;
+  isLoading: string | null;
   onUpgrade: (tierId: string) => void;
 }
 
