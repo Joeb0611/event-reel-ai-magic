@@ -162,15 +162,6 @@ const Subscription = () => {
     return subscription?.tier || 'free';
   };
 
-  const updatePricingTiers = () => {
-    const currentPlan = getCurrentPlanId();
-    return pricingTiers.map(tier => ({
-      ...tier,
-      buttonText: tier.id === currentPlan ? 'Current Plan' : tier.buttonText,
-      buttonVariant: tier.id === currentPlan ? 'outline' as const : tier.buttonVariant
-    }));
-  };
-
   if (subscriptionLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center">
@@ -193,7 +184,7 @@ const Subscription = () => {
 
         {/* Pricing Cards */}
         <PricingTierList
-          tiers={updatePricingTiers()}
+          tiers={pricingTiers}
           currentPlan={getCurrentPlanId()}
           loading={loading}
           onUpgrade={handleUpgrade}
