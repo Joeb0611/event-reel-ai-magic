@@ -53,10 +53,8 @@ serve(async (req) => {
       }
     }
 
-    // Create a checkout session
-    const session = await stripe.checkout.sessions.create({
-      customer: stripeCustomer,
-      customer_email: !stripeCustomer && user?.email ? user.email : undefined,
+    // Create checkout session parameters
+    const sessionParams: any = {
       payment_method_types: ["card"],
       line_items: [
         {
@@ -74,7 +72,17 @@ serve(async (req) => {
       mode: mode,
       success_url: success_url,
       cancel_url: cancel_url,
-    });
+    };
+
+    // Add either customer OR customer_email, but not both
+    if (stripeCustomer) {
+      sessionParams.customer = stripeCustomer;
+    } else if (user?.email) {
+      sessionParams.customer_email = user.email;
+    }
+
+    // Create a checkout session
+    const session = await stripe.checkout.sessions.create(sessionParams);
 
     // If user is authenticated and this is for a specific project, record the purchase intent
     if (user && project_id && mode === "payment") {
