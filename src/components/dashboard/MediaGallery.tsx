@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Filter, Grid, List, Star, Video, Image, Clock, User, Trash2, MoreVertical, Play } from 'lucide-react';
+import { Plus, Filter, Grid, List, Star, Video, Image, Clock, User, Trash2, MoreVertical, Play, X } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -97,7 +97,13 @@ const MediaGallery = ({
   };
 
   const handleMediaClick = (media: VideoFile) => {
+    console.log('Opening media:', media.name);
     setSelectedMedia(media);
+  };
+
+  const handleCloseModal = () => {
+    console.log('Closing media modal');
+    setSelectedMedia(null);
   };
 
   const MediaPreview = ({ video, onClick }: { video: VideoFile; onClick?: () => void }) => {
@@ -412,22 +418,35 @@ const MediaGallery = ({
         </Card>
       )}
 
-      {/* Media Modal */}
-      <Dialog open={!!selectedMedia} onOpenChange={() => setSelectedMedia(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] p-2">
-          <DialogHeader className="px-4 py-2">
-            <DialogTitle className="text-lg truncate">
+      {/* Media Modal - Custom implementation to prevent navigation issues */}
+      <Dialog open={!!selectedMedia} onOpenChange={handleCloseModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
+          {/* Custom Header with Close Button */}
+          <div className="flex items-center justify-between p-4 border-b bg-white">
+            <DialogTitle className="text-lg truncate pr-4">
               {selectedMedia?.name}
             </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 flex items-center justify-center p-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleCloseModal}
+              className="h-8 w-8 p-0 hover:bg-gray-100"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          {/* Media Content */}
+          <div className="flex-1 flex items-center justify-center p-4 bg-black">
             {selectedMedia?.url && (
               isVideo(selectedMedia.name) ? (
                 <video
                   src={selectedMedia.url}
                   controls
                   autoPlay
-                  className="max-w-full max-h-full rounded-lg"
+                  className="max-w-full max-h-full"
+                  style={{ aspectRatio: 'auto' }}
+                  onError={(e) => console.error('Video error:', e)}
                 >
                   Your browser does not support the video tag.
                 </video>
@@ -435,13 +454,16 @@ const MediaGallery = ({
                 <img
                   src={selectedMedia.url}
                   alt={selectedMedia.name}
-                  className="max-w-full max-h-full object-contain rounded-lg"
+                  className="max-w-full max-h-full object-contain"
+                  onError={(e) => console.error('Image error:', e)}
                 />
               )
             )}
           </div>
+          
+          {/* Media Info */}
           {selectedMedia && (
-            <div className="px-4 py-2 border-t">
+            <div className="px-4 py-3 border-t bg-white">
               <div className="flex items-center justify-between text-sm text-gray-600">
                 <span>{(selectedMedia.size / (1024 * 1024)).toFixed(1)} MB</span>
                 <span>{new Date(selectedMedia.uploaded_at).toLocaleString()}</span>
