@@ -25,7 +25,6 @@ import {
   DialogContent,
   DialogOverlay,
   DialogPortal,
-  DialogClose,
 } from '@/components/ui/dialog';
 import VideoUpload from '@/components/VideoUpload';
 import { VideoFile } from '@/hooks/useVideos';
@@ -419,12 +418,15 @@ const MediaGallery = ({
         </Card>
       )}
 
-      {/* Custom Media Modal - No default close button */}
+      {/* Custom Media Modal - Remove duplicate close button and prevent fullscreen issues */}
       <Dialog open={!!selectedMedia} onOpenChange={handleCloseModal}>
         <DialogPortal>
-          <DialogOverlay className="fixed inset-0 z-50 bg-black/80" />
-          <DialogContent className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-4xl translate-x-[-50%] translate-y-[-50%] gap-0 border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg max-h-[90vh] overflow-hidden p-0">
-            {/* Custom Header */}
+          <DialogOverlay 
+            className="fixed inset-0 z-50 bg-black/80" 
+            onClick={handleCloseModal}
+          />
+          <div className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-4xl translate-x-[-50%] translate-y-[-50%] gap-0 border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg max-h-[90vh] overflow-hidden">
+            {/* Custom Header with only ONE close button */}
             <div className="flex items-center justify-between p-4 border-b bg-white">
               <h2 className="text-lg font-semibold truncate pr-4">
                 {selectedMedia?.name}
@@ -447,11 +449,13 @@ const MediaGallery = ({
                     src={selectedMedia.url}
                     controls
                     autoPlay
-                    controlsList="nodownload"
+                    controlsList="nodownload nofullscreen"
+                    disablePictureInPicture
                     className="max-w-full max-h-full"
                     style={{ aspectRatio: 'auto' }}
                     onError={(e) => console.error('Video error:', e)}
                     onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.preventDefault()}
                   >
                     Your browser does not support the video tag.
                   </video>
@@ -485,7 +489,7 @@ const MediaGallery = ({
                 )}
               </div>
             )}
-          </DialogContent>
+          </div>
         </DialogPortal>
       </Dialog>
 
