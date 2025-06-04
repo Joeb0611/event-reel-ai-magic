@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Star } from 'lucide-react';
 import VideoStyleSelector from './VideoStyleSelector';
@@ -68,21 +69,19 @@ const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0, isP
         onChange={(value) => updateSetting('contentFocus', value)}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Music Style */}
-        <MusicStyleSelector
-          value={settings.musicStyle}
-          onChange={(value) => updateSetting('musicStyle', value)}
-          disabled={settings.useCustomMusic}
-        />
+      {/* Must Include Content */}
+      <MustIncludeToggle
+        checked={settings.includeMustInclude}
+        onChange={(checked) => updateSetting('includeMustInclude', checked)}
+        mustIncludeCount={mustIncludeCount}
+      />
 
-        {/* Must Include Content */}
-        <MustIncludeToggle
-          checked={settings.includeMustInclude}
-          onChange={(checked) => updateSetting('includeMustInclude', checked)}
-          mustIncludeCount={mustIncludeCount}
-        />
-      </div>
+      {/* Music Style */}
+      <MusicStyleSelector
+        value={settings.musicStyle}
+        onChange={(value) => updateSetting('musicStyle', value)}
+        disabled={settings.useCustomMusic}
+      />
 
       {/* Custom Music Upload */}
       <CustomMusicUpload
