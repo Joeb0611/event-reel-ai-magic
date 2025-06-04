@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -145,12 +144,16 @@ const MediaGallery = ({
               </div>
 
               {/* View Mode Toggle - Show on all devices but larger on mobile */}
-              <div className="flex border rounded-lg">
+              <div className="flex border rounded-lg bg-white">
                 <Button
                   variant={viewMode === 'grid' ? 'default' : 'ghost'}
                   size={isMobile ? "default" : "sm"}
                   onClick={() => setViewMode('grid')}
-                  className={isMobile ? 'touch-target px-3' : ''}
+                  className={`${isMobile ? 'touch-target px-3' : ''} ${
+                    viewMode === 'grid' 
+                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                      : 'hover:bg-gray-100'
+                  }`}
                 >
                   <Grid className="w-4 h-4" />
                 </Button>
@@ -158,7 +161,11 @@ const MediaGallery = ({
                   variant={viewMode === 'list' ? 'default' : 'ghost'}
                   size={isMobile ? "default" : "sm"}
                   onClick={() => setViewMode('list')}
-                  className={isMobile ? 'touch-target px-3' : ''}
+                  className={`${isMobile ? 'touch-target px-3' : ''} ${
+                    viewMode === 'list' 
+                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                      : 'hover:bg-gray-100'
+                  }`}
                 >
                   <List className="w-4 h-4" />
                 </Button>
@@ -171,7 +178,7 @@ const MediaGallery = ({
       {/* Media Grid/List */}
       {sortedVideos.length > 0 ? (
         <div className={
-          viewMode === 'grid' && !isMobile
+          viewMode === 'grid'
             ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
             : 'space-y-2'
         }>
@@ -184,9 +191,9 @@ const MediaGallery = ({
                 video.uploaded_by_guest ? 'border-purple-200 bg-purple-50/50' : 'border-gray-200'
               }`}
             >
-              <CardContent className={viewMode === 'grid' && !isMobile ? 'p-3' : 'p-3'}>
-                {viewMode === 'grid' && !isMobile ? (
-                  // Grid View (Desktop only)
+              <CardContent className="p-3">
+                {viewMode === 'grid' ? (
+                  // Grid View
                   <>
                     <div className="aspect-video bg-gray-100 rounded-lg mb-2 flex items-center justify-center relative overflow-hidden">
                       {video.url ? (
@@ -272,7 +279,7 @@ const MediaGallery = ({
                     </div>
                   </>
                 ) : (
-                  // List View (Mobile and Desktop list mode)
+                  // List View
                   <div className="flex items-start gap-3">
                     <div className={`${isMobile ? 'w-14 h-11' : 'w-12 h-9 sm:w-14 sm:h-10'} bg-gray-100 rounded flex items-center justify-center flex-shrink-0`}>
                       {video.url ? (
