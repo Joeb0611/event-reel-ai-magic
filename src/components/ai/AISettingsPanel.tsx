@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Star } from 'lucide-react';
 import VideoStyleSelector from './VideoStyleSelector';
@@ -6,6 +5,7 @@ import DurationSelector from './DurationSelector';
 import ContentFocusSelector from './ContentFocusSelector';
 import MusicStyleSelector from './MusicStyleSelector';
 import MustIncludeToggle from './MustIncludeToggle';
+import CustomMusicUpload from './CustomMusicUpload';
 
 export interface WeddingAISettings {
   videoStyle: 'romantic' | 'cinematic' | 'documentary' | 'energetic';
@@ -13,15 +13,17 @@ export interface WeddingAISettings {
   contentFocus: 'ceremony' | 'reception' | 'balanced' | 'emotional' | 'candid';
   musicStyle: 'romantic' | 'upbeat' | 'classical' | 'acoustic' | 'modern' | 'cinematic';
   includeMustInclude: boolean;
+  useCustomMusic: boolean;
 }
 
 interface AISettingsPanelProps {
   settings: WeddingAISettings;
   onSettingsChange: (settings: WeddingAISettings) => void;
   mustIncludeCount?: number;
+  isPremium?: boolean;
 }
 
-const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0 }: AISettingsPanelProps) => {
+const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0, isPremium = false }: AISettingsPanelProps) => {
   const updateSetting = <K extends keyof WeddingAISettings>(
     key: K,
     value: WeddingAISettings[K]
@@ -70,6 +72,7 @@ const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0 }: A
         <MusicStyleSelector
           value={settings.musicStyle}
           onChange={(value) => updateSetting('musicStyle', value)}
+          disabled={settings.useCustomMusic}
         />
 
         {/* Must Include Content */}
@@ -79,6 +82,13 @@ const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0 }: A
           mustIncludeCount={mustIncludeCount}
         />
       </div>
+
+      {/* Custom Music Upload */}
+      <CustomMusicUpload
+        checked={settings.useCustomMusic}
+        onChange={(checked) => updateSetting('useCustomMusic', checked)}
+        isPremium={isPremium}
+      />
     </div>
   );
 };

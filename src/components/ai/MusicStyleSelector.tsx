@@ -1,4 +1,3 @@
-
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Music } from 'lucide-react';
@@ -7,6 +6,7 @@ import { WeddingAISettings } from './AISettingsPanel';
 interface MusicStyleSelectorProps {
   value: WeddingAISettings['musicStyle'];
   onChange: (value: WeddingAISettings['musicStyle']) => void;
+  disabled?: boolean;
 }
 
 const musicStyleOptions = [
@@ -18,9 +18,9 @@ const musicStyleOptions = [
   { value: 'cinematic' as const, label: 'Cinematic' }
 ];
 
-const MusicStyleSelector = ({ value, onChange }: MusicStyleSelectorProps) => {
+const MusicStyleSelector = ({ value, onChange, disabled = false }: MusicStyleSelectorProps) => {
   return (
-    <Card className="border-gray-200">
+    <Card className={`border-gray-200 ${disabled ? 'opacity-50' : ''}`}>
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <Music className="w-5 h-5" />
@@ -29,7 +29,7 @@ const MusicStyleSelector = ({ value, onChange }: MusicStyleSelectorProps) => {
         <p className="text-sm text-gray-600">Background music genre</p>
       </CardHeader>
       <CardContent>
-        <Select value={value} onValueChange={onChange}>
+        <Select value={value} onValueChange={onChange} disabled={disabled}>
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -41,6 +41,11 @@ const MusicStyleSelector = ({ value, onChange }: MusicStyleSelectorProps) => {
             ))}
           </SelectContent>
         </Select>
+        {disabled && (
+          <p className="text-xs text-gray-500 mt-2">
+            Disabled while using custom music
+          </p>
+        )}
       </CardContent>
     </Card>
   );
