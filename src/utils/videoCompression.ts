@@ -1,10 +1,6 @@
-
 // Video compression utility using WebCodecs API
 export interface CompressionSettings {
-  quality: 'high' | 'medium' | 'low';
-  targetSizeMB?: number;
-  maxWidth?: number;
-  maxHeight?: number;
+  quality: number; // 0.1 to 1.0
 }
 
 export interface CompressionProgress {
@@ -14,14 +10,8 @@ export interface CompressionProgress {
   status: 'preparing' | 'compressing' | 'completed' | 'error';
 }
 
-export const COMPRESSION_PRESETS = {
-  high: { quality: 0.8, maxWidth: 1920, maxHeight: 1080, bitrate: 5000000 },
-  medium: { quality: 0.6, maxWidth: 1280, maxHeight: 720, bitrate: 2500000 },
-  low: { quality: 0.4, maxWidth: 854, maxHeight: 480, bitrate: 1000000 }
-};
-
 export const isCompressionSupported = (): boolean => {
-  return 'VideoEncoder' in window && 'VideoDecoder' in window;
+  return 'MediaRecorder' in window;
 };
 
 export const compressVideo = async (
@@ -30,21 +20,19 @@ export const compressVideo = async (
   onProgress?: (progress: CompressionProgress) => void
 ): Promise<File> => {
   if (!isCompressionSupported()) {
-    console.log('WebCodecs not supported, returning original file');
+    console.log('MediaRecorder not supported, returning original file');
     return file;
   }
 
-  const preset = COMPRESSION_PRESETS[settings.quality];
-  
   try {
     onProgress?.({
       progress: 0,
       originalSize: file.size,
-      estimatedSize: file.size * preset.quality,
+      estimatedSize: file.size * settings.quality,
       status: 'preparing'
     });
 
-    // Create video element to get dimensions
+    // Create video element to get video properties
     const video = document.createElement('video');
     video.src = URL.createObjectURL(file);
     video.muted = true;
@@ -54,36 +42,31 @@ export const compressVideo = async (
       video.onerror = reject;
     });
 
+    onProgress?.({
+      progress: 25,
+      originalSize: file.size,
+      estimatedSize: file.size * settings.quality,
+      status: 'compressing'
+    });
+
+    // Create canvas and stream for compression
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Cannot get canvas context');
 
-    // Calculate output dimensions
-    const aspectRatio = video.videoWidth / video.videoHeight;
-    let outputWidth = Math.min(video.videoWidth, preset.maxWidth || 1920);
-    let outputHeight = Math.min(video.videoHeight, preset.maxHeight || 1080);
+    // Keep original resolution but compress quality
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
 
-    if (outputWidth / outputHeight > aspectRatio) {
-      outputWidth = outputHeight * aspectRatio;
-    } else {
-      outputHeight = outputWidth / aspectRatio;
-    }
-
-    canvas.width = outputWidth;
-    canvas.height = outputHeight;
-
-    onProgress?.({
-      progress: 25,
-      originalSize: file.size,
-      estimatedSize: file.size * preset.quality,
-      status: 'compressing'
-    });
-
-    // Use MediaRecorder for compression (more widely supported)
     const stream = canvas.captureStream(30);
+    
+    // Calculate bitrate based on quality setting
+    const baseBitrate = 2500000; // 2.5 Mbps base
+    const targetBitrate = Math.floor(baseBitrate * settings.quality);
+
     const mediaRecorder = new MediaRecorder(stream, {
       mimeType: 'video/webm;codecs=vp9',
-      videoBitsPerSecond: preset.bitrate
+      videoBitsPerSecond: targetBitrate
     });
 
     const chunks: Blob[] = [];
@@ -119,26 +102,28 @@ export const compressVideo = async (
 
       // Play video and draw frames
       let frameCount = 0;
-      const totalFrames = Math.floor(video.duration * 30); // Assuming 30fps
+      const fps = 30;
+      const totalFrames = Math.floor(video.duration * fps);
       
       video.currentTime = 0;
       video.play();
 
       video.ontimeupdate = () => {
-        ctx.drawImage(video, 0, 0, outputWidth, outputHeight);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         frameCount++;
         
         const progress = 25 + (frameCount / totalFrames) * 70;
         onProgress?.({
           progress: Math.min(progress, 95),
           originalSize: file.size,
-          estimatedSize: file.size * preset.quality,
+          estimatedSize: file.size * settings.quality,
           status: 'compressing'
         });
 
         if (video.ended) {
           mediaRecorder.stop();
           video.pause();
+          URL.revokeObjectURL(video.src);
         }
       };
 
@@ -147,6 +132,7 @@ export const compressVideo = async (
         if (mediaRecorder.state === 'recording') {
           mediaRecorder.stop();
           video.pause();
+          URL.revokeObjectURL(video.src);
         }
       }, (video.duration + 1) * 1000);
     });
@@ -161,11 +147,6 @@ export const compressVideo = async (
     });
     return file; // Return original file on error
   }
-};
-
-export const estimateCompressionTime = (fileSizeMB: number): number => {
-  // Rough estimation: 1MB = ~3 seconds compression time
-  return Math.max(10, fileSizeMB * 3);
 };
 
 export const formatFileSize = (bytes: number): string => {

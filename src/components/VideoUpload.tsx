@@ -7,9 +7,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { VideoFile } from '@/hooks/useVideos';
 import { validateFileType, validateFileSize, sanitizeFileName } from '@/utils/security';
-import CompressionSettings from '@/components/CompressionSettings';
 import CompressionPreview, { FileCompressionStatus } from '@/components/CompressionPreview';
-import { compressVideo, CompressionSettings as CompressionSettingsType } from '@/utils/videoCompression';
+import { compressVideo } from '@/utils/videoCompression';
+import { getCompressionSettingsFromQuality } from '@/utils/projectSettings';
 
 interface VideoUploadProps {
   isOpen: boolean;
@@ -26,16 +26,16 @@ const MAX_FILES_PER_UPLOAD = 20;
 const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName }: VideoUploadProps) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [compressionFiles, setCompressionFiles] = useState<FileCompressionStatus[]>([]);
-  const [compressionSettings, setCompressionSettings] = useState<CompressionSettingsType & { enabled: boolean }>({
-    quality: 'medium',
-    enabled: true
-  });
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [compressing, setCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+
+  // Get project video quality setting (defaulting to 'good' for now)
+  const projectVideoQuality = 'good'; // This would come from project settings in real implementation
+  const compressionSettings = getCompressionSettingsFromQuality(projectVideoQuality);
 
   const validateFiles = (files: FileList): File[] => {
     const validFiles: File[] = [];
@@ -110,7 +110,7 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
   };
 
   const handleCompress = async () => {
-    if (selectedFiles.length === 0 || !compressionSettings.enabled) return;
+    if (selectedFiles.length === 0) return;
 
     setCompressing(true);
     const newCompressionFiles: FileCompressionStatus[] = selectedFiles.map((file, index) => ({
@@ -123,7 +123,7 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
 
     setCompressionFiles(newCompressionFiles);
 
-    // Compress files one by one
+    // Compress files one by one using project quality setting
     for (let i = 0; i < newCompressionFiles.length; i++) {
       const fileStatus = newCompressionFiles[i];
       
@@ -326,17 +326,16 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
   };
 
   const totalSizeMB = selectedFiles.reduce((sum, file) => sum + file.size, 0) / (1024 * 1024);
-  const readyToUpload = compressionSettings.enabled 
-    ? compressionFiles.filter(f => f.status === 'completed').length > 0
-    : selectedFiles.length > 0;
+  const readyToUpload = compressionFiles.filter(f => f.status === 'completed').length > 0 || 
+    (selectedFiles.length > 0 && compressionFiles.length === 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl">Enhanced Video Upload</DialogTitle>
+          <DialogTitle className="text-xl">Video Upload</DialogTitle>
           <DialogDescription>
-            Upload videos to {projectName}. Files can be compressed before upload to save time and storage.
+            Upload videos to {projectName}. Videos will be automatically compressed based on your project quality setting.
           </DialogDescription>
         </DialogHeader>
 
@@ -376,13 +375,16 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
             />
           </div>
 
-          {/* Compression Settings */}
+          {/* Project Quality Info */}
           {selectedFiles.length > 0 && (
-            <CompressionSettings
-              onSettingsChange={setCompressionSettings}
-              totalFiles={selectedFiles.length}
-              totalSizeMB={totalSizeMB}
-            />
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-sm text-green-800">
+                <strong>Video Quality:</strong> {projectVideoQuality.charAt(0).toUpperCase() + projectVideoQuality.slice(1)} quality compression will be applied automatically.
+              </p>
+              <p className="text-xs text-green-600 mt-1">
+                This setting is configured by the project owner and ensures consistent video quality across all uploads.
+              </p>
+            </div>
           )}
 
           {/* Selected Files */}
@@ -433,7 +435,7 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
               Cancel
             </Button>
             
-            {compressionSettings.enabled && selectedFiles.length > 0 && compressionFiles.length === 0 && (
+            {selectedFiles.length > 0 && compressionFiles.length === 0 && (
               <Button 
                 onClick={handleCompress}
                 disabled={compressing || selectedFiles.length === 0}

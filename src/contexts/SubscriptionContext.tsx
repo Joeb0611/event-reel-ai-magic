@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -184,7 +183,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       'multiple_versions': ['professional'],
       'custom_branding': ['professional'],
       'priority_processing': ['professional'],
-      'unlimited_projects': ['premium', 'professional']
+      'unlimited_projects': ['premium', 'professional'],
+      'video_quality_better': ['premium', 'professional'],
+      'video_quality_best': ['professional']
     };
 
     const requiredTiers = featureRequirements[feature];
@@ -214,7 +215,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       'multiple_versions': 'Upgrade to Professional for multiple video versions',
       'custom_branding': 'Upgrade to Professional for custom branding',
       'priority_processing': 'Upgrade to Professional for priority processing',
-      'unlimited_projects': 'Upgrade to Premium for unlimited projects'
+      'unlimited_projects': 'Upgrade to Premium for unlimited projects',
+      'video_quality_better': 'Upgrade to Premium for better video quality',
+      'video_quality_best': 'Upgrade to Professional for best video quality'
     };
     return messages[feature] || 'Upgrade to access this feature';
   };
