@@ -33,10 +33,8 @@ const VideoQualitySettings = ({ currentQuality, onQualityChange, projectId }: Vi
     onQualityChange(value);
   };
 
-  const selectedOption = VIDEO_QUALITY_OPTIONS.find(opt => opt.value === currentQuality);
-
   return (
-    <Card className="border-blue-200">
+    <Card className="border-gray-200">
       <CardHeader className="pb-3 md:pb-4">
         <CardTitle className="flex items-center gap-2 text-base md:text-lg">
           <Settings className="w-4 h-4 md:w-5 md:h-5" />
@@ -44,7 +42,7 @@ const VideoQualitySettings = ({ currentQuality, onQualityChange, projectId }: Vi
         </CardTitle>
         <p className="text-sm text-gray-600">Compression quality for all video uploads</p>
       </CardHeader>
-      <CardContent className="space-y-3 md:space-y-4">
+      <CardContent>
         <Select value={currentQuality} onValueChange={handleQualityChange}>
           <SelectTrigger className="w-full">
             <SelectValue />
@@ -75,20 +73,6 @@ const VideoQualitySettings = ({ currentQuality, onQualityChange, projectId }: Vi
             })}
           </SelectContent>
         </Select>
-        
-        {selectedOption && (
-          <div className="p-2 md:p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-xs md:text-sm text-blue-800">
-              <strong>Current:</strong> {selectedOption.label}
-            </p>
-            <p className="text-xs text-blue-600 mt-1">
-              {selectedOption.description}
-            </p>
-            <p className="text-xs text-blue-600 mt-1">
-              Applies to all video uploads for this project
-            </p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

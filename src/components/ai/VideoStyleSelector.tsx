@@ -13,25 +13,21 @@ const videoStyleOptions = [
   {
     value: 'romantic' as const,
     label: 'Romantic',
-    description: 'Soft, dreamy with warm tones',
     icon: Heart
   },
   {
     value: 'cinematic' as const,
     label: 'Cinematic',
-    description: 'Movie-like with dramatic transitions',
     icon: Camera
   },
   {
     value: 'documentary' as const,
     label: 'Documentary',
-    description: 'Natural, authentic storytelling',
     icon: FileText
   },
   {
     value: 'energetic' as const,
     label: 'Energetic',
-    description: 'Fast-paced, upbeat with dynamic cuts',
     icon: Zap
   }
 ];
@@ -60,26 +56,13 @@ const VideoStyleSelector = ({ value, onChange }: VideoStyleSelectorProps) => {
                 <SelectItem key={option.value} value={option.value}>
                   <div className="flex items-center gap-2">
                     <Icon className="w-4 h-4 text-purple-600" />
-                    <div>
-                      <div className="font-medium">{option.label}</div>
-                      <div className="text-xs text-gray-500">{option.description}</div>
-                    </div>
+                    <span className="font-medium">{option.label}</span>
                   </div>
                 </SelectItem>
               );
             })}
           </SelectContent>
         </Select>
-        
-        {selectedOption && (
-          <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
-            <div className="flex items-center gap-2 mb-1">
-              <selectedOption.icon className="w-4 h-4 text-purple-600" />
-              <span className="font-medium text-purple-900">{selectedOption.label}</span>
-            </div>
-            <p className="text-sm text-purple-700">{selectedOption.description}</p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Star } from 'lucide-react';
 import VideoStyleSelector from './VideoStyleSelector';
@@ -30,8 +29,8 @@ interface AISettingsPanelProps {
   projectId?: string;
 }
 
-const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0, projectId }: AISettingsPanelProps & { projectId?: string }) => {
-  const { getProjectTier } = useSubscription();
+const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0, projectId }: AISettingsPanelProps) => {
+  const { getProjectTier, hasFeatureAccess } = useSubscription();
   
   const updateSetting = <K extends keyof WeddingAISettings>(
     key: K,
@@ -45,7 +44,6 @@ const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0, pro
 
   const currentTier = projectId ? getProjectTier(projectId) : 'free';
   const isPremium = currentTier === 'premium' || currentTier === 'professional';
-  const isProfessional = currentTier === 'professional';
 
   return (
     <div className="space-y-4 md:space-y-8">
@@ -66,12 +64,12 @@ const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0, pro
       <div className="grid gap-4 md:gap-6">
         {/* Video Style & Quality - Combined on mobile */}
         <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-          <FeatureGate feature="all_styles" projectId={projectId}>
+          <SubscriptionGuard feature="all_styles" projectId={projectId}>
             <VideoStyleSelector
               value={settings.videoStyle}
               onChange={(value) => updateSetting('videoStyle', value)}
             />
-          </FeatureGate>
+          </SubscriptionGuard>
 
           {projectId && (
             <VideoQualitySettings
@@ -84,13 +82,11 @@ const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0, pro
 
         {/* Duration & Content Focus - Combined row */}
         <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-          <SubscriptionGuard feature="duration_1min" projectId={projectId}>
-            <DurationSelector
-              value={settings.duration}
-              onChange={(value) => updateSetting('duration', value)}
-              isPremium={isPremium}
-            />
-          </SubscriptionGuard>
+          <DurationSelector
+            value={settings.duration}
+            onChange={(value) => updateSetting('duration', value)}
+            projectId={projectId}
+          />
 
           <ContentFocusSelector
             value={settings.contentFocus}

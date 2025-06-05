@@ -116,7 +116,7 @@ const UpgradeModal = ({ isOpen, onClose, feature, currentPlan, requiredPlan }: U
             </Button>
             <Button
               onClick={handleUpgrade}
-              className={`flex-1 bg-${plan.color}-600 hover:bg-${plan.color}-700`}
+              className="flex-1 bg-purple-600 hover:bg-purple-700"
             >
               <Icon className="w-4 h-4 mr-2" />
               Upgrade Now
