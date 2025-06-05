@@ -31,17 +31,33 @@ const SubscriptionGuard: React.FC<SubscriptionGuardProps> = ({
     }
   };
 
+  // Clone children and add onClick handler to trigger upgrade modal
+  const enhancedChildren = React.cloneElement(children as React.ReactElement, {
+    onClick: (e: React.MouseEvent) => {
+      const originalOnClick = (children as React.ReactElement).props.onClick;
+      if (!hasAccess) {
+        e.preventDefault();
+        e.stopPropagation();
+        setShowUpgradeModal(true);
+        onBlock?.();
+        return;
+      }
+      if (originalOnClick) {
+        originalOnClick(e);
+      }
+    }
+  });
+
   return (
     <>
-      <div onClick={handleClick}>
-        {children}
-      </div>
+      {enhancedChildren}
       <UpgradeModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
         feature={feature}
         currentPlan={subscription?.tier || 'free'}
         requiredPlan={requiredTier}
+        projectId={projectId}
       />
     </>
   );

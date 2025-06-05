@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Brain, Bug } from 'lucide-react';
 import AISettingsPanel, { WeddingAISettings } from '@/components/ai/AISettingsPanel';
 import ProcessingProgress from '@/components/ai/ProcessingProgress';
+import ProcessingProgressCard from '@/components/ai/ProcessingProgressCard';
 import DetectedMomentsPreview from '@/components/ai/DetectedMomentsPreview';
 import { useWeddingProcessing } from '@/hooks/useWeddingProcessing';
 
@@ -36,16 +38,6 @@ const EnhancedAIProcessingPanel = ({
     includeMustInclude: true,
     useCustomMusic: false,
     videoQuality: 'good'
-  });
-
-  // Mock processing progress state
-  const [processingStatus, setProcessingStatus] = useState<'idle' | 'analyzing' | 'detecting' | 'moments' | 'creating' | 'completed' | 'failed'>('idle');
-  const [processingProgress, setProcessingProgress] = useState(0);
-  const [processingStats, setProcessingStats] = useState({
-    photosAnalyzed: 0,
-    videosProcessed: 0,
-    momentsDetected: 0,
-    facesFound: 0
   });
 
   const handleStartProcessing = async () => {
@@ -93,16 +85,16 @@ const EnhancedAIProcessingPanel = ({
     );
   }
 
-  // Show processing progress
-  if (currentJob?.status === 'processing' || currentJob?.status === 'pending' || processingStatus !== 'idle') {
+  // Show processing progress with navigation
+  if (currentJob?.status === 'processing' || currentJob?.status === 'pending') {
+    const estimatedTime = currentJob?.status === 'processing' ? 180 : undefined;
     return (
-      <ProcessingProgress
-        status={processingStatus}
-        progress={processingProgress}
-        stats={processingStats}
-        estimatedTime={180} // 3 minutes estimate
-        onCancel={cancelProcessing}
-        onRetry={handleStartProcessing}
+      <ProcessingProgressCard
+        projectId={projectId}
+        status={currentJob.status}
+        progress={currentJob.progress || 0}
+        estimatedTimeRemaining={estimatedTime}
+        startedAt={currentJob.started_at}
       />
     );
   }

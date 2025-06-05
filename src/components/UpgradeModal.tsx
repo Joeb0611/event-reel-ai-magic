@@ -17,9 +17,10 @@ interface UpgradeModalProps {
   feature: string;
   currentPlan: 'free' | 'premium' | 'professional';
   requiredPlan: 'premium' | 'professional';
+  projectId?: string;
 }
 
-const UpgradeModal = ({ isOpen, onClose, feature, currentPlan, requiredPlan }: UpgradeModalProps) => {
+const UpgradeModal = ({ isOpen, onClose, feature, currentPlan, requiredPlan, projectId }: UpgradeModalProps) => {
   const navigate = useNavigate();
 
   const planDetails = {
@@ -59,7 +60,8 @@ const UpgradeModal = ({ isOpen, onClose, feature, currentPlan, requiredPlan }: U
   const Icon = plan.icon;
 
   const handleUpgrade = () => {
-    navigate('/subscription');
+    const subscriptionUrl = projectId ? `/subscription?projectId=${projectId}` : '/subscription';
+    navigate(subscriptionUrl);
     onClose();
   };
 

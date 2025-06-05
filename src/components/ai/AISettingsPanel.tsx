@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Star } from 'lucide-react';
 import VideoStyleSelector from './VideoStyleSelector';
@@ -82,11 +83,13 @@ const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0, pro
 
         {/* Duration & Content Focus - Combined row */}
         <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
-          <DurationSelector
-            value={settings.duration}
-            onChange={(value) => updateSetting('duration', value)}
-            projectId={projectId}
-          />
+          <SubscriptionGuard feature="duration_1min" projectId={projectId}>
+            <DurationSelector
+              value={settings.duration}
+              onChange={(value) => updateSetting('duration', value)}
+              projectId={projectId}
+            />
+          </SubscriptionGuard>
 
           <ContentFocusSelector
             value={settings.contentFocus}
@@ -109,13 +112,13 @@ const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0, pro
             disabled={settings.useCustomMusic}
           />
 
-          <FeatureGate feature="custom_music" projectId={projectId}>
+          <SubscriptionGuard feature="custom_music" projectId={projectId}>
             <CustomMusicUpload
               checked={settings.useCustomMusic}
               onChange={(checked) => updateSetting('useCustomMusic', checked)}
               isPremium={isPremium}
             />
-          </FeatureGate>
+          </SubscriptionGuard>
         </div>
       </div>
     </div>
