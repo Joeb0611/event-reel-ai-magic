@@ -32,32 +32,34 @@ const GuestUpload = () => {
 
   const fetchProjectByQRCode = async (code: string) => {
     try {
-      console.log('Fetching project for QR code:', code);
+      console.log('=== QR CODE DEBUG ===');
+      console.log('Searching for QR code:', code);
       console.log('QR code length:', code.length);
-      console.log('QR code characters:', code.split('').map(c => `${c}(${c.charCodeAt(0)})`).join(', '));
+      console.log('QR code type:', typeof code);
 
-      // Simple validation - just check if it exists and has reasonable length
-      if (!code || code.length < 5) {
-        console.error('QR code too short:', code);
-        toast({
-          title: "Invalid QR code",
-          description: "The QR code format is invalid.",
-          variant: "destructive",
+      // First, let's see what projects exist in the database
+      const { data: allProjects, error: allProjectsError } = await supabase
+        .from('projects')
+        .select('id, name, qr_code, privacy_settings');
+
+      console.log('All projects in database:', allProjects);
+      console.log('All projects query error:', allProjectsError);
+
+      if (allProjects) {
+        console.log('Available QR codes in database:');
+        allProjects.forEach((p, index) => {
+          console.log(`${index + 1}. Project "${p.name}" - QR: "${p.qr_code}" (length: ${p.qr_code?.length || 0})`);
         });
-        setLoading(false);
-        return;
       }
 
-      console.log('Querying database for QR code:', code);
-      
-      // Query the projects table directly
+      // Now search for the specific QR code
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
         .select('*')
         .eq('qr_code', code)
         .maybeSingle();
 
-      console.log('Database query result:', { projectData, projectError });
+      console.log('Specific project query result:', { projectData, projectError });
 
       if (projectError) {
         console.error('Database error:', projectError);
@@ -73,18 +75,17 @@ const GuestUpload = () => {
       if (!projectData) {
         console.error('No project found with QR code:', code);
         
-        // Let's also check what QR codes exist in the database for debugging
-        const { data: allQrCodes, error: qrError } = await supabase
+        // Try to find projects without QR codes
+        const { data: projectsWithoutQR } = await supabase
           .from('projects')
-          .select('qr_code, name')
-          .not('qr_code', 'is', null);
+          .select('id, name, qr_code')
+          .is('qr_code', null);
         
-        console.log('All QR codes in database:', allQrCodes);
-        console.log('QR codes query error:', qrError);
+        console.log('Projects without QR codes:', projectsWithoutQR);
         
         toast({
           title: "Project not found",
-          description: "This QR code is not valid or the project no longer exists.",
+          description: "This QR code is not valid or the project no longer exists. Check the console for debugging info.",
           variant: "destructive",
         });
         setLoading(false);
@@ -108,8 +109,6 @@ const GuestUpload = () => {
         return;
       }
 
-      console.log('Setting project data...');
-
       setProject({
         id: projectData.id,
         name: projectData.name || '',
@@ -124,8 +123,6 @@ const GuestUpload = () => {
         location: projectData.location,
         privacy_settings: privacySettings,
       });
-      
-      console.log('Project set successfully');
       
     } catch (error) {
       console.error('Error fetching project:', error);
@@ -146,15 +143,18 @@ const GuestUpload = () => {
   if (!project) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 flex items-center justify-center">
-        <div className="text-center p-8">
+        <div className="text-center p-8 max-w-md">
           <h1 className="text-2xl font-bold text-gray-800 mb-4">Project Not Found</h1>
           <p className="text-gray-600 mb-4">
-            This QR code is not valid or the project is no longer available.
+            This QR code is not valid or the project no longer exists.
           </p>
           {qrCode && (
-            <div className="text-sm text-gray-500 space-y-1">
-              <p>QR Code: {qrCode}</p>
-              <p>Length: {qrCode.length} characters</p>
+            <div className="text-sm text-gray-500 space-y-1 bg-gray-100 p-4 rounded-lg">
+              <p><strong>QR Code:</strong> {qrCode}</p>
+              <p><strong>Length:</strong> {qrCode.length} characters</p>
+              <p className="text-xs mt-2 text-gray-400">
+                Check the browser console for more debugging information.
+              </p>
             </div>
           )}
         </div>
