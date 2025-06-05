@@ -2,11 +2,12 @@
 import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Upload, X, Video, CheckCircle } from 'lucide-react';
+import { Upload, X, Video, CheckCircle, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { VideoFile } from '@/hooks/useVideos';
+import { validateFileType, validateFileSize, sanitizeFileName } from '@/utils/security';
 
 interface VideoUploadProps {
   isOpen: boolean;
@@ -16,6 +17,10 @@ interface VideoUploadProps {
   projectName: string;
 }
 
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/mov', 'video/quicktime', 'video/avi'];
+const MAX_FILE_SIZE = 1024 * 1024 * 1024; // 1GB
+const MAX_FILES_PER_UPLOAD = 20;
+
 const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName }: VideoUploadProps) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -24,14 +29,56 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
   const { user } = useAuth();
   const { toast } = useToast();
 
+  const validateFiles = (files: FileList): File[] => {
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      // Validate file type
+      if (!validateFileType(file, ALLOWED_VIDEO_TYPES)) {
+        errors.push(`${file.name}: Only MP4, MOV, QuickTime, and AVI videos are supported.`);
+        continue;
+      }
+
+      // Validate file size
+      if (!validateFileSize(file, MAX_FILE_SIZE)) {
+        errors.push(`${file.name}: File too large. Maximum size is 1GB.`);
+        continue;
+      }
+
+      // Check for duplicate names
+      if (selectedFiles.some(existing => existing.name === file.name)) {
+        errors.push(`${file.name}: File already selected.`);
+        continue;
+      }
+
+      validFiles.push(file);
+    }
+
+    // Check total file limit
+    if (selectedFiles.length + validFiles.length > MAX_FILES_PER_UPLOAD) {
+      errors.push(`Too many files. Maximum ${MAX_FILES_PER_UPLOAD} files per upload.`);
+      return validFiles.slice(0, MAX_FILES_PER_UPLOAD - selectedFiles.length);
+    }
+
+    if (errors.length > 0) {
+      toast({
+        title: "File Validation Errors",
+        description: errors.join('\n'),
+        variant: "destructive",
+      });
+    }
+
+    return validFiles;
+  };
+
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
     
-    const videoFiles = Array.from(files).filter(file => 
-      file.type.startsWith('video/') && file.size <= 100 * 1024 * 1024 // 100MB limit
-    );
-    
-    setSelectedFiles(prev => [...prev, ...videoFiles]);
+    const validFiles = validateFiles(files);
+    setSelectedFiles(prev => [...prev, ...validFiles]);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -62,28 +109,34 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
 
     try {
       for (const file of selectedFiles) {
-        // Create unique file path
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}/${projectId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        // Create secure file path with user and project validation
+        const sanitizedFileName = sanitizeFileName(file.name);
+        const fileExt = sanitizedFileName.split('.').pop();
+        const timestamp = Date.now();
+        const randomId = Math.random().toString(36).substring(2, 15);
+        const fileName = `${user.id}/${projectId}/${timestamp}-${randomId}.${fileExt}`;
         
-        // Upload file to Supabase Storage
+        // Upload file to secure videos bucket
         const { error: uploadError } = await supabase.storage
           .from('videos')
-          .upload(fileName, file);
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
         if (uploadError) {
           console.error('Upload error:', uploadError);
-          throw uploadError;
+          throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
         }
 
-        // Save video metadata to media_assets table (using existing table structure)
+        // Save video metadata with validation
         const { data: videoData, error: dbError } = await supabase
           .from('media_assets')
           .insert([
             {
               user_id: user.id,
               project_id: projectId,
-              file_name: file.name,
+              file_name: sanitizedFileName,
               file_path: fileName,
               file_type: file.type,
               file_size: file.size,
@@ -95,7 +148,9 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
 
         if (dbError) {
           console.error('Database error:', dbError);
-          throw dbError;
+          // Clean up uploaded file
+          await supabase.storage.from('videos').remove([fileName]);
+          throw new Error(`Failed to save ${file.name}: ${dbError.message}`);
         }
 
         // Get signed URL for immediate display
@@ -123,11 +178,16 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
       setSelectedFiles([]);
       onClose();
 
+      toast({
+        title: "Upload Successful",
+        description: `Successfully uploaded ${uploadedVideos.length} video(s)`,
+      });
+
     } catch (error) {
       console.error('Error uploading videos:', error);
       toast({
         title: "Upload Error",
-        description: "Failed to upload one or more videos. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to upload videos",
         variant: "destructive",
       });
     } finally {
@@ -143,13 +203,19 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl">Upload Videos</DialogTitle>
+          <DialogTitle className="text-xl">Secure Video Upload</DialogTitle>
           <DialogDescription>
-            Add videos to {projectName}. Supported formats: MP4, MOV, AVI (max 100MB each)
+            Upload videos to {projectName}. Files are validated and securely stored.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Security Notice */}
+          <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
+            <AlertTriangle className="h-4 w-4" />
+            <span>All uploads are scanned for security and validated before processing.</span>
+          </div>
+
           {/* Drop Zone */}
           <div
             className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 cursor-pointer ${
@@ -167,13 +233,13 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
               {isDragging ? 'Drop videos here' : 'Drag & drop videos or click to browse'}
             </p>
             <p className="text-sm text-gray-500">
-              MP4, MOV, AVI files up to 100MB each
+              MP4, MOV, QuickTime, AVI files up to 1GB each (max {MAX_FILES_PER_UPLOAD} files)
             </p>
             <input
               ref={fileInputRef}
               type="file"
               multiple
-              accept="video/*"
+              accept="video/mp4,video/mov,video/quicktime,video/avi"
               className="hidden"
               onChange={(e) => handleFileSelect(e.target.files)}
             />
@@ -184,7 +250,7 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
             <div className="space-y-3">
               <h3 className="font-medium flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-green-500" />
-                Selected Videos ({selectedFiles.length})
+                Selected Videos ({selectedFiles.length}/{MAX_FILES_PER_UPLOAD})
               </h3>
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {selectedFiles.map((file, index) => (

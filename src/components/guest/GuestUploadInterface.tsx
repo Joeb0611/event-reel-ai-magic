@@ -1,186 +1,177 @@
 
-import { useState, useCallback } from 'react';
-import { ArrowLeft, Upload, Camera, CheckCircle } from 'lucide-react';
+import { useState } from 'react';
+import { ArrowLeft, Upload, User, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Project } from '@/hooks/useProjects';
-import GuestFileUpload from './GuestFileUpload';
-import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import SecureGuestUpload from './SecureGuestUpload';
+import { sanitizeInput } from '@/utils/security';
+
+interface GuestProject {
+  id: string;
+  name: string;
+  bride_name?: string;
+  groom_name?: string;
+  wedding_date?: string;
+  location?: string;
+  qr_code: string;
+}
 
 interface GuestUploadInterfaceProps {
-  project: Project;
+  project: GuestProject;
   onBack: () => void;
 }
 
-export interface GuestUploadData {
-  guestName?: string;
-  guestMessage?: string;
-}
-
 const GuestUploadInterface = ({ project, onBack }: GuestUploadInterfaceProps) => {
-  const { toast } = useToast();
   const [guestName, setGuestName] = useState('');
   const [guestMessage, setGuestMessage] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
   const [uploadComplete, setUploadComplete] = useState(false);
-  const [uploadedCount, setUploadedCount] = useState(0);
 
-  const handleUploadStart = useCallback(() => {
-    setIsUploading(true);
-  }, []);
-
-  const handleUploadComplete = useCallback((count: number) => {
-    setIsUploading(false);
-    setUploadComplete(true);
-    setUploadedCount(count);
-    
-    toast({
-      title: "Upload successful! 🎉",
-      description: `${count} file(s) uploaded successfully. Thank you for sharing!`,
-    });
-  }, [toast]);
-
-  const handleUploadError = useCallback((error: string) => {
-    setIsUploading(false);
-    toast({
-      title: "Upload failed",
-      description: error,
-      variant: "destructive",
-    });
-  }, [toast]);
-
-  const handleUploadAnother = () => {
-    setUploadComplete(false);
-    setUploadedCount(0);
-    setGuestName('');
-    setGuestMessage('');
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const sanitized = sanitizeInput(e.target.value);
+    if (sanitized.length <= 50) {
+      setGuestName(sanitized);
+    }
   };
 
-  if (uploadComplete) {
-    return (
+  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const sanitized = sanitizeInput(e.target.value);
+    if (sanitized.length <= 200) {
+      setGuestMessage(sanitized);
+    }
+  };
+
+  const handleUploadComplete = () => {
+    setUploadComplete(true);
+    setTimeout(() => {
+      setUploadComplete(false);
+    }, 3000);
+  };
+
+  const displayName = guestName.trim() || 'Anonymous Guest';
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
       <div className="container mx-auto px-4 py-8 max-w-2xl">
-        <Card className="text-center bg-white/90 backdrop-blur-sm border-0 shadow-lg">
-          <CardContent className="pt-8 pb-8">
-            <div className="w-20 h-20 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="w-10 h-10 text-white" />
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-6">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={onBack}
+            className="bg-white/80 backdrop-blur-sm"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Share Your Memories</h1>
+            <p className="text-gray-600">
+              {project.bride_name && project.groom_name 
+                ? `${project.bride_name} & ${project.groom_name}'s Wedding`
+                : project.name}
+            </p>
+          </div>
+        </div>
+
+        {/* Success Message */}
+        {uploadComplete && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-2 text-green-800">
+              <Upload className="w-5 h-5" />
+              <span className="font-medium">Upload successful!</span>
+            </div>
+            <p className="text-green-700 text-sm mt-1">
+              Thank you for sharing your memories. The couple will love seeing your photos and videos!
+            </p>
+          </div>
+        )}
+
+        {/* Guest Information Card */}
+        <Card className="mb-6 bg-white/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="w-5 h-5" />
+              Your Information (Optional)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <label htmlFor="guest-name" className="block text-sm font-medium text-gray-700 mb-1">
+                Your Name
+              </label>
+              <Input
+                id="guest-name"
+                type="text"
+                placeholder="Enter your name (optional)"
+                value={guestName}
+                onChange={handleNameChange}
+                maxLength={50}
+                className="bg-white"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {guestName.length}/50 characters
+              </p>
             </div>
             
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">
-              Thank you! 🎉
-            </h2>
-            
-            <p className="text-lg text-gray-600 mb-2">
-              {uploadedCount} file(s) uploaded successfully
-            </p>
-            
-            <p className="text-gray-500 mb-8">
-              Your photos and videos will help create amazing memories!
-            </p>
-            
-            <div className="space-y-3">
-              <Button
-                onClick={handleUploadAnother}
-                className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Upload More Files
-              </Button>
-              
-              <Button
-                onClick={onBack}
-                variant="outline"
-                className="w-full"
-              >
-                Back to Welcome
-              </Button>
+            <div>
+              <label htmlFor="guest-message" className="block text-sm font-medium text-gray-700 mb-1">
+                <MessageSquare className="w-4 h-4 inline mr-1" />
+                Message to the Couple
+              </label>
+              <Textarea
+                id="guest-message"
+                placeholder="Leave a sweet message for the happy couple..."
+                value={guestMessage}
+                onChange={handleMessageChange}
+                maxLength={200}
+                rows={3}
+                className="bg-white resize-none"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {guestMessage.length}/200 characters
+              </p>
             </div>
           </CardContent>
         </Card>
-      </div>
-    );
-  }
 
-  return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <div className="mb-6">
-        <Button
-          onClick={onBack}
-          variant="ghost"
-          className="text-gray-600 hover:text-gray-900"
-          disabled={isUploading}
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Details
-        </Button>
-      </div>
+        {/* Upload Interface */}
+        <Card className="bg-white/80 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Upload Photos & Videos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SecureGuestUpload
+              projectId={project.id}
+              qrCode={project.qr_code}
+              guestName={displayName}
+              onUploadComplete={handleUploadComplete}
+            />
+          </CardContent>
+        </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Guest Info Panel */}
-        <div className="lg:col-span-1">
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-lg">Your Info (Optional)</CardTitle>
-              <CardDescription>
-                Help us know who shared these memories
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="guestName">Your Name</Label>
-                <Input
-                  id="guestName"
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
-                  placeholder="e.g., Sarah & Mike"
-                  disabled={isUploading}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="guestMessage">Message</Label>
-                <Textarea
-                  id="guestMessage"
-                  value={guestMessage}
-                  onChange={(e) => setGuestMessage(e.target.value)}
-                  placeholder="Leave a special message..."
-                  rows={3}
-                  disabled={isUploading}
-                />
+        {/* Wedding Details */}
+        {(project.wedding_date || project.location) && (
+          <Card className="mt-6 bg-white/50 backdrop-blur-sm">
+            <CardContent className="pt-6">
+              <div className="text-center space-y-2">
+                {project.wedding_date && (
+                  <p className="text-sm text-gray-600">
+                    <strong>Date:</strong> {new Date(project.wedding_date).toLocaleDateString()}
+                  </p>
+                )}
+                {project.location && (
+                  <p className="text-sm text-gray-600">
+                    <strong>Location:</strong> {project.location}
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Upload Panel */}
-        <div className="lg:col-span-2">
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Camera className="w-5 h-5 text-purple-600" />
-                Upload Photos & Videos
-              </CardTitle>
-              <CardDescription>
-                Drag and drop files or click to browse. Mobile users can take photos directly!
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <GuestFileUpload
-                project={project}
-                guestData={{
-                  guestName: guestName.trim() || undefined,
-                  guestMessage: guestMessage.trim() || undefined,
-                }}
-                onUploadStart={handleUploadStart}
-                onUploadComplete={handleUploadComplete}
-                onUploadError={handleUploadError}
-                disabled={isUploading}
-              />
-            </CardContent>
-          </Card>
-        </div>
+        )}
       </div>
     </div>
   );
