@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -46,10 +45,13 @@ export const useProjects = () => {
 
   const fetchProjects = async () => {
     try {
+      console.log('Fetching projects...');
       const { data, error } = await supabase
         .from('projects')
         .select('*')
         .order('created_at', { ascending: false });
+
+      console.log('Projects fetch result:', { data, error });
 
       if (error) throw error;
       
@@ -59,6 +61,7 @@ export const useProjects = () => {
         privacy_settings: parsePrivacySettings(project.privacy_settings),
       }));
       
+      console.log('Converted projects:', convertedProjects);
       setProjects(convertedProjects);
     } catch (error) {
       console.error('Error fetching projects:', error);
@@ -74,22 +77,37 @@ export const useProjects = () => {
 
   const createProject = async (name: string, description: string) => {
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) throw new Error('Not authenticated');
+      console.log('Creating project...', { name, description });
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('Auth error:', userError);
+        throw new Error('Not authenticated');
+      }
+
+      console.log('Authenticated user:', user.id);
 
       const qrCode = `project-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+      console.log('Generated QR code:', qrCode);
       
+      const projectData = {
+        name,
+        title: name,
+        description,
+        user_id: user.id,
+        qr_code: qrCode,
+        privacy_settings: stringifyPrivacySettings({ public_qr: true, guest_upload: true }),
+      };
+
+      console.log('Inserting project data:', projectData);
+
       const { data, error } = await supabase
         .from('projects')
-        .insert([{
-          name,
-          title: name,
-          description,
-          user_id: user.data.user.id,
-          qr_code: qrCode,
-        }])
+        .insert([projectData])
         .select()
         .single();
+
+      console.log('Project insert result:', { data, error });
 
       if (error) throw error;
 
@@ -98,6 +116,7 @@ export const useProjects = () => {
         privacy_settings: parsePrivacySettings(data.privacy_settings),
       };
 
+      console.log('Created project:', newProject);
       setProjects([newProject, ...projects]);
       toast({
         title: "Success",
@@ -109,7 +128,7 @@ export const useProjects = () => {
       console.error('Error creating project:', error);
       toast({
         title: "Error",
-        description: "Failed to create project",
+        description: `Failed to create project: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -117,27 +136,41 @@ export const useProjects = () => {
 
   const createWeddingProject = async (projectData: WeddingProjectData) => {
     try {
-      const user = await supabase.auth.getUser();
-      if (!user.data.user) throw new Error('Not authenticated');
+      console.log('Creating wedding project...', projectData);
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('Auth error:', userError);
+        throw new Error('Not authenticated');
+      }
+
+      console.log('Authenticated user:', user.id);
 
       const qrCode = `wedding-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+      console.log('Generated wedding QR code:', qrCode);
       
+      const insertData = {
+        name: projectData.name,
+        title: projectData.name,
+        description: projectData.description,
+        bride_name: projectData.bride_name,
+        groom_name: projectData.groom_name,
+        wedding_date: projectData.wedding_date,
+        location: projectData.location,
+        privacy_settings: stringifyPrivacySettings({ public_qr: true, guest_upload: true }),
+        qr_code: qrCode,
+        user_id: user.id,
+      };
+
+      console.log('Inserting wedding project data:', insertData);
+
       const { data, error } = await supabase
         .from('projects')
-        .insert([{
-          name: projectData.name,
-          title: projectData.name,
-          description: projectData.description,
-          bride_name: projectData.bride_name,
-          groom_name: projectData.groom_name,
-          wedding_date: projectData.wedding_date,
-          location: projectData.location,
-          privacy_settings: stringifyPrivacySettings({ public_qr: true, guest_upload: true }),
-          qr_code: qrCode,
-          user_id: user.data.user.id,
-        }])
+        .insert([insertData])
         .select()
         .single();
+
+      console.log('Wedding project insert result:', { data, error });
 
       if (error) throw error;
 
@@ -146,6 +179,7 @@ export const useProjects = () => {
         privacy_settings: parsePrivacySettings(data.privacy_settings),
       };
 
+      console.log('Created wedding project:', newProject);
       setProjects([newProject, ...projects]);
       toast({
         title: "Success",
@@ -157,7 +191,7 @@ export const useProjects = () => {
       console.error('Error creating wedding project:', error);
       toast({
         title: "Error",
-        description: "Failed to create wedding project",
+        description: `Failed to create wedding project: ${error.message}`,
         variant: "destructive",
       });
     }
