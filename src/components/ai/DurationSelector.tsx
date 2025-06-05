@@ -1,6 +1,5 @@
 
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Crown } from 'lucide-react';
@@ -41,36 +40,30 @@ const DurationSelector = ({ value, onChange, isPremium = false }: DurationSelect
     onChange(newValue as WeddingAISettings['duration']);
   };
 
+  const selectedOption = durationOptions.find(option => option.value === value);
+
   return (
     <Card className="border-gray-200">
-      <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Clock className="w-5 h-5" />
+      <CardHeader className="pb-3 md:pb-4">
+        <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+          <Clock className="w-4 h-4 md:w-5 md:h-5" />
           Duration
         </CardTitle>
         <p className="text-sm text-gray-600">Select your preferred video length</p>
       </CardHeader>
       <CardContent className="space-y-4">
-        <RadioGroup
-          value={value}
-          onValueChange={handleChange}
-          className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-3"
-        >
-          {durationOptions.map((option) => (
-            <div key={option.value} className="relative">
-              <RadioGroupItem
+        <Select value={value} onValueChange={handleChange}>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {durationOptions.map((option) => (
+              <SelectItem 
+                key={option.value} 
                 value={option.value}
-                id={`duration-${option.value}`}
-                className="peer sr-only"
                 disabled={option.isPremium && !isPremium}
-              />
-              <Label
-                htmlFor={`duration-${option.value}`}
-                className={`flex flex-col items-center p-4 rounded-lg border-2 cursor-pointer transition-all 
-                  peer-checked:border-purple-500 peer-checked:bg-purple-50 hover:bg-gray-50
-                  ${option.isPremium && !isPremium ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2">
                   <span className="font-medium">{option.label}</span>
                   {option.isPremium && (
                     <Badge variant="secondary" className="text-xs">
@@ -79,10 +72,10 @@ const DurationSelector = ({ value, onChange, isPremium = false }: DurationSelect
                     </Badge>
                   )}
                 </div>
-              </Label>
-            </div>
-          ))}
-        </RadioGroup>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-2">
