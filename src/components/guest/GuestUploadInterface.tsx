@@ -8,6 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import SecureGuestUpload from './SecureGuestUpload';
 import { sanitizeInput } from '@/utils/security';
 
+export interface GuestUploadData {
+  guestName?: string;
+  guestMessage?: string;
+}
+
 interface GuestProject {
   id: string;
   name: string;
