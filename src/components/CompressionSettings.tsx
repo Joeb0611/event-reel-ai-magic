@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,25 +17,25 @@ interface CompressionSettingsProps {
 
 const CompressionSettings = ({ onSettingsChange, totalFiles, totalSizeMB }: CompressionSettingsProps) => {
   const [enabled, setEnabled] = useState(isCompressionSupported());
-  const [quality, setQuality] = useState<'high' | 'medium' | 'low'>('medium');
+  const [quality, setQuality] = useState<number>(0.8); // Changed to number
   
   const compressionSupported = isCompressionSupported();
 
   const qualityOptions = [
     {
-      value: 'high',
+      value: 0.9,
       label: 'High Quality',
       description: '1080p, ~80% size reduction',
       icon: <Zap className="w-4 h-4" />
     },
     {
-      value: 'medium',
+      value: 0.8,
       label: 'Medium Quality',
       description: '720p, ~60% size reduction',
       icon: <HardDrive className="w-4 h-4" />
     },
     {
-      value: 'low',
+      value: 0.6,
       label: 'Low Quality',
       description: '480p, ~40% size reduction',
       icon: <Clock className="w-4 h-4" />
@@ -42,9 +43,9 @@ const CompressionSettings = ({ onSettingsChange, totalFiles, totalSizeMB }: Comp
   ];
 
   const estimatedSavings = {
-    high: 0.8,
-    medium: 0.6,
-    low: 0.4
+    0.9: 0.8,
+    0.8: 0.6,
+    0.6: 0.4
   };
 
   const handleSettingsChange = () => {
@@ -59,7 +60,7 @@ const CompressionSettings = ({ onSettingsChange, totalFiles, totalSizeMB }: Comp
     handleSettingsChange();
   }, [enabled, quality]);
 
-  const estimatedNewSize = totalSizeMB * (1 - estimatedSavings[quality]);
+  const estimatedNewSize = totalSizeMB * (1 - estimatedSavings[quality as keyof typeof estimatedSavings]);
   const estimatedSavingsMB = totalSizeMB - estimatedNewSize;
 
   return (
@@ -95,12 +96,12 @@ const CompressionSettings = ({ onSettingsChange, totalFiles, totalSizeMB }: Comp
           <>
             <div className="space-y-3">
               <Label className="text-sm font-medium">Quality Level</Label>
-              <RadioGroup value={quality} onValueChange={(value: 'high' | 'medium' | 'low') => setQuality(value)}>
+              <RadioGroup value={quality.toString()} onValueChange={(value: string) => setQuality(parseFloat(value))}>
                 {qualityOptions.map((option) => (
                   <div key={option.value} className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
-                    <RadioGroupItem value={option.value} id={option.value} />
+                    <RadioGroupItem value={option.value.toString()} id={option.value.toString()} />
                     <div className="flex-1">
-                      <Label htmlFor={option.value} className="cursor-pointer">
+                      <Label htmlFor={option.value.toString()} className="cursor-pointer">
                         <div className="flex items-center gap-2 font-medium">
                           {option.icon}
                           {option.label}
@@ -137,9 +138,9 @@ const CompressionSettings = ({ onSettingsChange, totalFiles, totalSizeMB }: Comp
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs text-gray-600">
                     <span>Compression Progress</span>
-                    <span>{Math.round(estimatedSavings[quality] * 100)}%</span>
+                    <span>{Math.round(estimatedSavings[quality as keyof typeof estimatedSavings] * 100)}%</span>
                   </div>
-                  <Progress value={estimatedSavings[quality] * 100} className="h-2" />
+                  <Progress value={estimatedSavings[quality as keyof typeof estimatedSavings] * 100} className="h-2" />
                 </div>
               </div>
             )}

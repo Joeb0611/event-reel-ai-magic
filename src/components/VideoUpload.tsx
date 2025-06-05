@@ -217,7 +217,8 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
   };
 
   const getFilesToUpload = (): File[] => {
-    if (compressionSettings.enabled && compressionFiles.length > 0) {
+    // Always use compressed files if available, otherwise use original files
+    if (compressionFiles.length > 0) {
       return compressionFiles
         .filter(f => f.status === 'completed')
         .map(f => f.file);

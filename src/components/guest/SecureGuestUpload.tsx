@@ -35,7 +35,7 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [compressionFiles, setCompressionFiles] = useState<FileCompressionStatus[]>([]);
   const [compressionSettings, setCompressionSettings] = useState<CompressionSettingsType & { enabled: boolean }>({
-    quality: 'medium',
+    quality: 0.8, // Changed to number
     enabled: isCompressionSupported()
   });
   const [dragOver, setDragOver] = useState(false);
