@@ -9,7 +9,6 @@ import MobileGuestUpload from '@/components/mobile/MobileGuestUpload';
 import LoadingScreen from '@/components/LoadingScreen';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { validateProjectQRCode, ProjectByQRResponse } from '@/utils/validation';
 import { parsePrivacySettings } from '@/utils/typeConverters';
 
 type GuestProject = Project & { qr_code: string };
@@ -34,9 +33,12 @@ const GuestUpload = () => {
   const fetchProjectByQRCode = async (code: string) => {
     try {
       console.log('Fetching project for QR code:', code);
-      
-      if (!validateProjectQRCode(code)) {
-        console.error('Invalid QR code format:', code);
+      console.log('QR code length:', code.length);
+      console.log('QR code characters:', code.split('').map(c => `${c}(${c.charCodeAt(0)})`).join(', '));
+
+      // Simple validation - just check if it exists and has reasonable length
+      if (!code || code.length < 5) {
+        console.error('QR code too short:', code);
         toast({
           title: "Invalid QR code",
           description: "The QR code format is invalid.",
@@ -46,22 +48,40 @@ const GuestUpload = () => {
         return;
       }
 
-      // First, let's try a direct query to see if the project exists
-      const { data: directProject, error: directError } = await supabase
+      console.log('Querying database for QR code:', code);
+      
+      // Query the projects table directly
+      const { data: projectData, error: projectError } = await supabase
         .from('projects')
         .select('*')
         .eq('qr_code', code)
-        .single();
+        .maybeSingle();
 
-      console.log('Direct project query result:', { directProject, directError });
+      console.log('Database query result:', { projectData, projectError });
 
-      if (directError && directError.code !== 'PGRST116') {
-        console.error('Direct query error:', directError);
-        throw directError;
+      if (projectError) {
+        console.error('Database error:', projectError);
+        toast({
+          title: "Database error",
+          description: `Error fetching project: ${projectError.message}`,
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
       }
 
-      if (!directProject) {
+      if (!projectData) {
         console.error('No project found with QR code:', code);
+        
+        // Let's also check what QR codes exist in the database for debugging
+        const { data: allQrCodes, error: qrError } = await supabase
+          .from('projects')
+          .select('qr_code, name')
+          .not('qr_code', 'is', null);
+        
+        console.log('All QR codes in database:', allQrCodes);
+        console.log('QR codes query error:', qrError);
+        
         toast({
           title: "Project not found",
           description: "This QR code is not valid or the project no longer exists.",
@@ -71,8 +91,12 @@ const GuestUpload = () => {
         return;
       }
 
+      console.log('Project found:', projectData);
+
       // Check if guest uploads are enabled
-      const privacySettings = parsePrivacySettings(directProject.privacy_settings);
+      const privacySettings = parsePrivacySettings(projectData.privacy_settings);
+      console.log('Privacy settings:', privacySettings);
+      
       if (!privacySettings?.guest_upload) {
         console.error('Guest uploads disabled for project:', code);
         toast({
@@ -84,22 +108,25 @@ const GuestUpload = () => {
         return;
       }
 
-      console.log('Project found and guest uploads enabled:', directProject);
+      console.log('Setting project data...');
 
       setProject({
-        id: directProject.id,
-        name: directProject.name || '',
-        created_at: directProject.created_at || new Date().toISOString(),
-        updated_at: directProject.updated_at || new Date().toISOString(),
-        user_id: directProject.user_id || '',
+        id: projectData.id,
+        name: projectData.name || '',
+        created_at: projectData.created_at || new Date().toISOString(),
+        updated_at: projectData.updated_at || new Date().toISOString(),
+        user_id: projectData.user_id || '',
         qr_code: code,
-        description: directProject.description || '',
-        bride_name: directProject.bride_name,
-        groom_name: directProject.groom_name,
-        wedding_date: directProject.wedding_date,
-        location: directProject.location,
+        description: projectData.description || '',
+        bride_name: projectData.bride_name,
+        groom_name: projectData.groom_name,
+        wedding_date: projectData.wedding_date,
+        location: projectData.location,
         privacy_settings: privacySettings,
       });
+      
+      console.log('Project set successfully');
+      
     } catch (error) {
       console.error('Error fetching project:', error);
       toast({
@@ -125,9 +152,10 @@ const GuestUpload = () => {
             This QR code is not valid or the project is no longer available.
           </p>
           {qrCode && (
-            <p className="text-sm text-gray-500">
-              QR Code: {qrCode}
-            </p>
+            <div className="text-sm text-gray-500 space-y-1">
+              <p>QR Code: {qrCode}</p>
+              <p>Length: {qrCode.length} characters</p>
+            </div>
           )}
         </div>
       </div>

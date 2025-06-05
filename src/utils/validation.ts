@@ -1,3 +1,4 @@
+
 export const validateFileType = (file: File): boolean => {
   const allowedTypes = [
     'image/jpeg', 'image/jpg', 'image/png', 'image/heic', 'image/heif',
@@ -23,9 +24,8 @@ export const validateProjectQRCode = (qrCode: string): boolean => {
     return false;
   }
   
-  // QR codes should be alphanumeric with hyphens, minimum length check
-  const qrCodeRegex = /^[a-zA-Z0-9-_]{10,}$/;
-  return qrCodeRegex.test(qrCode) && qrCode.length >= 10 && qrCode.length <= 100;
+  // Simplified validation - just check for basic requirements
+  return qrCode.length >= 3 && qrCode.length <= 255;
 };
 
 export const sanitizeInput = (input: string): string => {
