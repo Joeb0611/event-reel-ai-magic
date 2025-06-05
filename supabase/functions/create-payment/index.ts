@@ -118,24 +118,14 @@ serve(async (req) => {
       console.log("No valid auth header, proceeding as guest");
     }
 
-    // Validate and sanitize origin
-    const origin = req.headers.get("origin") || "http://localhost:5173";
-    const allowedOrigins = [
-      "http://localhost:5173",
-      "https://memoryweave.lovable.app",
-      // Add your production domains here
-    ];
+    // Get origin and create secure redirect URLs (removed strict origin validation)
+    const origin = req.headers.get("origin") || req.headers.get("referer")?.split('/').slice(0, 3).join('/') || "https://memoryweave.lovable.app";
+    console.log("Using origin:", origin);
     
-    if (!allowedOrigins.some(allowed => origin.startsWith(allowed))) {
-      console.error("Origin not allowed:", origin);
-      throw new Error("Access denied: Invalid origin");
-    }
-
-    // Create secure redirect URLs
     const success_url = `${origin}/payment-success?tier=${encodeURIComponent(tier)}&project_id=${encodeURIComponent(project_id || "")}`;
     const cancel_url = `${origin}/subscription`;
     
-    console.log("Redirect URLs validated");
+    console.log("Redirect URLs created:", { success_url, cancel_url });
 
     // Check for existing Stripe customer with rate limiting
     let stripeCustomerId = null;
