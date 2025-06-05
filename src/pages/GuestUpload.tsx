@@ -25,12 +25,18 @@ const GuestUpload = () => {
   useEffect(() => {
     if (qrCode) {
       fetchProjectByQRCode(qrCode);
+    } else {
+      console.error('No QR code provided in URL');
+      setLoading(false);
     }
   }, [qrCode]);
 
   const fetchProjectByQRCode = async (code: string) => {
     try {
+      console.log('Fetching project for QR code:', code);
+      
       if (!validateProjectQRCode(code)) {
+        console.error('Invalid QR code format:', code);
         toast({
           title: "Invalid QR code",
           description: "The QR code format is invalid.",
@@ -40,53 +46,65 @@ const GuestUpload = () => {
         return;
       }
 
-      const result = await supabase.rpc('get_project_by_qr', { 
-        qr_code_param: code 
-      });
+      // First, let's try a direct query to see if the project exists
+      const { data: directProject, error: directError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('qr_code', code)
+        .single();
 
-      if (result.error) {
-        console.error('Error fetching project:', result.error);
+      console.log('Direct project query result:', { directProject, directError });
+
+      if (directError && directError.code !== 'PGRST116') {
+        console.error('Direct query error:', directError);
+        throw directError;
+      }
+
+      if (!directProject) {
+        console.error('No project found with QR code:', code);
         toast({
           title: "Project not found",
-          description: "This QR code is not valid or the project is no longer available.",
+          description: "This QR code is not valid or the project no longer exists.",
           variant: "destructive",
         });
         setLoading(false);
         return;
       }
 
-      const data = result.data as ProjectByQRResponse[];
-      
-      if (!data || data.length === 0) {
+      // Check if guest uploads are enabled
+      const privacySettings = parsePrivacySettings(directProject.privacy_settings);
+      if (!privacySettings?.guest_upload) {
+        console.error('Guest uploads disabled for project:', code);
         toast({
-          title: "Project not found",
-          description: "This QR code is not valid or guest uploads are disabled.",
+          title: "Guest uploads disabled",
+          description: "Guest uploads are not enabled for this project.",
           variant: "destructive",
         });
         setLoading(false);
         return;
       }
 
-      const projectData = data[0];
+      console.log('Project found and guest uploads enabled:', directProject);
+
       setProject({
-        id: projectData.id,
-        name: projectData.name || '',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user_id: '',
+        id: directProject.id,
+        name: directProject.name || '',
+        created_at: directProject.created_at || new Date().toISOString(),
+        updated_at: directProject.updated_at || new Date().toISOString(),
+        user_id: directProject.user_id || '',
         qr_code: code,
-        description: projectData.name || '',
-        bride_name: projectData.bride_name,
-        groom_name: projectData.groom_name,
-        wedding_date: projectData.wedding_date,
-        location: projectData.location,
-        privacy_settings: parsePrivacySettings(projectData.privacy_settings),
+        description: directProject.description || '',
+        bride_name: directProject.bride_name,
+        groom_name: directProject.groom_name,
+        wedding_date: directProject.wedding_date,
+        location: directProject.location,
+        privacy_settings: privacySettings,
       });
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching project:', error);
       toast({
         title: "Error",
-        description: "Failed to load project details.",
+        description: "Failed to load project details. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -103,7 +121,14 @@ const GuestUpload = () => {
       <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 flex items-center justify-center">
         <div className="text-center p-8">
           <h1 className="text-2xl font-bold text-gray-800 mb-4">Project Not Found</h1>
-          <p className="text-gray-600">This QR code is not valid or the project is no longer available.</p>
+          <p className="text-gray-600 mb-4">
+            This QR code is not valid or the project is no longer available.
+          </p>
+          {qrCode && (
+            <p className="text-sm text-gray-500">
+              QR Code: {qrCode}
+            </p>
+          )}
         </div>
       </div>
     );
