@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Upload, AlertTriangle } from 'lucide-react';
+import { Upload, AlertTriangle, X, FileImage, FileVideo } from 'lucide-react';
 import { sanitizeInput, validateFileType, validateFileSize, sanitizeFileName, checkRateLimit } from '@/utils/security';
 
 interface SecureGuestUploadProps {
@@ -30,6 +30,7 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [dragOver, setDragOver] = useState(false);
 
   const validateFiles = (files: FileList): File[] => {
     const validFiles: File[] = [];
@@ -87,6 +88,42 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
 
     const validFiles = validateFiles(files);
     setSelectedFiles(prev => [...prev, ...validFiles]);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const files = e.dataTransfer.files;
+    if (files) {
+      const validFiles = validateFiles(files);
+      setSelectedFiles(prev => [...prev, ...validFiles]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  };
+
+  const handleDropZoneClick = () => {
+    const input = document.getElementById('file-upload') as HTMLInputElement;
+    input?.click();
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024 * 1024) {
+      return `${(bytes / 1024).toFixed(1)} KB`;
+    }
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const uploadFiles = async () => {
@@ -177,31 +214,33 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
     }
   };
 
-  const removeFile = (index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
   return (
     <div className="space-y-4">
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+      <div 
+        className={`border-2 border-dashed rounded-lg p-6 cursor-pointer transition-colors ${
+          dragOver ? 'border-purple-400 bg-purple-50' : 'border-gray-300 hover:border-purple-300 hover:bg-gray-50'
+        }`}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onClick={handleDropZoneClick}
+      >
         <div className="text-center">
           <Upload className="mx-auto h-12 w-12 text-gray-400" />
           <div className="mt-4">
-            <label htmlFor="file-upload" className="cursor-pointer">
-              <span className="mt-2 block text-sm font-medium text-gray-900">
-                Select photos and videos to upload
-              </span>
-              <input
-                id="file-upload"
-                name="file-upload"
-                type="file"
-                className="sr-only"
-                multiple
-                accept="image/jpeg,image/png,image/heic,image/heif,video/mp4,video/mov,video/quicktime"
-                onChange={handleFileSelect}
-                disabled={uploading}
-              />
-            </label>
+            <span className="mt-2 block text-sm font-medium text-gray-900">
+              Select photos and videos to upload
+            </span>
+            <input
+              id="file-upload"
+              name="file-upload"
+              type="file"
+              className="sr-only"
+              multiple
+              accept="image/jpeg,image/png,image/heic,image/heif,video/mp4,video/mov,video/quicktime"
+              onChange={handleFileSelect}
+              disabled={uploading}
+            />
           </div>
           <p className="mt-1 text-xs text-gray-500">
             JPEG, PNG, HEIC, MP4, MOV up to 100MB each
@@ -212,20 +251,30 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
       {selectedFiles.length > 0 && (
         <div className="space-y-2">
           <h3 className="font-medium">Selected Files ({selectedFiles.length})</h3>
-          <div className="max-h-32 overflow-y-auto space-y-1">
+          <div className="max-h-64 overflow-y-auto space-y-2">
             {selectedFiles.map((file, index) => (
-              <div key={index} className="text-sm text-gray-600 flex justify-between items-center">
-                <span className="truncate">{file.name}</span>
-                <div className="flex items-center gap-2">
-                  <span>{(file.size / 1024 / 1024).toFixed(1)}MB</span>
-                  <button
-                    onClick={() => removeFile(index)}
-                    className="text-red-500 hover:text-red-700 text-xs"
-                    disabled={uploading}
-                  >
-                    Remove
-                  </button>
+              <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
+                <div className="flex-shrink-0">
+                  {file.type.startsWith('image/') ? (
+                    <FileImage className="h-8 w-8 text-blue-500" />
+                  ) : (
+                    <FileVideo className="h-8 w-8 text-purple-500" />
+                  )}
                 </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+                  <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeFile(index);
+                  }}
+                  className="text-red-500 hover:text-red-700 p-1"
+                  disabled={uploading}
+                >
+                  <X className="h-4 w-4" />
+                </button>
               </div>
             ))}
           </div>
