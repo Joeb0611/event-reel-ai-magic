@@ -1,10 +1,12 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Upload, AlertTriangle, X, FileImage, FileVideo } from 'lucide-react';
 import { sanitizeInput, validateFileType, validateFileSize, sanitizeFileName, checkRateLimit } from '@/utils/security';
+import CompressionSettings from '@/components/CompressionSettings';
+import CompressionPreview, { FileCompressionStatus } from '@/components/CompressionPreview';
+import { compressVideo, CompressionSettings as CompressionSettingsType, isCompressionSupported } from '@/utils/videoCompression';
 
 interface SecureGuestUploadProps {
   projectId: string;
@@ -23,13 +25,19 @@ const ALLOWED_FILE_TYPES = [
   'video/quicktime'
 ];
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+const MAX_FILE_SIZE = 300 * 1024 * 1024; // Increased to 300MB with compression
 const MAX_FILES_PER_SESSION = 10;
 
 const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: SecureGuestUploadProps) => {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
+  const [compressing, setCompressing] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [compressionFiles, setCompressionFiles] = useState<FileCompressionStatus[]>([]);
+  const [compressionSettings, setCompressionSettings] = useState<CompressionSettingsType & { enabled: boolean }>({
+    quality: 'medium',
+    enabled: isCompressionSupported()
+  });
   const [dragOver, setDragOver] = useState(false);
 
   const validateFiles = (files: FileList): File[] => {
@@ -53,7 +61,7 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
 
       // Validate file size
       if (!validateFileSize(file, MAX_FILE_SIZE)) {
-        errors.push(`${file.name}: File too large. Maximum size is 100MB.`);
+        errors.push(`${file.name}: File too large. Maximum size is 300MB.`);
         continue;
       }
 
@@ -119,6 +127,67 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleCompress = async () => {
+    const videoFiles = selectedFiles.filter(file => file.type.startsWith('video/'));
+    if (videoFiles.length === 0 || !compressionSettings.enabled) return;
+
+    setCompressing(true);
+    const newCompressionFiles: FileCompressionStatus[] = videoFiles.map((file, index) => ({
+      id: `${index}-${Date.now()}`,
+      file,
+      originalFile: file,
+      progress: { progress: 0, originalSize: file.size, estimatedSize: file.size, status: 'preparing' },
+      status: 'pending'
+    }));
+
+    setCompressionFiles(newCompressionFiles);
+
+    for (let i = 0; i < newCompressionFiles.length; i++) {
+      const fileStatus = newCompressionFiles[i];
+      
+      try {
+        setCompressionFiles(prev => prev.map(f => 
+          f.id === fileStatus.id 
+            ? { ...f, status: 'compressing' }
+            : f
+        ));
+
+        const compressedFile = await compressVideo(
+          fileStatus.originalFile,
+          compressionSettings,
+          (progress) => {
+            setCompressionFiles(prev => prev.map(f => 
+              f.id === fileStatus.id 
+                ? { ...f, progress }
+                : f
+            ));
+          }
+        );
+
+        setCompressionFiles(prev => prev.map(f => 
+          f.id === fileStatus.id 
+            ? { ...f, file: compressedFile, status: 'completed' }
+            : f
+        ));
+
+        // Replace the original file in selectedFiles with compressed version
+        setSelectedFiles(prev => prev.map(f => 
+          f === fileStatus.originalFile ? compressedFile : f
+        ));
+
+      } catch (error) {
+        console.error('Compression failed for file:', fileStatus.originalFile.name, error);
+        setCompressionFiles(prev => prev.map(f => 
+          f.id === fileStatus.id 
+            ? { ...f, status: 'error' }
+            : f
+        ));
+      }
+    }
+
+    setCompressing(false);
+  };
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024 * 1024) {
       return `${(bytes / 1024).toFixed(1)} KB`;
@@ -144,7 +213,6 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
         
         console.log('File path:', filePath);
         
-        // First, ensure the bucket exists by trying to create it (will fail silently if exists)
         try {
           await supabase.storage.createBucket('guest-uploads', {
             public: false,
@@ -155,7 +223,6 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
           console.log('Bucket already exists or creation failed:', bucketError);
         }
 
-        // Upload to guest-uploads bucket
         const { error: uploadError } = await supabase.storage
           .from('guest-uploads')
           .upload(filePath, file, {
@@ -170,8 +237,6 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
 
         console.log('File uploaded successfully, now saving to database');
 
-        // Record in videos table - note: we don't need authentication for guest uploads
-        // The RLS policies allow this through the guest upload flow
         const { error: dbError } = await supabase
           .from('videos')
           .insert({
@@ -181,12 +246,11 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
             size: file.size,
             guest_name: sanitizedGuestName,
             uploaded_by_guest: true,
-            user_id: '00000000-0000-0000-0000-000000000000' // Use a placeholder UUID for guest uploads
+            user_id: '00000000-0000-0000-0000-000000000000'
           });
 
         if (dbError) {
           console.error('Database error:', dbError);
-          // Try to clean up uploaded file
           await supabase.storage.from('guest-uploads').remove([filePath]);
           throw new Error(`Failed to record ${file.name}: ${dbError.message}`);
         }
@@ -200,6 +264,7 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
       });
       
       setSelectedFiles([]);
+      setCompressionFiles([]);
       onUploadComplete();
       
     } catch (error) {
@@ -213,6 +278,9 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
       setUploading(false);
     }
   };
+
+  const videoFiles = selectedFiles.filter(file => file.type.startsWith('video/'));
+  const totalSizeMB = selectedFiles.reduce((sum, file) => sum + file.size, 0) / (1024 * 1024);
 
   return (
     <div className="space-y-4">
@@ -239,14 +307,33 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
               multiple
               accept="image/jpeg,image/png,image/heic,image/heif,video/mp4,video/mov,video/quicktime"
               onChange={handleFileSelect}
-              disabled={uploading}
+              disabled={uploading || compressing}
             />
           </div>
           <p className="mt-1 text-xs text-gray-500">
-            JPEG, PNG, HEIC, MP4, MOV up to 100MB each
+            JPEG, PNG, HEIC, MP4, MOV up to 300MB each
           </p>
         </div>
       </div>
+
+      {/* Compression Settings for video files */}
+      {videoFiles.length > 0 && (
+        <CompressionSettings
+          onSettingsChange={setCompressionSettings}
+          totalFiles={videoFiles.length}
+          totalSizeMB={videoFiles.reduce((sum, file) => sum + file.size, 0) / (1024 * 1024)}
+        />
+      )}
+
+      {/* Compression Preview */}
+      {compressionFiles.length > 0 && (
+        <CompressionPreview
+          files={compressionFiles}
+          onCancel={() => {}} // handleCompressionCancel
+          onRetry={() => {}} // handleCompressionRetry  
+          onRemove={() => {}} // handleCompressionRemove
+        />
+      )}
 
       {selectedFiles.length > 0 && (
         <div className="space-y-2">
@@ -271,7 +358,7 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
                     removeFile(index);
                   }}
                   className="text-red-500 hover:text-red-700 p-1"
-                  disabled={uploading}
+                  disabled={uploading || compressing}
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -286,13 +373,25 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
         <span>Files are scanned for security. Large files may take longer to process.</span>
       </div>
 
-      <Button 
-        onClick={uploadFiles}
-        disabled={selectedFiles.length === 0 || uploading}
-        className="w-full"
-      >
-        {uploading ? 'Uploading...' : `Upload ${selectedFiles.length} file(s)`}
-      </Button>
+      <div className="flex gap-3">
+        {compressionSettings.enabled && videoFiles.length > 0 && compressionFiles.length === 0 && (
+          <Button 
+            onClick={handleCompress}
+            disabled={compressing || videoFiles.length === 0}
+            className="flex-1 bg-blue-600 hover:bg-blue-700"
+          >
+            {compressing ? 'Compressing...' : `Compress ${videoFiles.length} Video${videoFiles.length !== 1 ? 's' : ''}`}
+          </Button>
+        )}
+
+        <Button 
+          onClick={uploadFiles}
+          disabled={selectedFiles.length === 0 || uploading || compressing}
+          className="flex-1"
+        >
+          {uploading ? 'Uploading...' : `Upload ${selectedFiles.length} file(s)`}
+        </Button>
+      </div>
     </div>
   );
 };

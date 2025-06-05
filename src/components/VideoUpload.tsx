@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { VideoFile } from '@/hooks/useVideos';
 import { validateFileType, validateFileSize, sanitizeFileName } from '@/utils/security';
+import CompressionSettings from '@/components/CompressionSettings';
+import CompressionPreview, { FileCompressionStatus } from '@/components/CompressionPreview';
+import { compressVideo, CompressionSettings as CompressionSettingsType } from '@/utils/videoCompression';
 
 interface VideoUploadProps {
   isOpen: boolean;
@@ -18,13 +20,19 @@ interface VideoUploadProps {
 }
 
 const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/mov', 'video/quicktime', 'video/avi'];
-const MAX_FILE_SIZE = 1024 * 1024 * 1024; // 1GB
+const MAX_FILE_SIZE = 500 * 1024 * 1024; // Increased to 500MB since we'll compress
 const MAX_FILES_PER_UPLOAD = 20;
 
 const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName }: VideoUploadProps) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [compressionFiles, setCompressionFiles] = useState<FileCompressionStatus[]>([]);
+  const [compressionSettings, setCompressionSettings] = useState<CompressionSettingsType & { enabled: boolean }>({
+    quality: 'medium',
+    enabled: true
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [compressing, setCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -44,7 +52,7 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
 
       // Validate file size
       if (!validateFileSize(file, MAX_FILE_SIZE)) {
-        errors.push(`${file.name}: File too large. Maximum size is 1GB.`);
+        errors.push(`${file.name}: File too large. Maximum size is 500MB.`);
         continue;
       }
 
@@ -101,14 +109,131 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleCompress = async () => {
+    if (selectedFiles.length === 0 || !compressionSettings.enabled) return;
+
+    setCompressing(true);
+    const newCompressionFiles: FileCompressionStatus[] = selectedFiles.map((file, index) => ({
+      id: `${index}-${Date.now()}`,
+      file,
+      originalFile: file,
+      progress: { progress: 0, originalSize: file.size, estimatedSize: file.size, status: 'preparing' },
+      status: 'pending'
+    }));
+
+    setCompressionFiles(newCompressionFiles);
+
+    // Compress files one by one
+    for (let i = 0; i < newCompressionFiles.length; i++) {
+      const fileStatus = newCompressionFiles[i];
+      
+      try {
+        setCompressionFiles(prev => prev.map(f => 
+          f.id === fileStatus.id 
+            ? { ...f, status: 'compressing' }
+            : f
+        ));
+
+        const compressedFile = await compressVideo(
+          fileStatus.originalFile,
+          compressionSettings,
+          (progress) => {
+            setCompressionFiles(prev => prev.map(f => 
+              f.id === fileStatus.id 
+                ? { ...f, progress }
+                : f
+            ));
+          }
+        );
+
+        setCompressionFiles(prev => prev.map(f => 
+          f.id === fileStatus.id 
+            ? { ...f, file: compressedFile, status: 'completed' }
+            : f
+        ));
+
+      } catch (error) {
+        console.error('Compression failed for file:', fileStatus.originalFile.name, error);
+        setCompressionFiles(prev => prev.map(f => 
+          f.id === fileStatus.id 
+            ? { ...f, status: 'error' }
+            : f
+        ));
+      }
+    }
+
+    setCompressing(false);
+  };
+
+  const handleCompressionCancel = (fileId: string) => {
+    setCompressionFiles(prev => prev.map(f => 
+      f.id === fileId 
+        ? { ...f, status: 'cancelled' }
+        : f
+    ));
+  };
+
+  const handleCompressionRetry = async (fileId: string) => {
+    const fileStatus = compressionFiles.find(f => f.id === fileId);
+    if (!fileStatus) return;
+
+    try {
+      setCompressionFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { ...f, status: 'compressing', progress: { ...f.progress, progress: 0, status: 'preparing' } }
+          : f
+      ));
+
+      const compressedFile = await compressVideo(
+        fileStatus.originalFile,
+        compressionSettings,
+        (progress) => {
+          setCompressionFiles(prev => prev.map(f => 
+            f.id === fileId 
+              ? { ...f, progress }
+              : f
+          ));
+        }
+      );
+
+      setCompressionFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { ...f, file: compressedFile, status: 'completed' }
+          : f
+      ));
+
+    } catch (error) {
+      console.error('Retry compression failed:', error);
+      setCompressionFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { ...f, status: 'error' }
+          : f
+      ));
+    }
+  };
+
+  const handleCompressionRemove = (fileId: string) => {
+    setCompressionFiles(prev => prev.filter(f => f.id !== fileId));
+  };
+
+  const getFilesToUpload = (): File[] => {
+    if (compressionSettings.enabled && compressionFiles.length > 0) {
+      return compressionFiles
+        .filter(f => f.status === 'completed')
+        .map(f => f.file);
+    }
+    return selectedFiles;
+  };
+
   const handleUpload = async () => {
-    if (selectedFiles.length === 0 || !user) return;
+    const filesToUpload = getFilesToUpload();
+    if (filesToUpload.length === 0 || !user) return;
 
     setUploading(true);
     const uploadedVideos: VideoFile[] = [];
 
     try {
-      for (const file of selectedFiles) {
+      for (const file of filesToUpload) {
         // Create secure file path with user and project validation
         const sanitizedFileName = sanitizeFileName(file.name);
         const fileExt = sanitizedFileName.split('.').pop();
@@ -176,6 +301,7 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
 
       onVideosUploaded(uploadedVideos);
       setSelectedFiles([]);
+      setCompressionFiles([]);
       onClose();
 
       toast({
@@ -199,13 +325,18 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
+  const totalSizeMB = selectedFiles.reduce((sum, file) => sum + file.size, 0) / (1024 * 1024);
+  const readyToUpload = compressionSettings.enabled 
+    ? compressionFiles.filter(f => f.status === 'completed').length > 0
+    : selectedFiles.length > 0;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl">Secure Video Upload</DialogTitle>
+          <DialogTitle className="text-xl">Enhanced Video Upload</DialogTitle>
           <DialogDescription>
-            Upload videos to {projectName}. Files are validated and securely stored.
+            Upload videos to {projectName}. Files can be compressed before upload to save time and storage.
           </DialogDescription>
         </DialogHeader>
 
@@ -233,7 +364,7 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
               {isDragging ? 'Drop videos here' : 'Drag & drop videos or click to browse'}
             </p>
             <p className="text-sm text-gray-500">
-              MP4, MOV, QuickTime, AVI files up to 1GB each (max {MAX_FILES_PER_UPLOAD} files)
+              MP4, MOV, QuickTime, AVI files up to 500MB each (max {MAX_FILES_PER_UPLOAD} files)
             </p>
             <input
               ref={fileInputRef}
@@ -245,6 +376,15 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
             />
           </div>
 
+          {/* Compression Settings */}
+          {selectedFiles.length > 0 && (
+            <CompressionSettings
+              onSettingsChange={setCompressionSettings}
+              totalFiles={selectedFiles.length}
+              totalSizeMB={totalSizeMB}
+            />
+          )}
+
           {/* Selected Files */}
           {selectedFiles.length > 0 && (
             <div className="space-y-3">
@@ -252,7 +392,7 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
                 <CheckCircle className="w-5 h-5 text-green-500" />
                 Selected Videos ({selectedFiles.length}/{MAX_FILES_PER_UPLOAD})
               </h3>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+              <div className="space-y-2 max-h-40 overflow-y-auto">
                 {selectedFiles.map((file, index) => (
                   <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -267,7 +407,7 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
                       size="sm"
                       onClick={() => removeFile(index)}
                       className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      disabled={uploading}
+                      disabled={uploading || compressing}
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -277,17 +417,38 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
             </div>
           )}
 
+          {/* Compression Preview */}
+          {compressionFiles.length > 0 && (
+            <CompressionPreview
+              files={compressionFiles}
+              onCancel={handleCompressionCancel}
+              onRetry={handleCompressionRetry}
+              onRemove={handleCompressionRemove}
+            />
+          )}
+
           {/* Actions */}
           <div className="flex gap-3 pt-4">
-            <Button variant="outline" onClick={onClose} className="flex-1" disabled={uploading}>
+            <Button variant="outline" onClick={onClose} className="flex-1" disabled={uploading || compressing}>
               Cancel
             </Button>
+            
+            {compressionSettings.enabled && selectedFiles.length > 0 && compressionFiles.length === 0 && (
+              <Button 
+                onClick={handleCompress}
+                disabled={compressing || selectedFiles.length === 0}
+                className="flex-1 bg-blue-600 hover:bg-blue-700"
+              >
+                {compressing ? 'Compressing...' : `Compress ${selectedFiles.length} Video${selectedFiles.length !== 1 ? 's' : ''}`}
+              </Button>
+            )}
+            
             <Button 
               onClick={handleUpload}
-              disabled={selectedFiles.length === 0 || uploading}
+              disabled={!readyToUpload || uploading || compressing}
               className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
             >
-              {uploading ? 'Uploading...' : `Upload ${selectedFiles.length} Video${selectedFiles.length !== 1 ? 's' : ''}`}
+              {uploading ? 'Uploading...' : `Upload ${getFilesToUpload().length} Video${getFilesToUpload().length !== 1 ? 's' : ''}`}
             </Button>
           </div>
         </div>
