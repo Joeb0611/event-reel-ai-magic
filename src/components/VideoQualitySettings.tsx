@@ -15,6 +15,7 @@ interface VideoQualitySettingsProps {
 
 const VideoQualitySettings = ({ currentQuality, onQualityChange, projectId }: VideoQualitySettingsProps) => {
   const { hasFeatureAccess } = useSubscription();
+  const selectedOption = VIDEO_QUALITY_OPTIONS.find(opt => opt.value === currentQuality);
 
   const handleQualityChange = (value: VideoQuality) => {
     const option = VIDEO_QUALITY_OPTIONS.find(opt => opt.value === value);
@@ -40,9 +41,8 @@ const VideoQualitySettings = ({ currentQuality, onQualityChange, projectId }: Vi
           <Settings className="w-4 h-4 md:w-5 md:h-5" />
           Video Quality
         </CardTitle>
-        <p className="text-sm text-gray-600">Compression quality for all video uploads</p>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
         <Select value={currentQuality} onValueChange={handleQualityChange}>
           <SelectTrigger className="w-full">
             <SelectValue />
@@ -73,6 +73,9 @@ const VideoQualitySettings = ({ currentQuality, onQualityChange, projectId }: Vi
             })}
           </SelectContent>
         </Select>
+        {selectedOption && (
+          <p className="text-sm text-gray-600">{selectedOption.description}</p>
+        )}
       </CardContent>
     </Card>
   );

@@ -13,22 +13,26 @@ const videoStyleOptions = [
   {
     value: 'romantic' as const,
     label: 'Romantic',
-    icon: Heart
+    icon: Heart,
+    description: 'Soft, warm tones with gentle transitions and emotional focus'
   },
   {
     value: 'cinematic' as const,
     label: 'Cinematic',
-    icon: Camera
+    icon: Camera,
+    description: 'Professional film-like quality with dramatic angles and lighting'
   },
   {
     value: 'documentary' as const,
     label: 'Documentary',
-    icon: FileText
+    icon: FileText,
+    description: 'Natural, authentic storytelling with candid moments'
   },
   {
     value: 'energetic' as const,
     label: 'Energetic',
-    icon: Zap
+    icon: Zap,
+    description: 'Dynamic cuts, vibrant colors, and upbeat pacing'
   }
 ];
 
@@ -42,9 +46,8 @@ const VideoStyleSelector = ({ value, onChange }: VideoStyleSelectorProps) => {
           {selectedOption && <selectedOption.icon className="w-4 h-4 md:w-5 md:h-5" />}
           Video Style
         </CardTitle>
-        <p className="text-sm text-gray-600">Choose the overall aesthetic and mood</p>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
         <Select value={value} onValueChange={onChange}>
           <SelectTrigger className="w-full">
             <SelectValue />
@@ -63,6 +66,9 @@ const VideoStyleSelector = ({ value, onChange }: VideoStyleSelectorProps) => {
             })}
           </SelectContent>
         </Select>
+        {selectedOption && (
+          <p className="text-sm text-gray-600">{selectedOption.description}</p>
+        )}
       </CardContent>
     </Card>
   );

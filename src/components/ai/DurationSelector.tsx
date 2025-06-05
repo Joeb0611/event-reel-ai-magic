@@ -13,15 +13,41 @@ interface DurationSelectorProps {
 }
 
 const durationOptions = [
-  { value: '30s' as const, label: '30 seconds', isPremium: false },
-  { value: '1min' as const, label: '1 minute', isPremium: true },
-  { value: '2min' as const, label: '2 minutes', isPremium: true },
-  { value: '3min' as const, label: '3 minutes', isPremium: true },
-  { value: '5min' as const, label: '5 minutes', isPremium: true }
+  { 
+    value: '30s' as const, 
+    label: '30 seconds', 
+    isPremium: false,
+    description: 'Perfect for social media sharing and quick highlights'
+  },
+  { 
+    value: '1min' as const, 
+    label: '1 minute', 
+    isPremium: true,
+    description: 'Ideal balance of key moments and storytelling'
+  },
+  { 
+    value: '2min' as const, 
+    label: '2 minutes', 
+    isPremium: true,
+    description: 'Comprehensive highlights with more detail and emotion'
+  },
+  { 
+    value: '3min' as const, 
+    label: '3 minutes', 
+    isPremium: true,
+    description: 'Extended storytelling with ceremony and reception focus'
+  },
+  { 
+    value: '5min' as const, 
+    label: '5 minutes', 
+    isPremium: true,
+    description: 'Complete wedding story from start to finish'
+  }
 ];
 
 const DurationSelector = ({ value, onChange, projectId }: DurationSelectorProps) => {
   const { hasFeatureAccess } = useSubscription();
+  const selectedOption = durationOptions.find(option => option.value === value);
 
   const handleChange = (newValue: string) => {
     const option = durationOptions.find(opt => opt.value === newValue);
@@ -43,9 +69,8 @@ const DurationSelector = ({ value, onChange, projectId }: DurationSelectorProps)
           <Clock className="w-4 h-4 md:w-5 md:h-5" />
           Duration
         </CardTitle>
-        <p className="text-sm text-gray-600">Select your preferred video length</p>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
         <Select value={value} onValueChange={handleChange}>
           <SelectTrigger className="w-full">
             <SelectValue />
@@ -76,6 +101,9 @@ const DurationSelector = ({ value, onChange, projectId }: DurationSelectorProps)
             })}
           </SelectContent>
         </Select>
+        {selectedOption && (
+          <p className="text-sm text-gray-600">{selectedOption.description}</p>
+        )}
       </CardContent>
     </Card>
   );

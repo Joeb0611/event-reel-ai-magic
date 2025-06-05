@@ -10,14 +10,36 @@ interface ContentFocusSelectorProps {
 }
 
 const contentFocusOptions = [
-  { value: 'ceremony' as const, label: 'Ceremony Focus' },
-  { value: 'reception' as const, label: 'Reception Focus' },
-  { value: 'balanced' as const, label: 'Balanced' },
-  { value: 'emotional' as const, label: 'Emotional Moments' },
-  { value: 'candid' as const, label: 'Candid Shots' }
+  { 
+    value: 'ceremony' as const, 
+    label: 'Ceremony Focus',
+    description: 'Emphasizes vows, rings, and sacred moments of the ceremony'
+  },
+  { 
+    value: 'reception' as const, 
+    label: 'Reception Focus',
+    description: 'Highlights dancing, speeches, and celebration moments'
+  },
+  { 
+    value: 'balanced' as const, 
+    label: 'Balanced',
+    description: 'Equal mix of ceremony and reception highlights'
+  },
+  { 
+    value: 'emotional' as const, 
+    label: 'Emotional Moments',
+    description: 'Focuses on tears of joy, hugs, and heartfelt reactions'
+  },
+  { 
+    value: 'candid' as const, 
+    label: 'Candid Shots',
+    description: 'Natural, unposed moments and behind-the-scenes interactions'
+  }
 ];
 
 const ContentFocusSelector = ({ value, onChange }: ContentFocusSelectorProps) => {
+  const selectedOption = contentFocusOptions.find(option => option.value === value);
+
   return (
     <Card className="border-gray-200">
       <CardHeader className="pb-3 md:pb-4">
@@ -25,9 +47,8 @@ const ContentFocusSelector = ({ value, onChange }: ContentFocusSelectorProps) =>
           <Users className="w-4 h-4 md:w-5 md:h-5" />
           Content Focus
         </CardTitle>
-        <p className="text-sm text-gray-600">What should the AI prioritize in your video?</p>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
         <Select value={value} onValueChange={onChange}>
           <SelectTrigger className="w-full">
             <SelectValue />
@@ -40,6 +61,9 @@ const ContentFocusSelector = ({ value, onChange }: ContentFocusSelectorProps) =>
             ))}
           </SelectContent>
         </Select>
+        {selectedOption && (
+          <p className="text-sm text-gray-600">{selectedOption.description}</p>
+        )}
       </CardContent>
     </Card>
   );
