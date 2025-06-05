@@ -35,15 +35,15 @@ const VideoQualitySettings = ({ currentQuality, onQualityChange, projectId }: Vi
 
   return (
     <Card className="border-blue-200">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Settings className="w-5 h-5" />
-          Video Quality Settings
+      <CardHeader className="pb-3 md:pb-4">
+        <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+          <Settings className="w-4 h-4 md:w-5 md:h-5" />
+          Video Quality
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-3">
-          <Label className="text-sm font-medium">Video Compression Quality</Label>
+      <CardContent className="space-y-3 md:space-y-4">
+        <div className="space-y-2 md:space-y-3">
+          <Label className="text-sm font-medium">Compression Quality</Label>
           <RadioGroup value={currentQuality} onValueChange={handleQualityChange}>
             {VIDEO_QUALITY_OPTIONS.map((option) => {
               const hasAccess = option.tier === 'free' || 
@@ -53,11 +53,11 @@ const VideoQualitySettings = ({ currentQuality, onQualityChange, projectId }: Vi
               return (
                 <div key={option.value} className="relative">
                   {hasAccess ? (
-                    <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-gray-50">
+                    <div className="flex items-center space-x-2 p-2 md:p-3 border rounded-lg hover:bg-gray-50">
                       <RadioGroupItem value={option.value} id={option.value} />
                       <div className="flex-1">
                         <Label htmlFor={option.value} className="cursor-pointer">
-                          <div className="flex items-center gap-2 font-medium">
+                          <div className="flex items-center gap-2 font-medium text-sm md:text-base">
                             {option.label}
                             {option.tier !== 'free' && (
                               <Badge variant="secondary" className="text-xs">
@@ -75,11 +75,11 @@ const VideoQualitySettings = ({ currentQuality, onQualityChange, projectId }: Vi
                       projectId={projectId}
                       showBadge={true}
                     >
-                      <div className="flex items-center space-x-2 p-3 border rounded-lg opacity-60 cursor-not-allowed">
+                      <div className="flex items-center space-x-2 p-2 md:p-3 border rounded-lg opacity-60 cursor-not-allowed">
                         <RadioGroupItem value={option.value} id={option.value} disabled />
                         <div className="flex-1">
                           <Label className="cursor-not-allowed">
-                            <div className="flex items-center gap-2 font-medium">
+                            <div className="flex items-center gap-2 font-medium text-sm md:text-base">
                               <Lock className="w-4 h-4" />
                               {option.label}
                               <Badge variant="secondary" className="text-xs">
@@ -98,12 +98,12 @@ const VideoQualitySettings = ({ currentQuality, onQualityChange, projectId }: Vi
           </RadioGroup>
         </div>
         
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-800">
-            <strong>Current setting:</strong> {VIDEO_QUALITY_OPTIONS.find(opt => opt.value === currentQuality)?.label}
+        <div className="p-2 md:p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-xs md:text-sm text-blue-800">
+            <strong>Current:</strong> {VIDEO_QUALITY_OPTIONS.find(opt => opt.value === currentQuality)?.label}
           </p>
           <p className="text-xs text-blue-600 mt-1">
-            This setting applies to all video uploads for this project. Higher quality settings preserve more detail but result in larger file sizes.
+            Applies to all video uploads for this project
           </p>
         </div>
       </CardContent>

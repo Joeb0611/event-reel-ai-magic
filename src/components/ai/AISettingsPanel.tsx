@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Star } from 'lucide-react';
 import VideoStyleSelector from './VideoStyleSelector';
@@ -6,9 +7,11 @@ import ContentFocusSelector from './ContentFocusSelector';
 import MusicStyleSelector from './MusicStyleSelector';
 import MustIncludeToggle from './MustIncludeToggle';
 import CustomMusicUpload from './CustomMusicUpload';
+import VideoQualitySettings from '@/components/VideoQualitySettings';
 import FeatureGate from '@/components/FeatureGate';
 import SubscriptionGuard from '@/components/SubscriptionGuard';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { VideoQuality } from '@/utils/projectSettings';
 
 export interface WeddingAISettings {
   videoStyle: 'romantic' | 'cinematic' | 'documentary' | 'energetic';
@@ -17,6 +20,7 @@ export interface WeddingAISettings {
   musicStyle: 'romantic' | 'upbeat' | 'classical' | 'acoustic' | 'modern' | 'cinematic';
   includeMustInclude: boolean;
   useCustomMusic: boolean;
+  videoQuality: VideoQuality;
 }
 
 interface AISettingsPanelProps {
@@ -44,65 +48,80 @@ const AISettingsPanel = ({ settings, onSettingsChange, mustIncludeCount = 0, pro
   const isProfessional = currentTier === 'professional';
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 md:space-y-8">
       {/* Header */}
       <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl">
-            <Star className="w-6 h-6 text-purple-600" />
+        <CardHeader className="pb-3 md:pb-4">
+          <CardTitle className="flex items-center gap-2 text-lg md:text-2xl">
+            <Star className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
             Wedding AI Settings
           </CardTitle>
-          <p className="text-gray-600">
+          <p className="text-sm md:text-base text-gray-600">
             Customize how AI will create your perfect wedding highlight reel
           </p>
         </CardHeader>
       </Card>
 
-      {/* Video Style */}
-      <FeatureGate feature="all_styles" projectId={projectId}>
-        <VideoStyleSelector
-          value={settings.videoStyle}
-          onChange={(value) => updateSetting('videoStyle', value)}
+      {/* Compact grid layout for mobile */}
+      <div className="grid gap-4 md:gap-6">
+        {/* Video Style & Quality - Combined on mobile */}
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+          <FeatureGate feature="all_styles" projectId={projectId}>
+            <VideoStyleSelector
+              value={settings.videoStyle}
+              onChange={(value) => updateSetting('videoStyle', value)}
+            />
+          </FeatureGate>
+
+          {projectId && (
+            <VideoQualitySettings
+              currentQuality={settings.videoQuality}
+              onQualityChange={(quality) => updateSetting('videoQuality', quality)}
+              projectId={projectId}
+            />
+          )}
+        </div>
+
+        {/* Duration & Content Focus - Combined row */}
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+          <SubscriptionGuard feature="duration_1min" projectId={projectId}>
+            <DurationSelector
+              value={settings.duration}
+              onChange={(value) => updateSetting('duration', value)}
+              isPremium={isPremium}
+            />
+          </SubscriptionGuard>
+
+          <ContentFocusSelector
+            value={settings.contentFocus}
+            onChange={(value) => updateSetting('contentFocus', value)}
+          />
+        </div>
+
+        {/* Must Include Content */}
+        <MustIncludeToggle
+          checked={settings.includeMustInclude}
+          onChange={(checked) => updateSetting('includeMustInclude', checked)}
+          mustIncludeCount={mustIncludeCount}
         />
-      </FeatureGate>
 
-      {/* Duration */}
-      <SubscriptionGuard feature="duration_1min" projectId={projectId}>
-        <DurationSelector
-          value={settings.duration}
-          onChange={(value) => updateSetting('duration', value)}
-          isPremium={isPremium}
-        />
-      </SubscriptionGuard>
+        {/* Music Settings - Combined row */}
+        <div className="grid gap-4 md:gap-6 lg:grid-cols-2">
+          <MusicStyleSelector
+            value={settings.musicStyle}
+            onChange={(value) => updateSetting('musicStyle', value)}
+            disabled={settings.useCustomMusic}
+          />
 
-      {/* Content Focus */}
-      <ContentFocusSelector
-        value={settings.contentFocus}
-        onChange={(value) => updateSetting('contentFocus', value)}
-      />
-
-      {/* Must Include Content */}
-      <MustIncludeToggle
-        checked={settings.includeMustInclude}
-        onChange={(checked) => updateSetting('includeMustInclude', checked)}
-        mustIncludeCount={mustIncludeCount}
-      />
-
-      {/* Music Style */}
-      <MusicStyleSelector
-        value={settings.musicStyle}
-        onChange={(value) => updateSetting('musicStyle', value)}
-        disabled={settings.useCustomMusic}
-      />
-
-      {/* Custom Music Upload */}
-      <FeatureGate feature="custom_music" projectId={projectId}>
-        <CustomMusicUpload
-          checked={settings.useCustomMusic}
-          onChange={(checked) => updateSetting('useCustomMusic', checked)}
-          isPremium={isPremium}
-        />
-      </FeatureGate>
+          <FeatureGate feature="custom_music" projectId={projectId}>
+            <CustomMusicUpload
+              checked={settings.useCustomMusic}
+              onChange={(checked) => updateSetting('useCustomMusic', checked)}
+              isPremium={isPremium}
+            />
+          </FeatureGate>
+        </div>
+      </div>
     </div>
   );
 };

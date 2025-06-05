@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -35,7 +34,8 @@ const EnhancedAIProcessingPanel = ({
     contentFocus: 'balanced',
     musicStyle: 'romantic',
     includeMustInclude: true,
-    useCustomMusic: false
+    useCustomMusic: false,
+    videoQuality: 'good'
   });
 
   // Mock processing progress state
@@ -153,7 +153,8 @@ const EnhancedAIProcessingPanel = ({
                 <p>
                   {aiSettings.duration} {aiSettings.videoStyle} style • 
                   {aiSettings.contentFocus} focus • 
-                  {aiSettings.musicStyle} music
+                  {aiSettings.musicStyle} music • 
+                  {aiSettings.videoQuality} quality
                 </p>
                 {aiSettings.includeMustInclude && mustIncludeCount > 0 && (
                   <p>Including {mustIncludeCount} must-have moment{mustIncludeCount !== 1 ? 's' : ''}</p>
