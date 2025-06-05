@@ -98,12 +98,27 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
       const sanitizedGuestName = sanitizeInput(guestName);
       
       for (const file of selectedFiles) {
+        console.log('Uploading file:', file.name);
+        
         const sanitizedFileName = sanitizeFileName(file.name);
         const timestamp = Date.now();
         const randomId = Math.random().toString(36).substring(2, 15);
         const filePath = `${qrCode}/${timestamp}-${randomId}-${sanitizedFileName}`;
         
-        // Upload to secure guest-uploads bucket
+        console.log('File path:', filePath);
+        
+        // First, ensure the bucket exists by trying to create it (will fail silently if exists)
+        try {
+          await supabase.storage.createBucket('guest-uploads', {
+            public: false,
+            allowedMimeTypes: ALLOWED_FILE_TYPES,
+            fileSizeLimit: MAX_FILE_SIZE
+          });
+        } catch (bucketError) {
+          console.log('Bucket already exists or creation failed:', bucketError);
+        }
+
+        // Upload to guest-uploads bucket
         const { error: uploadError } = await supabase.storage
           .from('guest-uploads')
           .upload(filePath, file, {
@@ -116,7 +131,10 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
           throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
         }
 
-        // Record in videos table with proper validation
+        console.log('File uploaded successfully, now saving to database');
+
+        // Record in videos table - note: we don't need authentication for guest uploads
+        // The RLS policies allow this through the guest upload flow
         const { error: dbError } = await supabase
           .from('videos')
           .insert({
@@ -126,7 +144,7 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
             size: file.size,
             guest_name: sanitizedGuestName,
             uploaded_by_guest: true,
-            user_id: 'guest' // This will be filtered by RLS policies
+            user_id: '00000000-0000-0000-0000-000000000000' // Use a placeholder UUID for guest uploads
           });
 
         if (dbError) {
@@ -135,6 +153,8 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
           await supabase.storage.from('guest-uploads').remove([filePath]);
           throw new Error(`Failed to record ${file.name}: ${dbError.message}`);
         }
+
+        console.log('File recorded in database successfully');
       }
 
       toast({
@@ -155,6 +175,10 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
     } finally {
       setUploading(false);
     }
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -190,9 +214,18 @@ const SecureGuestUpload = ({ projectId, qrCode, guestName, onUploadComplete }: S
           <h3 className="font-medium">Selected Files ({selectedFiles.length})</h3>
           <div className="max-h-32 overflow-y-auto space-y-1">
             {selectedFiles.map((file, index) => (
-              <div key={index} className="text-sm text-gray-600 flex justify-between">
+              <div key={index} className="text-sm text-gray-600 flex justify-between items-center">
                 <span className="truncate">{file.name}</span>
-                <span>{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                <div className="flex items-center gap-2">
+                  <span>{(file.size / 1024 / 1024).toFixed(1)}MB</span>
+                  <button
+                    onClick={() => removeFile(index)}
+                    className="text-red-500 hover:text-red-700 text-xs"
+                    disabled={uploading}
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
             ))}
           </div>
