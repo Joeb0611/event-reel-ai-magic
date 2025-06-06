@@ -1,9 +1,10 @@
 
 import { useState } from 'react';
-import { Play, Download, Trash2, User, MessageSquare, Clock } from 'lucide-react';
+import { Play, Download, Trash2, User, MessageSquare, Clock, Image, Video } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { VideoFile } from '@/hooks/useVideos';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,7 +37,6 @@ const GuestContributions = ({ guestVideos, onVideoDeleted }: GuestContributionsP
   const handleDeleteVideo = async (videoId: string) => {
     setDeletingVideo(videoId);
     try {
-      // Try to delete from both possible tables
       const deleteResult = await supabase
         .from('media_assets')
         .delete()
@@ -48,16 +48,16 @@ const GuestContributions = ({ guestVideos, onVideoDeleted }: GuestContributionsP
       }
 
       toast({
-        title: "Video deleted",
-        description: "The video has been removed successfully.",
+        title: "Media deleted",
+        description: "The file has been removed successfully.",
       });
       
       onVideoDeleted();
     } catch (error) {
-      console.error('Error deleting video:', error);
+      console.error('Error deleting media:', error);
       toast({
         title: "Error",
-        description: "Failed to delete video. Please try again.",
+        description: "Failed to delete file. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -73,116 +73,188 @@ const GuestContributions = ({ guestVideos, onVideoDeleted }: GuestContributionsP
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const isVideo = (fileName: string) => {
+    const videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v'];
+    return videoExtensions.some(ext => fileName.toLowerCase().includes(ext));
+  };
+
+  const isImage = (fileName: string) => {
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+    return imageExtensions.some(ext => fileName.toLowerCase().includes(ext));
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
-    <div className="space-y-6">
-      {/* Contributors Leaderboard */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="w-5 h-5" />
-            Guest Contributors ({sortedContributors.length})
+    <div className="space-y-4 md:space-y-6">
+      {/* Contributors Section - Mobile First */}
+      <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+            <User className="w-5 h-5 text-purple-600" />
+            Contributors ({sortedContributors.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {sortedContributors.map((contributor, index) => (
-              <div key={contributor.name} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                <div className="flex items-center gap-3">
-                  <Badge variant={index === 0 ? "default" : "secondary"}>
-                    #{index + 1}
-                  </Badge>
-                  <div>
-                    <p className="font-medium">{contributor.name}</p>
-                    <p className="text-sm text-gray-600">
-                      {contributor.count} upload{contributor.count !== 1 ? 's' : ''}
+          {sortedContributors.length === 0 ? (
+            <div className="text-center py-6">
+              <User className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-500">No guest contributions yet</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {sortedContributors.map((contributor, index) => (
+                <div key={contributor.name} className="flex items-center gap-3 p-3 rounded-lg bg-white/60 backdrop-blur-sm">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src="" />
+                    <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white text-sm font-medium">
+                      {getInitials(contributor.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant={index === 0 ? "default" : "secondary"} className="text-xs">
+                        #{index + 1}
+                      </Badge>
+                      <p className="font-medium text-sm truncate">{contributor.name}</p>
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      {contributor.count} upload{contributor.count !== 1 ? 's' : ''} • Latest: {new Date(contributor.latestUpload).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-500">
-                    Latest: {new Date(contributor.latestUpload).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-            ))}
-            {sortedContributors.length === 0 && (
-              <p className="text-center text-gray-500 py-4">
-                No guest contributions yet
-              </p>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Recent Uploads */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="w-5 h-5" />
-            Recent Guest Uploads ({guestVideos.length})
+      {/* Recent Uploads - Mobile Optimized Grid */}
+      <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
+            <Clock className="w-5 h-5 text-blue-600" />
+            Recent Uploads ({guestVideos.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {guestVideos
-              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-              .map((video) => (
-                <div key={video.id} className="flex items-start gap-4 p-4 border rounded-lg">
-                  <div className="flex-shrink-0">
-                    {video.name.toLowerCase().includes('.mp4') || 
-                     video.name.toLowerCase().includes('.mov') || 
-                     video.name.toLowerCase().includes('.avi') ? (
-                      <Play className="w-8 h-8 text-blue-500" />
-                    ) : (
-                      <Download className="w-8 h-8 text-green-500" />
-                    )}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium truncate">{video.name}</h4>
-                    <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
-                      <span className="flex items-center gap-1">
-                        <User className="w-4 h-4" />
-                        {video.guest_name || 'Anonymous'}
-                      </span>
-                      <span>{formatFileSize(video.size || 0)}</span>
-                      <span>{new Date(video.created_at).toLocaleDateString()}</span>
+          {guestVideos.length === 0 ? (
+            <div className="text-center py-8">
+              <Image className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-600 mb-2">
+                No guest uploads yet
+              </h3>
+              <p className="text-gray-500 text-sm">
+                Share your QR code to start receiving photos and videos from guests!
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {guestVideos
+                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                .map((video) => (
+                  <div key={video.id} className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
+                    {/* Thumbnail/Preview */}
+                    <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 relative overflow-hidden">
+                      {video.url ? (
+                        <>
+                          {isVideo(video.name) ? (
+                            <div className="relative w-full h-full">
+                              <video
+                                src={video.url}
+                                className="w-full h-full object-cover"
+                                muted
+                                preload="metadata"
+                              />
+                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Play className="w-8 h-8 text-white drop-shadow-lg" />
+                              </div>
+                              <div className="absolute top-2 right-2 bg-black/60 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
+                                <Video className="w-3 h-3" />
+                                Video
+                              </div>
+                            </div>
+                          ) : isImage(video.name) ? (
+                            <div className="relative w-full h-full">
+                              <img
+                                src={video.url}
+                                alt={video.name}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                              />
+                              <div className="absolute top-2 right-2 bg-black/60 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
+                                <Image className="w-3 h-3" />
+                                Photo
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Download className="w-8 h-8 text-gray-400" />
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          {isVideo(video.name) ? (
+                            <Video className="w-8 h-8 text-blue-500" />
+                          ) : isImage(video.name) ? (
+                            <Image className="w-8 h-8 text-green-500" />
+                          ) : (
+                            <Download className="w-8 h-8 text-gray-400" />
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Delete Button */}
+                      <Button
+                        onClick={() => handleDeleteVideo(video.id)}
+                        variant="destructive"
+                        size="sm"
+                        disabled={deletingVideo === video.id}
+                        className="absolute top-2 left-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
                     </div>
                     
-                    {video.guest_message && (
-                      <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
-                        <MessageSquare className="w-4 h-4 inline mr-1" />
-                        {video.guest_message}
+                    {/* Content */}
+                    <div className="p-3">
+                      <h4 className="font-medium text-sm truncate mb-2">{video.name}</h4>
+                      
+                      <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
+                        <div className="flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          <span className="truncate">{video.guest_name || 'Anonymous'}</span>
+                        </div>
+                        <span>•</span>
+                        <span>{formatFileSize(video.size || 0)}</span>
                       </div>
-                    )}
+                      
+                      <p className="text-xs text-gray-500 mb-2">
+                        {new Date(video.created_at).toLocaleDateString()} at {new Date(video.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                      
+                      {video.guest_message && (
+                        <div className="mt-2 p-2 bg-blue-50 rounded text-xs">
+                          <div className="flex items-start gap-1">
+                            <MessageSquare className="w-3 h-3 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <p className="text-blue-700 line-clamp-2">{video.guest_message}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  
-                  <div className="flex-shrink-0">
-                    <Button
-                      onClick={() => handleDeleteVideo(video.id)}
-                      variant="outline"
-                      size="sm"
-                      disabled={deletingVideo === video.id}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            
-            {guestVideos.length === 0 && (
-              <div className="text-center py-8">
-                <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-600 mb-2">
-                  No guest uploads yet
-                </h3>
-                <p className="text-gray-500">
-                  Share your QR code to start receiving photos and videos from guests!
-                </p>
-              </div>
-            )}
-          </div>
+                ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
