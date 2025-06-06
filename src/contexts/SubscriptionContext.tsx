@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -61,7 +62,6 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [loading, setLoading] = useState(true);
   const refreshTimeoutRef = useRef<NodeJS.Timeout>();
   const isRefreshingRef = useRef(false);
-  const abortControllerRef = useRef<AbortController>();
 
   const createDefaultSubscription = (userId: string): UserSubscription => ({
     id: 'default',
@@ -89,30 +89,16 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     isRefreshingRef.current = true;
 
-    // Cancel any previous request
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    // Create new abort controller
-    abortControllerRef.current = new AbortController();
-
     try {
       setLoading(true);
       console.log('Fetching subscription for user:', user.id);
       
-      // Fetch user subscription with abort signal
+      // Fetch user subscription
       const { data: subData, error: subError } = await supabase
         .from('user_subscriptions')
         .select('*')
         .eq('user_id', user.id)
-        .maybeSingle()
-        .abortSignal(abortControllerRef.current.signal);
-
-      // Check if request was aborted
-      if (abortControllerRef.current.signal.aborted) {
-        return;
-      }
+        .maybeSingle();
 
       if (subError) {
         console.error('Error fetching subscription:', subError);
@@ -134,13 +120,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const { data: purchaseData, error: purchaseError } = await supabase
         .from('per_wedding_purchases')
         .select('*')
-        .eq('user_id', user.id)
-        .abortSignal(abortControllerRef.current.signal);
-
-      // Check if request was aborted
-      if (abortControllerRef.current.signal.aborted) {
-        return;
-      }
+        .eq('user_id', user.id);
 
       if (purchaseError) {
         console.error('Error fetching purchases:', purchaseError);
@@ -159,20 +139,15 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
 
     } catch (error) {
-      // Only log error if it's not an abort error
-      if (!abortControllerRef.current?.signal.aborted) {
-        console.error('Error in refreshSubscription:', error);
-        
-        // Always provide a default subscription on error
-        if (user) {
-          setSubscription(createDefaultSubscription(user.id));
-        }
-        setPurchases([]);
+      console.error('Error in refreshSubscription:', error);
+      
+      // Always provide a default subscription on error
+      if (user) {
+        setSubscription(createDefaultSubscription(user.id));
       }
+      setPurchases([]);
     } finally {
-      if (!abortControllerRef.current?.signal.aborted) {
-        setLoading(false);
-      }
+      setLoading(false);
       isRefreshingRef.current = false;
     }
   }, [user]);
@@ -266,9 +241,6 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     return () => {
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current);
-      }
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
       }
       isRefreshingRef.current = false;
     };
