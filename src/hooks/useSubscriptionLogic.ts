@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { pricingTiers } from '@/data/PricingData';
 
 export const useSubscriptionLogic = (projectId: string | null) => {
-  const { subscription, refreshSubscription } = useSubscription();
+  const { subscription } = useSubscription();
   const [loading, setLoading] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -93,7 +93,6 @@ export const useSubscriptionLogic = (projectId: string | null) => {
     subscription,
     loading,
     handleUpgrade,
-    getCurrentPlanId,
-    refreshSubscription
+    getCurrentPlanId
   };
 };

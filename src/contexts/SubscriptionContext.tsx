@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -59,7 +60,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [purchases, setPurchases] = useState<WeddingPurchase[]>([]);
   const [loading, setLoading] = useState(true);
-  const [retryCount, setRetryCount] = useState(0);
+  const refreshTimeoutRef = useRef<NodeJS.Timeout>();
+  const isRefreshingRef = useRef(false);
 
   const createDefaultSubscription = (userId: string): UserSubscription => ({
     id: 'default',
@@ -72,37 +74,38 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     updated_at: new Date().toISOString()
   });
 
-  const refreshSubscription = async () => {
-    if (!user) {
+  const refreshSubscription = useCallback(async () => {
+    if (!user || isRefreshingRef.current) {
       setSubscription(null);
       setPurchases([]);
       setLoading(false);
       return;
     }
 
-    // Prevent excessive retries
-    if (retryCount >= 3) {
-      console.log('Max retry attempts reached, using default subscription');
-      setSubscription(createDefaultSubscription(user.id));
-      setPurchases([]);
-      setLoading(false);
+    // Prevent multiple simultaneous requests
+    if (isRefreshingRef.current) {
       return;
     }
+
+    isRefreshingRef.current = true;
 
     try {
       setLoading(true);
       console.log('Fetching subscription for user:', user.id);
 
+      // Create an AbortController for request cleanup
+      const controller = new AbortController();
+      
       // Fetch user subscription with proper error handling
       const { data: subData, error: subError } = await supabase
         .from('user_subscriptions')
         .select('*')
         .eq('user_id', user.id)
-        .maybeSingle();
+        .maybeSingle()
+        .abortSignal(controller.signal);
 
       if (subError) {
         console.error('Error fetching subscription:', subError);
-        // Create default subscription and don't retry on RLS or auth errors
         setSubscription(createDefaultSubscription(user.id));
       } else if (subData) {
         console.log('Subscription found:', subData);
@@ -121,7 +124,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const { data: purchaseData, error: purchaseError } = await supabase
         .from('per_wedding_purchases')
         .select('*')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .abortSignal(controller.signal);
 
       if (purchaseError) {
         console.error('Error fetching purchases:', purchaseError);
@@ -139,11 +143,8 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setPurchases([]);
       }
 
-      // Reset retry count on success
-      setRetryCount(0);
     } catch (error) {
       console.error('Error in refreshSubscription:', error);
-      setRetryCount(prev => prev + 1);
       
       // Always provide a default subscription on error
       if (user) {
@@ -152,8 +153,9 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setPurchases([]);
     } finally {
       setLoading(false);
+      isRefreshingRef.current = false;
     }
-  };
+  }, [user]);
 
   const getProjectTier = (projectId: string): SubscriptionTier => {
     // Check if there's a paid purchase for this project
@@ -223,15 +225,31 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   useEffect(() => {
+    // Clear any existing timeout
+    if (refreshTimeoutRef.current) {
+      clearTimeout(refreshTimeoutRef.current);
+    }
+
     if (user) {
-      refreshSubscription();
+      // Debounce the refresh to prevent rapid successive calls
+      refreshTimeoutRef.current = setTimeout(() => {
+        refreshSubscription();
+      }, 100);
     } else {
       setSubscription(null);
       setPurchases([]);
       setLoading(false);
-      setRetryCount(0);
+      isRefreshingRef.current = false;
     }
-  }, [user]);
+
+    // Cleanup on unmount
+    return () => {
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+      isRefreshingRef.current = false;
+    };
+  }, [user, refreshSubscription]);
 
   const value: SubscriptionContextType = {
     subscription,

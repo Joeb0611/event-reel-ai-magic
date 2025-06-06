@@ -1,9 +1,8 @@
 
-import { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useSubscriptionLogic } from '@/hooks/useSubscriptionLogic';
 import { pricingTiers } from '@/data/PricingData';
 import { faqs } from '@/data/FAQData';
+import { useSubscriptionLogic } from '@/hooks/useSubscriptionLogic';
+import { useSearchParams } from 'react-router-dom';
 
 // Import existing components
 import SubscriptionHeader from '@/components/subscription/SubscriptionHeader';
@@ -18,14 +17,8 @@ const Subscription = () => {
     subscription,
     loading,
     handleUpgrade,
-    getCurrentPlanId,
-    refreshSubscription
+    getCurrentPlanId
   } = useSubscriptionLogic(projectId);
-
-  // Refresh subscription data when component mounts
-  useEffect(() => {
-    refreshSubscription();
-  }, [refreshSubscription]);
 
   // Show loading screen only if still loading and no subscription data
   if (!subscription && loading) {
