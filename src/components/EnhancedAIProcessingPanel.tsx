@@ -131,6 +131,7 @@ const EnhancedAIProcessingPanel = ({
         onSettingsChange={setAiSettings}
         mustIncludeCount={mustIncludeCount}
         projectId={projectId}
+        testPremiumMode={testPremium}
       />
 
       {/* Start Processing Button */}
@@ -150,6 +151,9 @@ const EnhancedAIProcessingPanel = ({
                 </p>
                 {aiSettings.includeMustInclude && mustIncludeCount > 0 && (
                   <p>Including {mustIncludeCount} must-have moment{mustIncludeCount !== 1 ? 's' : ''}</p>
+                )}
+                {testPremium && (
+                  <p className="text-orange-600 font-medium">🧪 Test Premium Mode Active</p>
                 )}
               </div>
             </div>

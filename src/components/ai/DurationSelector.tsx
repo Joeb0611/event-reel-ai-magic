@@ -10,6 +10,7 @@ interface DurationSelectorProps {
   value: WeddingAISettings['duration'];
   onChange: (value: WeddingAISettings['duration']) => void;
   projectId?: string;
+  testPremiumMode?: boolean;
 }
 
 const durationOptions = [
@@ -45,19 +46,28 @@ const durationOptions = [
   }
 ];
 
-const DurationSelector = ({ value, onChange, projectId }: DurationSelectorProps) => {
+const DurationSelector = ({ value, onChange, projectId, testPremiumMode = false }: DurationSelectorProps) => {
   const { hasFeatureAccess } = useSubscription();
   const selectedOption = durationOptions.find(option => option.value === value);
 
+  const getFeatureAccess = (feature: string) => {
+    if (testPremiumMode) return true;
+    return hasFeatureAccess(feature, projectId);
+  };
+
   const handleChange = (newValue: string) => {
     const option = durationOptions.find(opt => opt.value === newValue);
-    if (option?.isPremium && !hasFeatureAccess('duration_1min', projectId)) {
-      alert('Please upgrade to Premium to access longer durations');
-      return;
+    if (option?.isPremium && !getFeatureAccess('duration_1min')) {
+      if (!testPremiumMode) {
+        alert('Please upgrade to Premium to access longer durations');
+        return;
+      }
     }
-    if (newValue === '5min' && !hasFeatureAccess('duration_5min', projectId)) {
-      alert('Please upgrade to Professional to access 5-minute videos');
-      return;
+    if (newValue === '5min' && !getFeatureAccess('duration_5min')) {
+      if (!testPremiumMode) {
+        alert('Please upgrade to Professional to access 5-minute videos');
+        return;
+      }
     }
     onChange(newValue as WeddingAISettings['duration']);
   };
@@ -68,6 +78,11 @@ const DurationSelector = ({ value, onChange, projectId }: DurationSelectorProps)
         <CardTitle className="flex items-center gap-2 text-base md:text-lg">
           <Clock className="w-4 h-4 md:w-5 md:h-5" />
           Duration
+          {testPremiumMode && (
+            <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
+              Test Mode
+            </span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -78,8 +93,8 @@ const DurationSelector = ({ value, onChange, projectId }: DurationSelectorProps)
           <SelectContent>
             {durationOptions.map((option) => {
               const hasAccess = !option.isPremium || 
-                (option.value !== '5min' && hasFeatureAccess('duration_1min', projectId)) ||
-                (option.value === '5min' && hasFeatureAccess('duration_5min', projectId));
+                (option.value !== '5min' && getFeatureAccess('duration_1min')) ||
+                (option.value === '5min' && getFeatureAccess('duration_5min'));
 
               return (
                 <SelectItem 
@@ -89,10 +104,15 @@ const DurationSelector = ({ value, onChange, projectId }: DurationSelectorProps)
                 >
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{option.label}</span>
-                    {option.isPremium && (
+                    {option.isPremium && !testPremiumMode && (
                       <Badge variant="secondary" className="text-xs">
                         <Crown className="w-2 h-2 mr-1" />
                         {option.value === '5min' ? 'Professional' : 'Premium'}
+                      </Badge>
+                    )}
+                    {option.isPremium && testPremiumMode && (
+                      <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                        ✓ Unlocked
                       </Badge>
                     )}
                   </div>
