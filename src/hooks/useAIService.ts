@@ -85,7 +85,7 @@ export const useAIService = () => {
       customMusicUrl: settings.useCustomMusic ? customMusicUrl || null : null,
       aiEnhancement: true,
       faceDetectionPriority: true,
-      emotionalMoments: settings.contentFocus === 'emotional'
+      emotionalMoments: settings.contentFocus === 'highlights'
     };
   };
 

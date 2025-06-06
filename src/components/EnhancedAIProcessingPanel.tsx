@@ -25,7 +25,7 @@ const EnhancedAIProcessingPanel = ({
   onProcessingComplete 
 }: EnhancedAIProcessingPanelProps) => {
   const { currentJob, isProcessing, startProcessing, cancelProcessing } = useWeddingProcessing(projectId);
-  const { videos } = useVideos(projectId);
+  const { projectVideos } = useVideos(projectId);
   
   const [showPreview, setShowPreview] = useState(false);
   const [testPremium, setTestPremium] = useState(false);
@@ -51,13 +51,13 @@ const EnhancedAIProcessingPanel = ({
     }
     
     // Start processing with actual videos and settings
-    await startProcessing(videos, aiSettings);
+    await startProcessing(projectVideos, aiSettings);
   };
 
   const handleApprovePreview = () => {
     setShowPreview(false);
     // Continue with actual processing
-    startProcessing(videos, aiSettings);
+    startProcessing(projectVideos, aiSettings);
   };
 
   const handleRejectPreview = () => {
@@ -222,7 +222,7 @@ const EnhancedAIProcessingPanel = ({
             </div>
             <Button
               onClick={handleStartProcessing}
-              disabled={isProcessing || !videos.length}
+              disabled={isProcessing || !projectVideos.length}
               className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
               size="lg"
             >

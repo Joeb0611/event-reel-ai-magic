@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Brain, Play, Square, RefreshCw, CheckCircle, XCircle, Clock, AlertTriangle, Wifi, WifiOff } from 'lucide-react';
 import { useWeddingProcessing, WeddingMoment } from '@/hooks/useWeddingProcessing';
+import { useVideos } from '@/hooks/useVideos';
 
 interface AIProcessingPanelProps {
   projectId: string;
@@ -13,6 +14,7 @@ interface AIProcessingPanelProps {
 
 const AIProcessingPanel = ({ projectId, hasVideos, onProcessingComplete }: AIProcessingPanelProps) => {
   const { currentJob, isProcessing, serviceStatus, startProcessing, cancelProcessing, checkServiceHealth } = useWeddingProcessing(projectId);
+  const { projectVideos } = useVideos(projectId);
 
   const getStatusIcon = () => {
     switch (currentJob?.status) {
@@ -83,6 +85,20 @@ const AIProcessingPanel = ({ projectId, hasVideos, onProcessingComplete }: AIPro
     }
   };
 
+  const handleStartProcessing = async () => {
+    const defaultSettings = {
+      videoStyle: 'romantic' as const,
+      duration: '2min' as const,
+      contentFocus: 'balanced' as const,
+      musicStyle: 'romantic' as const,
+      includeMustInclude: true,
+      useCustomMusic: false,
+      videoQuality: 'good' as const
+    };
+    
+    await startProcessing(projectVideos, defaultSettings);
+  };
+
   if (!hasVideos) {
     return (
       <Card className="border-gray-200">
@@ -141,7 +157,7 @@ const AIProcessingPanel = ({ projectId, hasVideos, onProcessingComplete }: AIPro
           
           {!currentJob || currentJob.status === 'failed' ? (
             <Button
-              onClick={startProcessing}
+              onClick={handleStartProcessing}
               disabled={isProcessing || serviceStatus === 'checking'}
               className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
             >
