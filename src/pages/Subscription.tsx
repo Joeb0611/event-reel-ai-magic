@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Crown, Star, Zap } from 'lucide-react';
@@ -119,7 +118,6 @@ const Subscription = () => {
       console.log('Tier:', tierId);
       console.log('Project ID:', projectId);
       console.log('Amount:', tier.priceAmount);
-      console.log('Current URL:', window.location.href);
       
       // Create a Stripe checkout session for per-wedding purchase
       const { data, error } = await supabase.functions.invoke('create-payment', {
@@ -148,62 +146,9 @@ const Subscription = () => {
 
       if (data?.url) {
         console.log('Redirecting to Stripe checkout:', data.url);
-        console.log('URL length:', data.url.length);
-        console.log('URL starts with https:', data.url.startsWith('https://'));
         
-        // Validate the URL before redirecting
-        try {
-          new URL(data.url); // This will throw if URL is invalid
-          console.log('URL validation passed');
-          
-          // Add a small delay and show loading state
-          toast({
-            title: "Redirecting to Payment",
-            description: "Taking you to Stripe checkout...",
-          });
-          
-          // Try multiple redirect methods
-          setTimeout(() => {
-            console.log('Attempting redirect...');
-            
-            // Method 1: Direct assignment
-            try {
-              window.location.href = data.url;
-            } catch (redirectError) {
-              console.error('Direct redirect failed:', redirectError);
-              
-              // Method 2: window.open as fallback
-              try {
-                const newWindow = window.open(data.url, '_self');
-                if (!newWindow) {
-                  throw new Error('Popup blocked');
-                }
-              } catch (popupError) {
-                console.error('Popup redirect failed:', popupError);
-                
-                // Method 3: Show manual link as last resort
-                toast({
-                  title: "Redirect Failed",
-                  description: "Please click this link to continue to payment",
-                  action: (
-                    <a 
-                      href={data.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="underline"
-                    >
-                      Open Payment Page
-                    </a>
-                  ),
-                });
-              }
-            }
-          }, 500);
-          
-        } catch (urlError) {
-          console.error('Invalid URL received:', urlError);
-          throw new Error('Invalid checkout URL received from payment service');
-        }
+        // Simple, direct redirect - no delays or complex fallbacks
+        window.location.href = data.url;
       } else {
         console.error('No checkout URL in response:', data);
         throw new Error('No checkout URL received from payment service');
