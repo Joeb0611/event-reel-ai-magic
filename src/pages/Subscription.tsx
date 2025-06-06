@@ -8,6 +8,7 @@ import { useSearchParams } from 'react-router-dom';
 import SubscriptionHeader from '@/components/subscription/SubscriptionHeader';
 import PricingTierList from '@/components/subscription/PricingTierList';
 import FAQSection from '@/components/subscription/FAQSection';
+import ContactForm from '@/components/subscription/ContactForm';
 
 const Subscription = () => {
   const [searchParams] = useSearchParams();
@@ -51,6 +52,9 @@ const Subscription = () => {
 
         {/* FAQ Section */}
         <FAQSection faqs={faqs} />
+
+        {/* Contact Form */}
+        <ContactForm />
       </div>
     </div>
   );
