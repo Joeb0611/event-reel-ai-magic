@@ -65,16 +65,8 @@ export const useSubscriptionLogic = (projectId: string | null) => {
       console.log('Response data:', data);
 
       if (data?.url) {
-        console.log('Opening Stripe checkout in new tab:', data.url);
-        // Open Stripe checkout in a new tab instead of redirecting
-        window.open(data.url, '_blank');
-        
-        // Show success message
-        toast({
-          title: "Redirecting to Payment",
-          description: "Opening Stripe checkout in a new tab. Please complete your payment there.",
-          duration: 5000
-        });
+        console.log('Redirecting to Stripe checkout:', data.url);
+        window.location.href = data.url;
       } else {
         console.error('No checkout URL in response:', data);
         throw new Error('No checkout URL received from payment service');
