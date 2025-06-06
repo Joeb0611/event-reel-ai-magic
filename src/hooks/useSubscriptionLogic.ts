@@ -23,6 +23,21 @@ export const useSubscriptionLogic = (projectId: string | null) => {
       console.log('Tier:', tierId);
       console.log('Project ID:', projectId);
       console.log('Amount:', tier.priceAmount);
+
+      // Get the current session to ensure we have a valid token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        throw new Error('Authentication required. Please sign in again.');
+      }
+
+      if (!session) {
+        console.error('No active session found');
+        throw new Error('Please sign in to upgrade your plan.');
+      }
+
+      console.log('User authenticated, proceeding with payment...');
       
       // Create a Stripe checkout session for per-wedding purchase
       const { data, error } = await supabase.functions.invoke('create-payment', {
@@ -51,8 +66,6 @@ export const useSubscriptionLogic = (projectId: string | null) => {
 
       if (data?.url) {
         console.log('Redirecting to Stripe checkout:', data.url);
-        
-        // Simple, direct redirect - no delays or complex fallbacks
         window.location.href = data.url;
       } else {
         console.error('No checkout URL in response:', data);
