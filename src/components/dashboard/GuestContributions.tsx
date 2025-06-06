@@ -92,6 +92,45 @@ const GuestContributions = ({ guestVideos, onVideoDeleted }: GuestContributionsP
       .slice(0, 2);
   };
 
+  const MediaPreview = ({ video }: { video: VideoFile }) => {
+    if (!video.url) {
+      return (
+        <div className="flex items-center justify-center">
+          {isVideo(video.name) ? (
+            <Video className="w-4 h-4 text-gray-400" />
+          ) : (
+            <Image className="w-4 h-4 text-gray-400" />
+          )}
+        </div>
+      );
+    }
+
+    if (isVideo(video.name)) {
+      return (
+        <div className="relative group">
+          <video
+            src={video.url}
+            className="w-full h-full object-cover rounded"
+            muted
+            preload="metadata"
+          />
+          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded">
+            <Play className="w-4 h-4 text-white" />
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <img
+          src={video.url}
+          alt={video.name}
+          className="w-full h-full object-cover rounded"
+          loading="lazy"
+        />
+      );
+    }
+  };
+
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Contributors Section - Mobile First */}
@@ -137,7 +176,7 @@ const GuestContributions = ({ guestVideos, onVideoDeleted }: GuestContributionsP
         </CardContent>
       </Card>
 
-      {/* Recent Uploads - Mobile Optimized Grid */}
+      {/* Recent Uploads - List Mode */}
       <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-lg md:text-xl">
@@ -157,99 +196,70 @@ const GuestContributions = ({ guestVideos, onVideoDeleted }: GuestContributionsP
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-3">
               {guestVideos
                 .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                 .map((video) => (
                   <div key={video.id} className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
-                    {/* Thumbnail/Preview */}
-                    <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 relative overflow-hidden">
-                      {video.url ? (
-                        <>
+                    <div className="flex items-start gap-3 p-3">
+                      {/* Thumbnail */}
+                      <div className="w-16 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+                        <MediaPreview video={video} />
+                        
+                        {/* File type indicator */}
+                        <div className="absolute top-1 right-1 bg-black/60 text-white px-1 py-0.5 rounded text-xs flex items-center gap-0.5">
                           {isVideo(video.name) ? (
-                            <div className="relative w-full h-full">
-                              <video
-                                src={video.url}
-                                className="w-full h-full object-cover"
-                                muted
-                                preload="metadata"
-                              />
-                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Play className="w-8 h-8 text-white drop-shadow-lg" />
-                              </div>
-                              <div className="absolute top-2 right-2 bg-black/60 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
-                                <Video className="w-3 h-3" />
-                                Video
-                              </div>
-                            </div>
-                          ) : isImage(video.name) ? (
-                            <div className="relative w-full h-full">
-                              <img
-                                src={video.url}
-                                alt={video.name}
-                                className="w-full h-full object-cover"
-                                loading="lazy"
-                              />
-                              <div className="absolute top-2 right-2 bg-black/60 text-white px-2 py-1 rounded text-xs flex items-center gap-1">
-                                <Image className="w-3 h-3" />
-                                Photo
-                              </div>
-                            </div>
+                            <Video className="w-2 h-2" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Download className="w-8 h-8 text-gray-400" />
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          {isVideo(video.name) ? (
-                            <Video className="w-8 h-8 text-blue-500" />
-                          ) : isImage(video.name) ? (
-                            <Image className="w-8 h-8 text-green-500" />
-                          ) : (
-                            <Download className="w-8 h-8 text-gray-400" />
+                            <Image className="w-2 h-2" />
                           )}
                         </div>
-                      )}
-                      
-                      {/* Delete Button */}
-                      <Button
-                        onClick={() => handleDeleteVideo(video.id)}
-                        variant="destructive"
-                        size="sm"
-                        disabled={deletingVideo === video.id}
-                        className="absolute top-2 left-2 h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                    
-                    {/* Content */}
-                    <div className="p-3">
-                      <h4 className="font-medium text-sm truncate mb-2">{video.name}</h4>
-                      
-                      <div className="flex items-center gap-2 text-xs text-gray-600 mb-2">
-                        <div className="flex items-center gap-1">
-                          <User className="w-3 h-3" />
-                          <span className="truncate">{video.guest_name || 'Anonymous'}</span>
-                        </div>
-                        <span>•</span>
-                        <span>{formatFileSize(video.size || 0)}</span>
                       </div>
                       
-                      <p className="text-xs text-gray-500 mb-2">
-                        {new Date(video.created_at).toLocaleDateString()} at {new Date(video.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                      
-                      {video.guest_message && (
-                        <div className="mt-2 p-2 bg-blue-50 rounded text-xs">
-                          <div className="flex items-start gap-1">
-                            <MessageSquare className="w-3 h-3 text-blue-600 mt-0.5 flex-shrink-0" />
-                            <p className="text-blue-700 line-clamp-2">{video.guest_message}</p>
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-sm truncate">{video.name}</h4>
+                            <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                              <span>{formatFileSize(video.size || 0)}</span>
+                              <span>•</span>
+                              <span>{new Date(video.created_at).toLocaleDateString()}</span>
+                              <span>•</span>
+                              <span>{new Date(video.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                          </div>
+                          
+                          {/* Delete Button */}
+                          <Button
+                            onClick={() => handleDeleteVideo(video.id)}
+                            variant="destructive"
+                            size="sm"
+                            disabled={deletingVideo === video.id}
+                            className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                        
+                        {/* Guest info */}
+                        <div className="flex items-center gap-2 text-xs text-gray-600">
+                          <div className="flex items-center gap-1">
+                            <User className="w-3 h-3" />
+                            <span className="truncate">{video.guest_name || 'Anonymous'}</span>
                           </div>
                         </div>
-                      )}
+                        
+                        {/* Guest message */}
+                        {video.guest_message && (
+                          <div className="mt-2 p-2 bg-blue-50 rounded text-xs">
+                            <div className="flex items-start gap-1">
+                              <MessageSquare className="w-3 h-3 text-blue-600 mt-0.5 flex-shrink-0" />
+                              <p className="text-blue-700 line-clamp-2">{video.guest_message}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
