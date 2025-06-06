@@ -6,10 +6,10 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Brain, Bug } from 'lucide-react';
 import AISettingsPanel, { WeddingAISettings } from '@/components/ai/AISettingsPanel';
-import ProcessingProgress from '@/components/ai/ProcessingProgress';
 import ProcessingProgressCard from '@/components/ai/ProcessingProgressCard';
 import DetectedMomentsPreview from '@/components/ai/DetectedMomentsPreview';
 import { useWeddingProcessing } from '@/hooks/useWeddingProcessing';
+import { useVideos } from '@/hooks/useVideos';
 
 interface EnhancedAIProcessingPanelProps {
   projectId: string;
@@ -25,6 +25,7 @@ const EnhancedAIProcessingPanel = ({
   onProcessingComplete 
 }: EnhancedAIProcessingPanelProps) => {
   const { currentJob, isProcessing, startProcessing, cancelProcessing } = useWeddingProcessing(projectId);
+  const { videos } = useVideos(projectId);
   
   const [showPreview, setShowPreview] = useState(false);
   const [testPremium, setTestPremium] = useState(false);
@@ -49,13 +50,14 @@ const EnhancedAIProcessingPanel = ({
       return;
     }
     
-    await startProcessing();
+    // Start processing with actual videos and settings
+    await startProcessing(videos, aiSettings);
   };
 
   const handleApprovePreview = () => {
     setShowPreview(false);
     // Continue with actual processing
-    startProcessing();
+    startProcessing(videos, aiSettings);
   };
 
   const handleRejectPreview = () => {
@@ -87,7 +89,7 @@ const EnhancedAIProcessingPanel = ({
 
   // Show processing progress with navigation
   if (currentJob?.status === 'processing' || currentJob?.status === 'pending') {
-    const estimatedTime = currentJob?.status === 'processing' ? 180 : undefined;
+    const estimatedTime = currentJob?.status === 'processing' ? 240 : undefined; // 4 minutes for live AI
     return (
       <ProcessingProgressCard
         projectId={projectId}
@@ -96,6 +98,64 @@ const EnhancedAIProcessingPanel = ({
         estimatedTimeRemaining={estimatedTime}
         startedAt={currentJob.started_at}
       />
+    );
+  }
+
+  // Show results if completed
+  if (currentJob?.status === 'completed' && currentJob.result_video_url) {
+    return (
+      <Card className="border-green-200 bg-green-50">
+        <CardHeader>
+          <CardTitle className="text-green-900">🎉 AI Processing Complete!</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-green-800">Your wedding highlight reel has been created successfully!</p>
+          
+          {currentJob.ai_insights && (
+            <div className="grid grid-cols-3 gap-4 p-4 bg-white rounded-lg">
+              <div className="text-center">
+                <div className="text-lg font-semibold text-purple-600">
+                  {currentJob.ai_insights.total_people_detected}
+                </div>
+                <div className="text-sm text-gray-600">People Detected</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-pink-600">
+                  {currentJob.ai_insights.ceremony_moments}
+                </div>
+                <div className="text-sm text-gray-600">Ceremony Moments</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-semibold text-blue-600">
+                  {currentJob.ai_insights.reception_moments}
+                </div>
+                <div className="text-sm text-gray-600">Reception Moments</div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <Button 
+              onClick={() => window.open(currentJob.result_video_url, '_blank')}
+              className="flex-1 bg-green-600 hover:bg-green-700"
+            >
+              View Highlight Reel
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = currentJob.result_video_url!;
+                link.download = 'wedding-highlight-reel.mp4';
+                link.click();
+              }}
+              className="flex-1"
+            >
+              Download Video
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -155,11 +215,14 @@ const EnhancedAIProcessingPanel = ({
                 {testPremium && (
                   <p className="text-orange-600 font-medium">🧪 Test Premium Mode Active</p>
                 )}
+                <p className="text-xs text-green-600">
+                  🚀 Using live AI service - Processing takes 3-5 minutes
+                </p>
               </div>
             </div>
             <Button
               onClick={handleStartProcessing}
-              disabled={isProcessing}
+              disabled={isProcessing || !videos.length}
               className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
               size="lg"
             >

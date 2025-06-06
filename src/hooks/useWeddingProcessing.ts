@@ -3,8 +3,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { AI_SERVICE_CONFIG } from '@/config/aiService';
+import { useAIService } from '@/hooks/useAIService';
 import { parseWeddingMoments, stringifyWeddingMoments, WeddingMoment } from '@/utils/typeConverters';
+import { WeddingAISettings } from '@/components/ai/AISettingsPanel';
+import { VideoFile } from '@/hooks/useVideos';
 
 export interface ProcessingJob {
   id: string;
@@ -18,6 +20,12 @@ export interface ProcessingJob {
   completed_at?: string;
   created_at: string;
   updated_at: string;
+  result_video_url?: string;
+  ai_insights?: {
+    total_people_detected: number;
+    ceremony_moments: number;
+    reception_moments: number;
+  };
 }
 
 // Re-export WeddingMoment for other components
@@ -29,6 +37,7 @@ export const useWeddingProcessing = (projectId: string | null) => {
   const [currentJob, setCurrentJob] = useState<ProcessingJob | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [serviceStatus, setServiceStatus] = useState<'checking' | 'available' | 'sleeping' | 'error'>('available');
+  const aiService = useAIService();
 
   useEffect(() => {
     if (projectId) {
@@ -41,8 +50,8 @@ export const useWeddingProcessing = (projectId: string | null) => {
   useEffect(() => {
     if (currentJob?.status === 'processing') {
       const interval = setInterval(() => {
-        fetchCurrentJob();
-      }, 2000);
+        pollAIStatus();
+      }, 10000); // Poll every 10 seconds
 
       return () => clearInterval(interval);
     }
@@ -51,16 +60,8 @@ export const useWeddingProcessing = (projectId: string | null) => {
   const checkServiceHealth = async () => {
     try {
       setServiceStatus('checking');
-      const response = await fetch(`${AI_SERVICE_CONFIG.baseUrl}${AI_SERVICE_CONFIG.endpoints.health}`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(10000)
-      });
-
-      if (response.ok) {
-        setServiceStatus('available');
-      } else {
-        setServiceStatus('sleeping');
-      }
+      const isHealthy = await aiService.checkHealth();
+      setServiceStatus(isHealthy ? 'available' : 'sleeping');
     } catch (error) {
       console.error('Service health check failed:', error);
       setServiceStatus('sleeping');
@@ -97,13 +98,70 @@ export const useWeddingProcessing = (projectId: string | null) => {
     }
   };
 
-  const startProcessing = async () => {
+  const pollAIStatus = async () => {
+    if (!projectId || !currentJob) return;
+
+    try {
+      const status = await aiService.checkStatus(projectId);
+      if (!status) return;
+
+      // Update local job with AI status
+      const updatedJob = {
+        ...currentJob,
+        status: status.status as ProcessingJob['status'],
+        progress: status.progress || currentJob.progress
+      };
+
+      setCurrentJob(updatedJob);
+
+      // Update database
+      await supabase
+        .from('processing_jobs')
+        .update({
+          status: status.status,
+          progress: status.progress || currentJob.progress,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', currentJob.id);
+
+      // If completed, get results
+      if (status.status === 'completed') {
+        const results = await aiService.getResults(projectId);
+        if (results?.result) {
+          await supabase
+            .from('processing_jobs')
+            .update({
+              result_video_url: results.result.video_url,
+              ai_insights: results.result.ai_insights,
+              completed_at: new Date().toISOString()
+            })
+            .eq('id', currentJob.id);
+
+          // Update project with final video URL
+          await supabase
+            .from('projects')
+            .update({ edited_video_url: results.result.video_url })
+            .eq('id', projectId);
+
+          toast({
+            title: "AI Processing Complete!",
+            description: results.message,
+          });
+        }
+      }
+
+    } catch (error) {
+      console.error('Error polling AI status:', error);
+    }
+  };
+
+  const startProcessing = async (videos: VideoFile[], settings: WeddingAISettings, customMusicUrl?: string) => {
     if (!projectId || !user) return;
 
     if (serviceStatus === 'sleeping') {
       toast({
         title: "AI Service Unavailable",
-        description: "The AI service is currently sleeping (free tier). Please try again in a few minutes.",
+        description: "The AI service is currently sleeping. Please try again in a few minutes.",
         variant: "destructive",
       });
       return;
@@ -111,26 +169,53 @@ export const useWeddingProcessing = (projectId: string | null) => {
 
     setIsProcessing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('process-wedding-videos', {
-        body: { projectId, userId: user.id }
+      // Create processing job in database
+      const { data: job, error: jobError } = await supabase
+        .from('processing_jobs')
+        .insert({
+          project_id: projectId,
+          user_id: user.id,
+          status: 'pending',
+          progress: 0,
+          started_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (jobError) throw jobError;
+
+      setCurrentJob({
+        ...job,
+        status: 'pending' as const,
+        detected_moments: [],
+        progress: 0
       });
 
-      if (error) throw error;
+      // Start AI processing
+      const result = await aiService.processProject(projectId, user.id, videos, settings, customMusicUrl);
 
-      toast({
-        title: "AI Processing Started",
-        description: "Your wedding videos are being analyzed by our AI service.",
-      });
+      if (result?.success) {
+        // Update job status to processing
+        await supabase
+          .from('processing_jobs')
+          .update({
+            status: 'processing',
+            progress: 10
+          })
+          .eq('id', job.id);
 
-      setTimeout(fetchCurrentJob, 1000);
+        setCurrentJob(prev => prev ? { ...prev, status: 'processing', progress: 10 } : null);
+      } else {
+        throw new Error('Failed to start AI processing');
+      }
 
     } catch (error) {
       console.error('Error starting processing:', error);
       
       let errorMessage = "Failed to start AI processing. Please try again.";
       
-      if (error instanceof Error && (error.message?.includes('sleeping') || error.message?.includes('unavailable'))) {
-        errorMessage = "AI service is currently sleeping (free tier). Please try again in a few minutes.";
+      if (error instanceof Error && (error.message?.includes('unavailable') || error.message?.includes('sleeping'))) {
+        errorMessage = "AI service is currently unavailable. Please try again in a few minutes.";
         setServiceStatus('sleeping');
         setTimeout(checkServiceHealth, 30000);
       }
@@ -140,6 +225,13 @@ export const useWeddingProcessing = (projectId: string | null) => {
         description: errorMessage,
         variant: "destructive",
       });
+
+      if (currentJob) {
+        await supabase
+          .from('processing_jobs')
+          .update({ status: 'failed', error_message: errorMessage })
+          .eq('id', currentJob.id);
+      }
     } finally {
       setIsProcessing(false);
     }
