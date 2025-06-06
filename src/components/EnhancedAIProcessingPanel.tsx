@@ -102,7 +102,9 @@ const EnhancedAIProcessingPanel = ({
   }
 
   // Show results if completed
-  if (currentJob?.status === 'completed' && currentJob.result_video_url) {
+  if (currentJob?.status === 'completed' && (currentJob.local_video_path || currentJob.result_video_url)) {
+    const videoUrl = currentJob.local_video_path || currentJob.result_video_url;
+    
     return (
       <Card className="border-green-200 bg-green-50">
         <CardHeader>
@@ -110,6 +112,21 @@ const EnhancedAIProcessingPanel = ({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-green-800">Your wedding highlight reel has been created successfully!</p>
+          
+          {/* Video Preview */}
+          <div className="bg-white rounded-lg p-4">
+            <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden mb-3">
+              <video
+                src={videoUrl}
+                className="w-full h-full object-cover"
+                controls
+                preload="metadata"
+              />
+            </div>
+            {currentJob.local_video_path && (
+              <p className="text-xs text-green-600">✓ Video stored in Supabase Storage</p>
+            )}
+          </div>
           
           {currentJob.ai_insights && (
             <div className="grid grid-cols-3 gap-4 p-4 bg-white rounded-lg">
@@ -136,7 +153,7 @@ const EnhancedAIProcessingPanel = ({
 
           <div className="flex gap-3">
             <Button 
-              onClick={() => window.open(currentJob.result_video_url, '_blank')}
+              onClick={() => window.open(videoUrl, '_blank')}
               className="flex-1 bg-green-600 hover:bg-green-700"
             >
               View Highlight Reel
@@ -145,7 +162,7 @@ const EnhancedAIProcessingPanel = ({
               variant="outline" 
               onClick={() => {
                 const link = document.createElement('a');
-                link.href = currentJob.result_video_url!;
+                link.href = videoUrl;
                 link.download = 'wedding-highlight-reel.mp4';
                 link.click();
               }}

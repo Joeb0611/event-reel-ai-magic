@@ -11,6 +11,7 @@ interface VideoManagerProps {
     id: string;
     name: string;
     edited_video_url?: string;
+    local_video_path?: string;
   };
   onVideoDeleted: () => void;
 }
@@ -20,12 +21,15 @@ const VideoManager = ({ project, onVideoDeleted }: VideoManagerProps) => {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
+  // Use local video path if available, fallback to edited_video_url
+  const videoUrl = project.local_video_path || project.edited_video_url;
+
   const handleExport = () => {
-    if (!project.edited_video_url) return;
+    if (!videoUrl) return;
     
     // Create a download link
     const link = document.createElement('a');
-    link.href = project.edited_video_url;
+    link.href = videoUrl;
     link.download = `${project.name}-highlight-reel.mp4`;
     document.body.appendChild(link);
     link.click();
@@ -38,15 +42,16 @@ const VideoManager = ({ project, onVideoDeleted }: VideoManagerProps) => {
   };
 
   const handleDelete = async () => {
-    if (!project.edited_video_url) return;
+    if (!videoUrl) return;
     
     setIsDeleting(true);
     try {
-      // Remove the edited video URL from the project using the correct column name
+      // Remove both the edited video URL and local video path from the project
       const { error } = await supabase
         .from('projects')
         .update({ 
           edited_video_url: null,
+          local_video_path: null,
           updated_at: new Date().toISOString()
         })
         .eq('id', project.id);
@@ -71,10 +76,10 @@ const VideoManager = ({ project, onVideoDeleted }: VideoManagerProps) => {
   };
 
   const handleShare = async () => {
-    if (!project.edited_video_url) return;
+    if (!videoUrl) return;
     
     try {
-      await navigator.clipboard.writeText(project.edited_video_url);
+      await navigator.clipboard.writeText(videoUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       
@@ -92,7 +97,7 @@ const VideoManager = ({ project, onVideoDeleted }: VideoManagerProps) => {
     }
   };
 
-  if (!project.edited_video_url) {
+  if (!videoUrl) {
     return null;
   }
 
@@ -105,11 +110,27 @@ const VideoManager = ({ project, onVideoDeleted }: VideoManagerProps) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Video Preview */}
+        <div className="bg-white rounded-lg p-3">
+          <p className="text-sm text-gray-600 mb-2">Video Preview:</p>
+          <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+            <video
+              src={videoUrl}
+              className="w-full h-full object-cover"
+              controls
+              preload="metadata"
+            />
+          </div>
+        </div>
+        
         <div className="bg-white rounded-lg p-3">
           <p className="text-sm text-gray-600 mb-2">Video URL:</p>
           <p className="text-xs font-mono bg-gray-100 p-2 rounded truncate">
-            {project.edited_video_url}
+            {videoUrl}
           </p>
+          {project.local_video_path && (
+            <p className="text-xs text-green-600 mt-1">✓ Stored in Supabase Storage</p>
+          )}
         </div>
         
         <div className="flex flex-wrap gap-2">

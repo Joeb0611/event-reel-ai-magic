@@ -21,6 +21,7 @@ export interface ProcessingJob {
   created_at: string;
   updated_at: string;
   result_video_url?: string;
+  local_video_path?: string;
   ai_insights?: {
     total_people_detected: number;
     ceremony_moments: number;
@@ -128,10 +129,14 @@ export const useWeddingProcessing = (projectId: string | null) => {
       if (status.status === 'completed') {
         const results = await aiService.getResults(projectId);
         if (results?.result) {
+          // Use local_video_path if available, fallback to result video_url
+          const videoUrl = results.result.local_video_path || results.result.video_url;
+          
           await supabase
             .from('processing_jobs')
             .update({
-              result_video_url: results.result.video_url,
+              result_video_url: videoUrl,
+              local_video_path: results.result.local_video_path,
               ai_insights: results.result.ai_insights,
               completed_at: new Date().toISOString()
             })
@@ -140,7 +145,10 @@ export const useWeddingProcessing = (projectId: string | null) => {
           // Update project with final video URL
           await supabase
             .from('projects')
-            .update({ edited_video_url: results.result.video_url })
+            .update({ 
+              edited_video_url: videoUrl,
+              local_video_path: results.result.local_video_path
+            })
             .eq('id', projectId);
 
           toast({

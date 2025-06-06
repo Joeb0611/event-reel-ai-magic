@@ -102,11 +102,13 @@ export type Database = {
       }
       processing_jobs: {
         Row: {
+          ai_insights: Json | null
           completed_at: string | null
           created_at: string
           detected_moments: Json | null
           error_message: string | null
           id: string
+          local_video_path: string | null
           progress: number
           project_id: string
           started_at: string | null
@@ -115,11 +117,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ai_insights?: Json | null
           completed_at?: string | null
           created_at?: string
           detected_moments?: Json | null
           error_message?: string | null
           id?: string
+          local_video_path?: string | null
           progress?: number
           project_id: string
           started_at?: string | null
@@ -128,11 +132,13 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ai_insights?: Json | null
           completed_at?: string | null
           created_at?: string
           detected_moments?: Json | null
           error_message?: string | null
           id?: string
+          local_video_path?: string | null
           progress?: number
           project_id?: string
           started_at?: string | null
@@ -160,6 +166,7 @@ export type Database = {
           groom_name: string | null
           guest_count: number | null
           id: string
+          local_video_path: string | null
           location: string | null
           name: string | null
           privacy_settings: Json | null
@@ -179,6 +186,7 @@ export type Database = {
           groom_name?: string | null
           guest_count?: number | null
           id?: string
+          local_video_path?: string | null
           location?: string | null
           name?: string | null
           privacy_settings?: Json | null
@@ -198,6 +206,7 @@ export type Database = {
           groom_name?: string | null
           guest_count?: number | null
           id?: string
+          local_video_path?: string | null
           location?: string | null
           name?: string | null
           privacy_settings?: Json | null

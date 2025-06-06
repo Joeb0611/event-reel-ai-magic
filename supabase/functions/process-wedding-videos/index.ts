@@ -59,7 +59,7 @@ serve(async (req) => {
     console.log(`Created processing job: ${job.id} for project ${projectId}`);
 
     // Start processing with external AI service
-    EdgeRuntime.waitUntil(processWithExternalService(supabaseClient, job.id, projectId));
+    EdgeRuntime.waitUntil(processWithExternalService(supabaseClient, job.id, projectId, userId));
 
     return new Response(
       JSON.stringify({ jobId: job.id, status: 'pending' }),
@@ -75,7 +75,7 @@ serve(async (req) => {
   }
 });
 
-async function processWithExternalService(supabase: any, jobId: string, projectId: string) {
+async function processWithExternalService(supabase: any, jobId: string, projectId: string, userId: string) {
   try {
     // First check if the AI service is healthy
     const healthCheck = await checkServiceHealth();
@@ -153,7 +153,7 @@ async function processWithExternalService(supabase: any, jobId: string, projectI
     }
 
     // Poll the external service for updates
-    await pollExternalJobStatus(supabase, jobId, externalJobId);
+    await pollExternalJobStatus(supabase, jobId, externalJobId, projectId, userId);
 
   } catch (error) {
     console.error('Error in external processing:', error);
@@ -190,7 +190,49 @@ async function checkServiceHealth() {
   }
 }
 
-async function pollExternalJobStatus(supabase: any, jobId: string, externalJobId: string) {
+async function downloadAndStoreVideo(supabase: any, videoUrl: string, projectId: string, userId: string): Promise<string | null> {
+  try {
+    console.log(`Downloading video from: ${videoUrl}`);
+    
+    // Download the video
+    const response = await fetch(videoUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to download video: ${response.status}`);
+    }
+
+    const videoBlob = await response.blob();
+    const fileName = `${userId}/${projectId}/ai-generated-${Date.now()}.mp4`;
+    
+    console.log(`Uploading video to storage: ${fileName}`);
+    
+    // Upload to Supabase storage
+    const { data, error } = await supabase.storage
+      .from('ai-videos')
+      .upload(fileName, videoBlob, {
+        contentType: 'video/mp4',
+        upsert: false
+      });
+
+    if (error) {
+      console.error('Error uploading video to storage:', error);
+      throw error;
+    }
+
+    console.log(`Video uploaded successfully: ${data.path}`);
+    
+    // Get public URL
+    const { data: publicUrlData } = supabase.storage
+      .from('ai-videos')
+      .getPublicUrl(data.path);
+
+    return publicUrlData.publicUrl;
+  } catch (error) {
+    console.error('Error downloading and storing video:', error);
+    return null;
+  }
+}
+
+async function pollExternalJobStatus(supabase: any, jobId: string, externalJobId: string, projectId: string, userId: string) {
   const maxAttempts = 60; // 5 minutes with 5-second intervals
   let attempts = 0;
 
@@ -225,11 +267,36 @@ async function pollExternalJobStatus(supabase: any, jobId: string, externalJobId
         console.log(`Job ${externalJobId} finished with status: ${jobStatus.status}`);
         
         if (jobStatus.status === 'completed' && jobStatus.edited_video_url) {
-          // Update project with edited video URL
-          await supabase
-            .from('projects')
-            .update({ edited_video_url: jobStatus.edited_video_url })
-            .eq('id', jobStatus.project_id);
+          console.log(`Downloading and storing video: ${jobStatus.edited_video_url}`);
+          
+          // Download and store the video in Supabase storage
+          const localVideoUrl = await downloadAndStoreVideo(supabase, jobStatus.edited_video_url, projectId, userId);
+          
+          if (localVideoUrl) {
+            // Update processing job with local video path
+            await supabase
+              .from('processing_jobs')
+              .update({
+                local_video_path: localVideoUrl,
+                ai_insights: jobStatus.ai_insights || {},
+                completed_at: new Date().toISOString()
+              })
+              .eq('id', jobId);
+
+            // Update project with local video URL
+            await supabase
+              .from('projects')
+              .update({ 
+                edited_video_url: localVideoUrl,
+                local_video_path: localVideoUrl
+              })
+              .eq('id', projectId);
+
+            console.log(`Video stored successfully at: ${localVideoUrl}`);
+          } else {
+            console.error('Failed to download and store video');
+            await updateJobStatus(supabase, jobId, 'failed', 0, [], 'Failed to download and store video');
+          }
         }
         break;
       }
