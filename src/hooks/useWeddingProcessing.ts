@@ -8,6 +8,12 @@ import { parseWeddingMoments, stringifyWeddingMoments, WeddingMoment } from '@/u
 import { WeddingAISettings } from '@/components/ai/AISettingsPanel';
 import { VideoFile } from '@/hooks/useVideos';
 
+export interface AIInsights {
+  total_people_detected: number;
+  ceremony_moments: number;
+  reception_moments: number;
+}
+
 export interface ProcessingJob {
   id: string;
   project_id: string;
@@ -22,11 +28,7 @@ export interface ProcessingJob {
   updated_at: string;
   result_video_url?: string;
   local_video_path?: string;
-  ai_insights?: {
-    total_people_detected: number;
-    ceremony_moments: number;
-    reception_moments: number;
-  };
+  ai_insights?: AIInsights;
 }
 
 // Re-export WeddingMoment for other components
@@ -69,6 +71,30 @@ export const useWeddingProcessing = (projectId: string | null) => {
     }
   };
 
+  const parseAIInsights = (insights: any): AIInsights | undefined => {
+    if (!insights) return undefined;
+    
+    // Handle both string and object formats
+    let parsedInsights = insights;
+    if (typeof insights === 'string') {
+      try {
+        parsedInsights = JSON.parse(insights);
+      } catch {
+        return undefined;
+      }
+    }
+    
+    if (parsedInsights && typeof parsedInsights === 'object') {
+      return {
+        total_people_detected: parsedInsights.total_people_detected || 0,
+        ceremony_moments: parsedInsights.ceremony_moments || 0,
+        reception_moments: parsedInsights.reception_moments || 0
+      };
+    }
+    
+    return undefined;
+  };
+
   const fetchCurrentJob = async () => {
     if (!projectId) return;
 
@@ -88,7 +114,8 @@ export const useWeddingProcessing = (projectId: string | null) => {
           ...data,
           status: data.status as ProcessingJob['status'],
           detected_moments: parseWeddingMoments(data.detected_moments),
-          progress: data.progress || 0
+          progress: data.progress || 0,
+          ai_insights: parseAIInsights(data.ai_insights)
         };
         setCurrentJob(typedJob);
       } else {
@@ -129,7 +156,7 @@ export const useWeddingProcessing = (projectId: string | null) => {
       if (status.status === 'completed') {
         const results = await aiService.getResults(projectId);
         if (results?.result) {
-          // Use local_video_path if available, fallback to result video_url
+          // The AI service result now includes local_video_path from the edge function
           const videoUrl = results.result.local_video_path || results.result.video_url;
           
           await supabase
@@ -196,7 +223,8 @@ export const useWeddingProcessing = (projectId: string | null) => {
         ...job,
         status: 'pending' as const,
         detected_moments: [],
-        progress: 0
+        progress: 0,
+        ai_insights: undefined
       });
 
       // Start AI processing

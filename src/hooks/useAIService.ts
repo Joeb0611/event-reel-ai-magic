@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AI_SERVICE_CONFIG, mapVideoStyleToAI, mapDurationToAI, mapContentFocusToAI, mapVideoQualityToAI, mapMusicStyleToAI } from '@/config/aiService';
 import { WeddingAISettings } from '@/components/ai/AISettingsPanel';
 import { VideoFile } from '@/hooks/useVideos';
+import { AIInsights } from '@/hooks/useWeddingProcessing';
 
 interface MediaFile {
   id: string;
@@ -31,13 +32,10 @@ interface AIProcessingResult {
   result?: {
     status: string;
     video_url: string;
+    local_video_path?: string;
     highlight_duration: string;
     scenes_included: string[];
-    ai_insights: {
-      total_people_detected: number;
-      ceremony_moments: number;
-      reception_moments: number;
-    };
+    ai_insights: AIInsights;
   };
 }
 
