@@ -124,7 +124,7 @@ const AISettingsPanel = ({
         <MustIncludeToggle
           checked={settings.includeMustInclude}
           onChange={(checked) => updateSetting('includeMustInclude', checked)}
-          count={mustIncludeCount}
+          mustIncludeCount={mustIncludeCount}
         />
       )}
     </div>
