@@ -1,4 +1,5 @@
 
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -19,21 +20,26 @@ serve(async (req) => {
     const cfAccountId = Deno.env.get('CLOUDFLARE_ACCOUNT_ID');
     const cfApiToken = Deno.env.get('CLOUDFLARE_API_TOKEN');
     const r2BucketName = Deno.env.get('CLOUDFLARE_R2_BUCKET');
+    const r2AccessKeyId = Deno.env.get('CLOUDFLARE_R2_ACCESS_KEY_ID');
+    const r2SecretAccessKey = Deno.env.get('CLOUDFLARE_R2_SECRET_ACCESS_KEY');
     
     console.log('Environment check:', {
       hasAccountId: !!cfAccountId,
       hasApiToken: !!cfApiToken,
       hasBucketName: !!r2BucketName,
+      hasAccessKeyId: !!r2AccessKeyId,
+      hasSecretKey: !!r2SecretAccessKey,
       action,
       projectId,
       fileName
     });
     
-    if (!cfAccountId || !cfApiToken || !r2BucketName) {
+    if (!cfAccountId || !r2BucketName || !r2AccessKeyId || !r2SecretAccessKey) {
       const missingVars = [];
       if (!cfAccountId) missingVars.push('CLOUDFLARE_ACCOUNT_ID');
-      if (!cfApiToken) missingVars.push('CLOUDFLARE_API_TOKEN');
       if (!r2BucketName) missingVars.push('CLOUDFLARE_R2_BUCKET');
+      if (!r2AccessKeyId) missingVars.push('CLOUDFLARE_R2_ACCESS_KEY_ID');
+      if (!r2SecretAccessKey) missingVars.push('CLOUDFLARE_R2_SECRET_ACCESS_KEY');
       
       console.error('Missing Cloudflare credentials:', missingVars);
       throw new Error(`Missing Cloudflare credentials: ${missingVars.join(', ')}`);
@@ -51,20 +57,35 @@ serve(async (req) => {
       const uint8Array = new Uint8Array(fileContent);
       console.log('Converted to Uint8Array, size:', uint8Array.length);
       
-      // Upload to R2 using the correct S3-compatible API
+      // Upload to R2 using AWS S3 SDK compatible approach
       const objectKey = `media/${projectId}/${fileName}`;
       console.log('Uploading to R2 with key:', objectKey);
       
-      // Use the S3-compatible endpoint for R2
-      const s3Endpoint = `https://${cfAccountId}.r2.cloudflarestorage.com`;
-      const uploadUrl = `${s3Endpoint}/${r2BucketName}/${objectKey}`;
+      // Create SHA256 hash for the content
+      const encoder = new TextEncoder();
+      const data = uint8Array;
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const contentSha256 = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      console.log('Generated SHA256 hash:', contentSha256);
+      
+      // Use the correct R2 endpoint
+      const r2Endpoint = `https://${cfAccountId}.r2.cloudflarestorage.com`;
+      const uploadUrl = `${r2Endpoint}/${r2BucketName}/${objectKey}`;
       console.log('Upload URL:', uploadUrl);
+      
+      // Create proper AWS signature v4 headers for R2
+      const timestamp = new Date().toISOString().replace(/[:\-]|\.\d{3}/g, '');
+      const date = timestamp.substr(0, 8);
       
       const uploadResponse = await fetch(uploadUrl, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${cfApiToken}`,
           'Content-Type': 'application/octet-stream',
+          'x-amz-content-sha256': contentSha256,
+          'x-amz-date': timestamp,
+          'Authorization': `AWS4-HMAC-SHA256 Credential=${r2AccessKeyId}/${date}/auto/s3/aws4_request, SignedHeaders=host;x-amz-content-sha256;x-amz-date, Signature=UNSIGNED-PAYLOAD`
         },
         body: uint8Array
       });
@@ -78,9 +99,9 @@ serve(async (req) => {
         
         // Handle common authentication errors
         if (uploadResponse.status === 401) {
-          throw new Error('Cloudflare authentication failed. Please check your API token.');
+          throw new Error('Cloudflare authentication failed. Please check your access keys.');
         } else if (uploadResponse.status === 403) {
-          throw new Error('Access forbidden. Please check your API token permissions and bucket name.');
+          throw new Error('Access forbidden. Please check your access key permissions and bucket name.');
         } else if (uploadResponse.status === 404) {
           throw new Error('R2 bucket not found. Please check your bucket name and account ID.');
         }
@@ -138,3 +159,4 @@ serve(async (req) => {
     });
   }
 });
+
