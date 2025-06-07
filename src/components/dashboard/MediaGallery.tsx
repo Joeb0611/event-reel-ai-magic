@@ -27,6 +27,7 @@ import {
   DialogPortal,
 } from '@/components/ui/dialog';
 import VideoUpload from '@/components/VideoUpload';
+import VideoThumbnailWithLoading from '@/components/ui/VideoThumbnailWithLoading';
 import { VideoFile } from '@/hooks/useVideos';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -96,76 +97,61 @@ const MediaGallery = ({
   };
 
   const handleAddMediaClick = () => {
-    console.log('Add Media button clicked');
     setShowVideoUpload(true);
   };
 
   const handleMediaClick = (media: VideoFile) => {
-    console.log('Opening media:', media.name);
-    setSelectedMedia(media);
+    // Only allow preview if it's not a Cloudflare video or if thumbnail is ready
+    if (!isCloudflareStream(media) || media.thumbnail_url) {
+      setSelectedMedia(media);
+    }
   };
 
   const handleCloseModal = () => {
-    console.log('Closing media modal');
     setSelectedMedia(null);
   };
 
   const MediaPreview = ({ video, onClick }: { video: VideoFile; onClick?: () => void }) => {
-    // Use thumbnail_url if available, otherwise fall back to url
-    const previewUrl = video.thumbnail_url || video.url;
-    
-    if (!previewUrl) {
-      return (
-        <div className="text-center">
-          {isVideo(video.name) ? (
-            <Video className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-          ) : (
-            <Image className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-          )}
-          <p className="text-xs text-gray-500">No preview</p>
-        </div>
-      );
-    }
-
     if (isVideo(video.name) || isCloudflareStream(video)) {
-      // For videos, show thumbnail image with play overlay
       return (
-        <div className="relative group cursor-pointer" onClick={onClick}>
-          <img
-            src={previewUrl}
-            alt={video.name}
-            className="w-full h-full object-cover rounded-lg"
-            onError={(e) => {
-              console.error('Thumbnail error:', e);
-              // Show fallback play icon if thumbnail fails
-              const target = e.target as HTMLImageElement;
-              target.style.display = 'none';
-              target.parentElement?.classList.add('bg-gray-900', 'flex', 'items-center', 'justify-center');
-            }}
-          />
-          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
-            <Play className="w-8 h-8 text-white" />
-          </div>
-          {/* Always show small play icon to indicate it's a video */}
-          <div className="absolute bottom-1 right-1 bg-black/60 rounded-full p-1">
-            <Play className="w-3 h-3 text-white fill-current" />
-          </div>
-        </div>
-      );
-    } else {
-      return (
-        <img
-          src={previewUrl}
+        <VideoThumbnailWithLoading
+          videoUrl={video.url}
+          filePath={video.file_path}
+          streamVideoId={video.stream_video_id}
           alt={video.name}
-          className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-          onClick={onClick}
-          onError={(e) => {
-            console.error('Image error:', e);
-            // Hide the broken image
-            (e.target as HTMLImageElement).style.display = 'none';
+          className="w-full h-full cursor-pointer"
+          size="lg"
+          aspectRatio="video"
+          onRetry={() => {
+            // Force refresh by updating the component
+            window.location.reload();
           }}
         />
       );
+    } else {
+      // For images, show thumbnail if available
+      const previewUrl = video.thumbnail_url || video.url;
+      
+      if (previewUrl) {
+        return (
+          <img
+            src={previewUrl}
+            alt={video.name}
+            className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={onClick}
+            onError={(e) => {
+              console.error('Image error:', e);
+              (e.target as HTMLImageElement).style.display = 'none';
+            }}
+          />
+        );
+      } else {
+        return (
+          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-lg">
+            <Image className="w-6 h-6 text-gray-400" />
+          </div>
+        );
+      }
     }
   };
 
@@ -275,7 +261,10 @@ const MediaGallery = ({
                 {viewMode === 'grid' ? (
                   // Grid View
                   <>
-                    <div className="aspect-video bg-gray-100 rounded-lg mb-2 flex items-center justify-center relative overflow-hidden">
+                    <div 
+                      className="aspect-video bg-gray-100 rounded-lg mb-2 flex items-center justify-center relative overflow-hidden"
+                      onClick={() => handleMediaClick(video)}
+                    >
                       <MediaPreview 
                         video={video} 
                         onClick={() => handleMediaClick(video)}
@@ -287,7 +276,10 @@ const MediaGallery = ({
                           variant="ghost"
                           size="sm"
                           className={`h-7 w-7 p-0 ${mustIncludeItems.has(video.id) ? 'bg-yellow-500 text-white' : 'bg-white/80'}`}
-                          onClick={() => onToggleMustInclude(video.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onToggleMustInclude(video.id);
+                          }}
                         >
                           <Star className={`w-3 h-3 ${mustIncludeItems.has(video.id) ? 'fill-current' : ''}`} />
                         </Button>
@@ -342,7 +334,10 @@ const MediaGallery = ({
                 ) : (
                   // List View
                   <div className="flex items-start gap-3">
-                    <div className={`${isMobile ? 'w-14 h-11' : 'w-12 h-9 sm:w-14 sm:h-10'} bg-gray-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden`}>
+                    <div 
+                      className={`${isMobile ? 'w-14 h-11' : 'w-12 h-9 sm:w-14 sm:h-10'} bg-gray-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden`}
+                      onClick={() => handleMediaClick(video)}
+                    >
                       <MediaPreview 
                         video={video} 
                         onClick={() => handleMediaClick(video)}

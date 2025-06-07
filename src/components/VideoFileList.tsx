@@ -2,7 +2,6 @@
 import React from 'react';
 import { Video, X, CheckCircle, FileImage } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import ThumbnailImage from '@/components/ui/ThumbnailImage';
 
 interface VideoFileListProps {
   files: File[];
@@ -21,55 +20,6 @@ const VideoFileList = ({
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  const createImagePreview = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target?.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const FilePreview = ({ file }: { file: File }) => {
-    const [imagePreview, setImagePreview] = React.useState<string>('');
-    
-    React.useEffect(() => {
-      if (file.type.startsWith('image/')) {
-        createImagePreview(file).then(setImagePreview).catch(() => {
-          // Ignore preview errors
-        });
-      }
-      
-      return () => {
-        if (imagePreview) {
-          URL.revokeObjectURL(imagePreview);
-        }
-      };
-    }, [file]);
-
-    if (file.type.startsWith('image/') && imagePreview) {
-      return (
-        <ThumbnailImage
-          src={imagePreview}
-          alt={file.name}
-          className="w-full h-full"
-          fallbackIcon="image"
-          showRetry={false}
-        />
-      );
-    }
-
-    // Show simple icons for videos (no loading states during selection)
-    return (
-      <ThumbnailImage
-        alt={file.name}
-        className="w-full h-full"
-        fallbackIcon={file.type.startsWith('video/') ? 'video' : 'image'}
-        showRetry={false}
-      />
-    );
-  };
-
   if (files.length === 0) return null;
 
   return (
@@ -83,9 +33,13 @@ const VideoFileList = ({
         {files.map((file, index) => (
           <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              {/* Mobile-optimized thumbnail size */}
-              <div className="w-16 h-10 md:w-20 md:h-12 flex-shrink-0 overflow-hidden rounded">
-                <FilePreview file={file} />
+              {/* Simple icon - no thumbnails */}
+              <div className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-gray-200 rounded">
+                {file.type.startsWith('video/') ? (
+                  <Video className="w-5 h-5 text-gray-600" />
+                ) : (
+                  <FileImage className="w-5 h-5 text-gray-600" />
+                )}
               </div>
               
               <div className="min-w-0 flex-1">

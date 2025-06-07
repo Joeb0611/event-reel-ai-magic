@@ -17,7 +17,11 @@ const VideoManager = ({ videos, onDeleteVideo, mustIncludeItems, onToggleMustInc
   const [selectedVideo, setSelectedVideo] = useState<VideoFile | null>(null);
 
   const handleThumbnailClick = (video: VideoFile) => {
-    setSelectedVideo(video);
+    // Only allow preview if thumbnail is ready for Cloudflare videos
+    const isCloudflareStream = video.file_path?.startsWith('stream://') || video.stream_video_id;
+    if (!isCloudflareStream || video.thumbnail_url) {
+      setSelectedVideo(video);
+    }
   };
 
   const handleDownload = async (video: VideoFile) => {
@@ -97,7 +101,7 @@ const VideoManager = ({ videos, onDeleteVideo, mustIncludeItems, onToggleMustInc
                 }`}
                 onClick={() => handleThumbnailClick(video)}
               >
-                {/* Thumbnail with loading states */}
+                {/* Thumbnail with loading states - NO PREVIEW until ready */}
                 <div className="aspect-video">
                   <VideoThumbnailWithLoading
                     videoUrl={video.url}
@@ -116,7 +120,7 @@ const VideoManager = ({ videos, onDeleteVideo, mustIncludeItems, onToggleMustInc
                   </div>
                 )}
 
-                {/* Hover Overlay */}
+                {/* Hover Overlay - only show if thumbnail is ready */}
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
                   <Eye className="w-8 h-8 text-white" />
                 </div>
