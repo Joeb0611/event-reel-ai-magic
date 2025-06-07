@@ -61,7 +61,7 @@ const VideoUploadDialog = ({
         <DialogHeader>
           <DialogTitle className="text-xl">Media Upload</DialogTitle>
           <DialogDescription>
-            Upload photos and videos to {projectName}. Videos will be automatically processed by Cloudflare Stream for optimal quality and performance.
+            Upload photos and videos to {projectName}. Your media will be automatically processed for optimal quality and performance.
           </DialogDescription>
         </DialogHeader>
 
@@ -69,7 +69,7 @@ const VideoUploadDialog = ({
           {/* Security Notice */}
           <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
             <AlertTriangle className="h-4 w-4" />
-            <span>All uploads are scanned for security. Videos are automatically processed by Cloudflare Stream and images are stored in Cloudflare R2 for optimal performance.</span>
+            <span>All uploads are scanned for security and automatically optimized for the best viewing experience.</span>
           </div>
 
           {/* Drop Zone */}
@@ -82,10 +82,10 @@ const VideoUploadDialog = ({
           {selectedFiles.length > 0 && (
             <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-sm text-green-800">
-                <strong>Auto-Processing:</strong> Videos will be automatically processed by Cloudflare Stream and images will be optimized during upload.
+                <strong>Auto-Processing:</strong> Your media will be automatically optimized during upload.
               </p>
               <p className="text-xs text-green-600 mt-1">
-                This ensures optimal quality and fast loading times for your media files.
+                This ensures the best quality and fast loading times for your project.
               </p>
             </div>
           )}
