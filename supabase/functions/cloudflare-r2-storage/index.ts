@@ -30,8 +30,11 @@ serve(async (req) => {
     );
 
     if (action === 'upload') {
-      // Upload final video to R2
-      const objectKey = `highlights/${projectId}/${fileName}`;
+      // Convert array of numbers back to Uint8Array
+      const uint8Array = new Uint8Array(fileContent);
+      
+      // Upload to R2
+      const objectKey = `media/${projectId}/${fileName}`;
       
       const uploadResponse = await fetch(
         `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/r2/buckets/${r2BucketName}/objects/${objectKey}`,
@@ -39,18 +42,20 @@ serve(async (req) => {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${cfApiToken}`,
-            'Content-Type': 'video/mp4',
+            'Content-Type': 'application/octet-stream',
           },
-          body: fileContent
+          body: uint8Array
         }
       );
 
       if (!uploadResponse.ok) {
-        throw new Error(`R2 upload failed: ${uploadResponse.status}`);
+        const errorText = await uploadResponse.text();
+        console.error('R2 upload failed:', uploadResponse.status, errorText);
+        throw new Error(`R2 upload failed: ${uploadResponse.status} ${errorText}`);
       }
 
-      // Create public URL
-      const publicUrl = `https://pub-${cfAccountId}.r2.dev/${objectKey}`;
+      // Create public URL (assuming R2 bucket is configured with a custom domain)
+      const publicUrl = `https://${r2BucketName}.r2.dev/${objectKey}`;
       
       return new Response(JSON.stringify({
         success: true,
@@ -62,10 +67,10 @@ serve(async (req) => {
 
     } else if (action === 'get_signed_url') {
       // Generate signed URL for download
-      const objectKey = `highlights/${projectId}/${fileName}`;
+      const objectKey = `media/${projectId}/${fileName}`;
       
       // For now, return the public URL - in production you'd generate a signed URL
-      const publicUrl = `https://pub-${cfAccountId}.r2.dev/${objectKey}`;
+      const publicUrl = `https://${r2BucketName}.r2.dev/${objectKey}`;
       
       return new Response(JSON.stringify({
         success: true,
