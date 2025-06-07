@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Video, X, CheckCircle, FileImage } from 'lucide-react';
+import { Video, X, CheckCircle, FileImage, Loader } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface VideoFileListProps {
@@ -77,7 +77,16 @@ const VideoFileList = ({
     }, [file]);
 
     if (file.type.startsWith('video/')) {
-      // For video files, show a video placeholder since we'll get the thumbnail from Cloudflare after upload
+      // Show loading state for videos during upload/processing
+      if (uploading) {
+        return (
+          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded">
+            <Loader className="w-4 h-4 text-blue-500 animate-spin" />
+          </div>
+        );
+      }
+      
+      // Show video placeholder when not uploading
       return (
         <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded">
           <Video className="w-6 h-6 text-gray-400" />
@@ -119,9 +128,15 @@ const VideoFileList = ({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium truncate">{file.name}</p>
-                <p className="text-xs text-gray-500">
-                  {formatFileSize(file.size)} • {file.type.startsWith('video/') ? 'Video' : 'Image'}
-                </p>
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <span>{formatFileSize(file.size)} • {file.type.startsWith('video/') ? 'Video' : 'Image'}</span>
+                  {file.type.startsWith('video/') && uploading && (
+                    <span className="text-blue-600 flex items-center gap-1">
+                      <Loader className="w-3 h-3 animate-spin" />
+                      Processing...
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <Button
