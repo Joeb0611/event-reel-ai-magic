@@ -26,7 +26,7 @@ const VideoUploadDialog = ({
 }: VideoUploadDialogProps) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const { validateFiles, MAX_FILES_PER_UPLOAD } = useFileValidation();
-  const { uploading, compressionProgress, uploadFiles, projectVideoQuality } = useVideoUpload(projectId, projectName);
+  const { uploading, uploadFiles } = useVideoUpload(projectId, projectName);
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
@@ -61,7 +61,7 @@ const VideoUploadDialog = ({
         <DialogHeader>
           <DialogTitle className="text-xl">Media Upload</DialogTitle>
           <DialogDescription>
-            Upload photos and videos to {projectName}. Videos will be automatically compressed to {projectVideoQuality} quality based on your project settings.
+            Upload photos and videos to {projectName}. Videos will be automatically processed by Cloudflare Stream for optimal quality and performance.
           </DialogDescription>
         </DialogHeader>
 
@@ -69,7 +69,7 @@ const VideoUploadDialog = ({
           {/* Security Notice */}
           <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
             <AlertTriangle className="h-4 w-4" />
-            <span>All uploads are scanned for security. Videos are automatically compressed and images are stored in Cloudflare for optimal performance.</span>
+            <span>All uploads are scanned for security. Videos are automatically processed by Cloudflare Stream and images are stored in Cloudflare R2 for optimal performance.</span>
           </div>
 
           {/* Drop Zone */}
@@ -78,14 +78,14 @@ const VideoUploadDialog = ({
             maxFiles={MAX_FILES_PER_UPLOAD}
           />
 
-          {/* Project Quality Info */}
+          {/* Processing Info */}
           {selectedFiles.length > 0 && (
             <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-sm text-green-800">
-                <strong>Auto-Processing:</strong> Videos will be compressed to {projectVideoQuality} quality and images will be optimized during upload.
+                <strong>Auto-Processing:</strong> Videos will be automatically processed by Cloudflare Stream and images will be optimized during upload.
               </p>
               <p className="text-xs text-green-600 mt-1">
-                This reduces file sizes and upload times while maintaining quality standards for your project.
+                This ensures optimal quality and fast loading times for your media files.
               </p>
             </div>
           )}
@@ -93,7 +93,6 @@ const VideoUploadDialog = ({
           {/* Selected Files */}
           <VideoFileList
             files={selectedFiles}
-            compressionProgress={compressionProgress}
             onRemoveFile={removeFile}
             uploading={uploading}
             maxFiles={MAX_FILES_PER_UPLOAD}
