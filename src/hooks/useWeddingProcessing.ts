@@ -164,7 +164,7 @@ export const useWeddingProcessing = (projectId: string | null) => {
             .update({
               result_video_url: videoUrl,
               local_video_path: results.result.local_video_path,
-              ai_insights: results.result.ai_insights,
+              ai_insights: JSON.stringify(results.result.ai_insights),
               completed_at: new Date().toISOString()
             })
             .eq('id', currentJob.id);
