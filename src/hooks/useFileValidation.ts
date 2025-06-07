@@ -1,8 +1,13 @@
 
 import { useToast } from '@/hooks/use-toast';
 
-const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/mov', 'video/quicktime', 'video/avi'];
-const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB since we'll compress
+const ALLOWED_FILE_TYPES = [
+  // Video types
+  'video/mp4', 'video/mov', 'video/quicktime', 'video/avi',
+  // Image types
+  'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/heic'
+];
+const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB since we'll compress videos
 const MAX_FILES_PER_UPLOAD = 20;
 
 export const useFileValidation = () => {
@@ -16,8 +21,8 @@ export const useFileValidation = () => {
       const file = files[i];
       
       // Validate file type
-      if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
-        errors.push(`${file.name}: Only MP4, MOV, QuickTime, and AVI videos are supported.`);
+      if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+        errors.push(`${file.name}: Only MP4, MOV, QuickTime, AVI videos and JPG, PNG, GIF, WEBP, HEIC images are supported.`);
         continue;
       }
 
