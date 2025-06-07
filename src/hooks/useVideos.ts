@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -68,44 +67,67 @@ export const useVideos = (projectId: string | null) => {
         // Add signed URLs for Supabase storage files
         const videosWithUrls = await Promise.all(
           mediaVideos.map(async (video) => {
-            const { data: urlData } = await supabase.storage
-              .from('videos')
-              .createSignedUrl(video.file_path, 3600);
-            
-            return {
-              ...video,
-              url: urlData?.signedUrl
-            };
+            try {
+              const { data: urlData } = await supabase.storage
+                .from('videos')
+                .createSignedUrl(video.file_path, 3600);
+              
+              return {
+                ...video,
+                url: urlData?.signedUrl
+              };
+            } catch (error) {
+              console.error('Error generating signed URL for:', video.file_path, error);
+              return video;
+            }
           })
         );
         
         allVideos.push(...videosWithUrls);
       }
 
-      // Process videos data (Cloudflare Stream)
+      // Process videos data (Cloudflare Stream and R2)
       if (videosResult.data) {
-        const videoData = videosResult.data.map((video) => ({
-          id: video.id,
-          name: video.name,
-          file_path: video.file_path,
-          size: video.size,
-          uploaded_at: video.uploaded_at,
-          created_at: video.uploaded_at,
-          edited: video.edited || false,
-          project_id: video.project_id,
-          user_id: video.user_id,
-          guest_name: video.guest_name,
-          guest_message: video.guest_message,
-          uploaded_by_guest: video.uploaded_by_guest || false,
-          stream_video_id: video.stream_video_id,
-          // For Cloudflare Stream videos, construct the playback URL
-          url: video.stream_video_id 
-            ? `https://videodelivery.net/${video.stream_video_id}/manifest/video.m3u8`
-            : video.stream_playback_url
-        }));
+        const videoData = videosResult.data.map((video) => {
+          let url: string | undefined;
+          
+          // Handle different storage types
+          if (video.file_path?.startsWith('stream://')) {
+            // Cloudflare Stream video
+            const streamId = video.file_path.replace('stream://', '');
+            // Use iframe embed URL for better compatibility
+            url = `https://iframe.videodelivery.net/${streamId}`;
+          } else if (video.file_path?.startsWith('r2://')) {
+            // Cloudflare R2 file - construct public URL
+            const objectKey = video.file_path.replace('r2://', '');
+            // This assumes your R2 bucket is configured with a public domain
+            url = `https://d067de0dad23153466dc9015deb5d9df.r2.cloudflarestorage.com/memorymixer/${objectKey}`;
+          } else if (video.stream_video_id) {
+            // Fallback for stream video ID
+            url = `https://iframe.videodelivery.net/${video.stream_video_id}`;
+          }
+
+          return {
+            id: video.id,
+            name: video.name,
+            file_path: video.file_path,
+            size: video.size,
+            uploaded_at: video.uploaded_at,
+            created_at: video.uploaded_at,
+            edited: video.edited || false,
+            project_id: video.project_id,
+            user_id: video.user_id,
+            guest_name: video.guest_name,
+            guest_message: video.guest_message,
+            uploaded_by_guest: video.uploaded_by_guest || false,
+            stream_video_id: video.stream_video_id,
+            url
+          };
+        });
         allVideos.push(...videoData);
       }
 
+      console.log('Fetched videos with URLs:', allVideos.map(v => ({ name: v.name, url: v.url, file_path: v.file_path })));
       setProjectVideos(allVideos);
     } catch (error) {
       console.error('Error fetching project videos:', error);

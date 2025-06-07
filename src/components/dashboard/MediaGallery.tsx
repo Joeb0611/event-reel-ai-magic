@@ -84,6 +84,10 @@ const MediaGallery = ({
     return filename.toLowerCase().includes('.mp4') || filename.toLowerCase().includes('.mov');
   };
 
+  const isCloudflareStream = (video: VideoFile) => {
+    return video.file_path?.startsWith('stream://') || video.stream_video_id;
+  };
+
   const handleDeleteVideo = () => {
     if (deleteVideoId) {
       onDeleteVideo(deleteVideoId);
@@ -115,24 +119,38 @@ const MediaGallery = ({
           ) : (
             <Image className="w-6 h-6 text-gray-400 mx-auto mb-1" />
           )}
+          <p className="text-xs text-gray-500">No preview</p>
         </div>
       );
     }
 
-    if (isVideo(video.name)) {
-      return (
-        <div className="relative group cursor-pointer" onClick={onClick}>
-          <video
-            src={video.url}
-            className="w-full h-full object-cover rounded-lg"
-            muted
-            preload="metadata"
-          />
-          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+    if (isVideo(video.name) || isCloudflareStream(video)) {
+      // For Cloudflare Stream, show a thumbnail placeholder
+      if (isCloudflareStream(video)) {
+        return (
+          <div className="relative group cursor-pointer bg-gray-900 flex items-center justify-center" onClick={onClick}>
             <Play className="w-8 h-8 text-white" />
+            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+              <Play className="w-12 h-12 text-white" />
+            </div>
           </div>
-        </div>
-      );
+        );
+      } else {
+        return (
+          <div className="relative group cursor-pointer" onClick={onClick}>
+            <video
+              src={video.url}
+              className="w-full h-full object-cover rounded-lg"
+              muted
+              preload="metadata"
+              onError={(e) => console.error('Video error:', e)}
+            />
+            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+              <Play className="w-8 h-8 text-white" />
+            </div>
+          </div>
+        );
+      }
     } else {
       return (
         <img
@@ -140,6 +158,11 @@ const MediaGallery = ({
           alt={video.name}
           className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
           onClick={onClick}
+          onError={(e) => {
+            console.error('Image error:', e);
+            // Hide the broken image
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
         />
       );
     }
@@ -418,15 +441,15 @@ const MediaGallery = ({
         </Card>
       )}
 
-      {/* Custom Media Modal - Smaller size */}
+      {/* Custom Media Modal */}
       <Dialog open={!!selectedMedia} onOpenChange={handleCloseModal}>
         <DialogPortal>
           <DialogOverlay 
             className="fixed inset-0 z-50 bg-black/80" 
             onClick={handleCloseModal}
           />
-          <div className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-2xl translate-x-[-50%] translate-y-[-50%] gap-0 border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg max-h-[80vh] overflow-hidden">
-            {/* Custom Header with only ONE close button */}
+          <div className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-4xl translate-x-[-50%] translate-y-[-50%] gap-0 border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg max-h-[90vh] overflow-hidden">
+            {/* Custom Header */}
             <div className="flex items-center justify-between p-4 border-b bg-white">
               <h2 className="text-lg font-semibold truncate pr-4">
                 {selectedMedia?.name}
@@ -442,24 +465,37 @@ const MediaGallery = ({
             </div>
             
             {/* Media Content */}
-            <div className="flex-1 flex items-center justify-center p-4 bg-white min-h-[40vh]">
-              {selectedMedia?.url && (
-                isVideo(selectedMedia.name) ? (
-                  <video
-                    src={selectedMedia.url}
-                    controls
-                    autoPlay
-                    controlsList="nodownload nofullscreen"
-                    disablePictureInPicture
-                    className="max-w-full max-h-full"
-                    style={{ aspectRatio: 'auto' }}
-                    onError={(e) => console.error('Video error:', e)}
-                    onClick={(e) => e.stopPropagation()}
-                    onDoubleClick={(e) => e.preventDefault()}
-                  >
-                    Your browser does not support the video tag.
-                  </video>
+            <div className="flex-1 flex items-center justify-center p-4 bg-white min-h-[50vh]">
+              {selectedMedia?.url ? (
+                isVideo(selectedMedia.name) || isCloudflareStream(selectedMedia) ? (
+                  isCloudflareStream(selectedMedia) ? (
+                    // Cloudflare Stream iframe embed
+                    <iframe
+                      src={selectedMedia.url}
+                      className="w-full h-full min-h-[400px]"
+                      frameBorder="0"
+                      allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                      allowFullScreen
+                    />
+                  ) : (
+                    // Regular video file
+                    <video
+                      src={selectedMedia.url}
+                      controls
+                      autoPlay
+                      controlsList="nodownload nofullscreen"
+                      disablePictureInPicture
+                      className="max-w-full max-h-full"
+                      style={{ aspectRatio: 'auto' }}
+                      onError={(e) => console.error('Video error:', e)}
+                      onClick={(e) => e.stopPropagation()}
+                      onDoubleClick={(e) => e.preventDefault()}
+                    >
+                      Your browser does not support the video tag.
+                    </video>
+                  )
                 ) : (
+                  // Image
                   <img
                     src={selectedMedia.url}
                     alt={selectedMedia.name}
@@ -467,6 +503,11 @@ const MediaGallery = ({
                     onError={(e) => console.error('Image error:', e)}
                   />
                 )
+              ) : (
+                <div className="text-center text-gray-500">
+                  <div className="text-6xl mb-4">📱</div>
+                  <p>Media preview not available</p>
+                </div>
               )}
             </div>
             
@@ -493,6 +534,7 @@ const MediaGallery = ({
         </DialogPortal>
       </Dialog>
 
+      {/* VideoUpload and Delete Dialog */}
       {showVideoUpload && (
         <VideoUpload
           isOpen={showVideoUpload}
