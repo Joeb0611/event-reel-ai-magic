@@ -20,34 +20,6 @@ const VideoFileList = ({
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  const createVideoThumbnail = (file: File): Promise<string> => {
-    return new Promise((resolve) => {
-      const video = document.createElement('video');
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      video.addEventListener('loadedmetadata', () => {
-        canvas.width = 160;
-        canvas.height = 90;
-        video.currentTime = 1; // Seek to 1 second for thumbnail
-      });
-      
-      video.addEventListener('seeked', () => {
-        if (ctx) {
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL());
-        }
-      });
-      
-      video.addEventListener('error', () => {
-        resolve(''); // Return empty string on error
-      });
-      
-      video.src = URL.createObjectURL(file);
-      video.load();
-    });
-  };
-
   const createImageThumbnail = (file: File): Promise<string> => {
     return new Promise((resolve) => {
       const img = new Image();
@@ -93,9 +65,7 @@ const VideoFileList = ({
     const [thumbnail, setThumbnail] = React.useState<string>('');
     
     React.useEffect(() => {
-      if (file.type.startsWith('video/')) {
-        createVideoThumbnail(file).then(setThumbnail);
-      } else if (file.type.startsWith('image/')) {
+      if (file.type.startsWith('image/')) {
         createImageThumbnail(file).then(setThumbnail);
       }
       
@@ -105,6 +75,15 @@ const VideoFileList = ({
         }
       };
     }, [file]);
+
+    if (file.type.startsWith('video/')) {
+      // For video files, show a video placeholder since we'll get the thumbnail from Cloudflare after upload
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded">
+          <Video className="w-6 h-6 text-gray-400" />
+        </div>
+      );
+    }
 
     if (thumbnail) {
       return (
@@ -118,11 +97,7 @@ const VideoFileList = ({
 
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded">
-        {file.type.startsWith('video/') ? (
-          <Video className="w-6 h-6 text-gray-400" />
-        ) : (
-          <FileImage className="w-6 h-6 text-gray-400" />
-        )}
+        <FileImage className="w-6 h-6 text-gray-400" />
       </div>
     );
   };
