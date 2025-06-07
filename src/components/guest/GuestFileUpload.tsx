@@ -3,10 +3,10 @@ import { useState, useCallback, useRef } from 'react';
 import { Upload, Camera, X, FileImage, FileVideo, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { supabase } from '@/integrations/supabase/client';
 import { Project } from '@/hooks/useProjects';
 import { GuestUploadData } from './GuestUploadInterface';
 import { validateFileType, validateFileSize, sanitizeFilename, validateGuestUploadData } from '@/utils/validation';
+import { useCloudflareIntegration } from '@/hooks/useCloudflareIntegration';
 
 interface GuestFileUploadProps {
   project: Project & { qr_code?: string };
@@ -38,6 +38,7 @@ const GuestFileUpload = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const { uploadToR2, initiateStreamUpload } = useCloudflareIntegration();
 
   const maxFileSize = 100 * 1024 * 1024; // 100MB
 
@@ -141,33 +142,39 @@ const GuestFileUpload = ({
         return false;
       }
 
-      const fileExt = file.name.split('.').pop()?.toLowerCase() || '';
       const sanitizedName = sanitizeFilename(file.name);
-      const fileName = `guest-${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `${project.id}/${fileName}`;
 
-      // Upload to storage
-      const { error: uploadError } = await supabase.storage
-        .from('guest-uploads')
-        .upload(filePath, file);
+      if (file.type.startsWith('video/')) {
+        // Upload videos to Cloudflare Stream
+        const uploadResult = await initiateStreamUpload(
+          project.id,
+          sanitizedName,
+          file.size,
+          guestData.guestName,
+          guestData.guestMessage
+        );
 
-      if (uploadError) throw uploadError;
+        if (!uploadResult.success || !uploadResult.uploadUrl) {
+          throw new Error('Failed to get upload URL from Cloudflare Stream');
+        }
 
-      // Create media asset record (using existing table structure for now)
-      const { error: dbError } = await supabase
-        .from('media_assets')
-        .insert({
-          file_name: sanitizedName,
-          file_path: filePath,
-          file_type: file.type,
-          file_size: file.size,
-          project_id: project.id,
-          user_id: '00000000-0000-0000-0000-000000000000', // Anonymous user ID
-          description: `Guest upload: ${guestData.guestMessage || 'No message'}`,
-          tags: guestData.guestName ? [guestData.guestName] : [],
+        const uploadResponse = await fetch(uploadResult.uploadUrl, {
+          method: 'POST',
+          body: file,
         });
 
-      if (dbError) throw dbError;
+        if (!uploadResponse.ok) {
+          throw new Error(`Stream upload failed: ${uploadResponse.statusText}`);
+        }
+      } else {
+        // Upload images to Cloudflare R2
+        const fileContent = await file.arrayBuffer();
+        const uploadResult = await uploadToR2(project.id, sanitizedName, fileContent);
+
+        if (!uploadResult.success) {
+          throw new Error(uploadResult.error || 'R2 upload failed');
+        }
+      }
 
       return true;
     } catch (error) {
@@ -239,8 +246,11 @@ const GuestFileUpload = ({
         <p className="text-sm text-gray-500 mb-4">
           Support for JPG, PNG, MP4, MOV, HEIC files up to 100MB each (max 20 files)
         </p>
+        <p className="text-xs text-blue-600">
+          Files will be uploaded to Cloudflare for optimal performance
+        </p>
         
-        <div className="flex justify-center gap-4">
+        <div className="flex justify-center gap-4 mt-4">
           <Button
             type="button"
             variant="outline"
@@ -331,8 +341,8 @@ const GuestFileUpload = ({
                       <p className="text-xs text-red-600">{file.error}</p>
                     </div>
                   )}
-                  {file.uploading && <p className="text-xs text-blue-600">Uploading...</p>}
-                  {file.uploaded && <p className="text-xs text-green-600">✓ Uploaded</p>}
+                  {file.uploading && <p className="text-xs text-blue-600">Uploading to Cloudflare...</p>}
+                  {file.uploaded && <p className="text-xs text-green-600">✓ Uploaded to Cloudflare</p>}
                 </div>
 
                 {/* Remove Button */}
@@ -355,7 +365,7 @@ const GuestFileUpload = ({
           {uploadProgress > 0 && uploadProgress < 100 && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Uploading files...</span>
+                <span>Uploading files to Cloudflare...</span>
                 <span>{Math.round(uploadProgress)}%</span>
               </div>
               <Progress value={uploadProgress} className="w-full" />
@@ -370,7 +380,7 @@ const GuestFileUpload = ({
               className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
             >
               <Upload className="w-4 h-4 mr-2" />
-              Upload {validFiles.length} File{validFiles.length !== 1 ? 's' : ''}
+              Upload {validFiles.length} File{validFiles.length !== 1 ? 's' : ''} to Cloudflare
             </Button>
           )}
 

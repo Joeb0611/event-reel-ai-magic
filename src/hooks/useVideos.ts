@@ -17,6 +17,7 @@ export interface VideoFile {
   guest_name?: string;
   guest_message?: string;
   uploaded_by_guest?: boolean;
+  stream_video_id?: string;
 }
 
 export const useVideos = (projectId: string | null) => {
@@ -49,7 +50,7 @@ export const useVideos = (projectId: string | null) => {
 
       const allVideos: VideoFile[] = [];
 
-      // Process media_assets data
+      // Process media_assets data (legacy Supabase storage)
       if (mediaAssetsResult.data) {
         const mediaVideos = mediaAssetsResult.data.map((asset) => ({
           id: asset.id,
@@ -63,10 +64,25 @@ export const useVideos = (projectId: string | null) => {
           user_id: asset.user_id,
           uploaded_by_guest: false
         }));
-        allVideos.push(...mediaVideos);
+
+        // Add signed URLs for Supabase storage files
+        const videosWithUrls = await Promise.all(
+          mediaVideos.map(async (video) => {
+            const { data: urlData } = await supabase.storage
+              .from('videos')
+              .createSignedUrl(video.file_path, 3600);
+            
+            return {
+              ...video,
+              url: urlData?.signedUrl
+            };
+          })
+        );
+        
+        allVideos.push(...videosWithUrls);
       }
 
-      // Process videos data
+      // Process videos data (Cloudflare Stream)
       if (videosResult.data) {
         const videoData = videosResult.data.map((video) => ({
           id: video.id,
@@ -80,28 +96,17 @@ export const useVideos = (projectId: string | null) => {
           user_id: video.user_id,
           guest_name: video.guest_name,
           guest_message: video.guest_message,
-          uploaded_by_guest: video.uploaded_by_guest || false
+          uploaded_by_guest: video.uploaded_by_guest || false,
+          stream_video_id: video.stream_video_id,
+          // For Cloudflare Stream videos, construct the playback URL
+          url: video.stream_video_id 
+            ? `https://videodelivery.net/${video.stream_video_id}/manifest/video.m3u8`
+            : video.stream_playback_url
         }));
         allVideos.push(...videoData);
       }
 
-      // Add signed URLs
-      const videosWithUrls = await Promise.all(
-        allVideos.map(async (video) => {
-          const bucket = video.uploaded_by_guest ? 'guest-uploads' : 'videos';
-          
-          const { data: urlData } = await supabase.storage
-            .from(bucket)
-            .createSignedUrl(video.file_path, 3600);
-          
-          return {
-            ...video,
-            url: urlData?.signedUrl
-          };
-        })
-      );
-
-      setProjectVideos(videosWithUrls);
+      setProjectVideos(allVideos);
     } catch (error) {
       console.error('Error fetching project videos:', error);
       toast({
@@ -153,7 +158,7 @@ export const useVideos = (projectId: string | null) => {
     setProjectVideos([...uploadedVideos, ...projectVideos]);
     toast({
       title: "Success",
-      description: `${uploadedVideos.length} video(s) uploaded successfully`,
+      description: `${uploadedVideos.length} video(s) uploaded successfully to Cloudflare`,
     });
   };
 

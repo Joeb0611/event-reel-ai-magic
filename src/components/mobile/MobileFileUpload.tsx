@@ -5,6 +5,7 @@ import { Upload, Camera, X, FileImage, FileVideo, AlertCircle, RotateCcw } from 
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
+import { useCloudflareIntegration } from '@/hooks/useCloudflareIntegration';
 import confetti from 'canvas-confetti';
 
 interface MobileFileUploadProps {
@@ -12,6 +13,7 @@ interface MobileFileUploadProps {
   disabled?: boolean;
   maxFiles?: number;
   acceptedTypes?: string[];
+  projectId?: string;
 }
 
 interface FileWithPreview extends File {
@@ -27,12 +29,14 @@ const MobileFileUpload = ({
   onUpload,
   disabled = false,
   maxFiles = 20,
-  acceptedTypes = ['image/*', 'video/*']
+  acceptedTypes = ['image/*', 'video/*'],
+  projectId
 }: MobileFileUploadProps) => {
   const [files, setFiles] = useState<FileWithPreview[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
+  const { uploadToR2, initiateStreamUpload } = useCloudflareIntegration();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -126,6 +130,42 @@ const MobileFileUpload = ({
     e.target.value = '';
   };
 
+  const uploadToCloudflare = async (file: File): Promise<boolean> => {
+    try {
+      if (!projectId) {
+        console.error('Project ID required for Cloudflare upload');
+        return false;
+      }
+
+      const fileName = `${Date.now()}-${file.name}`;
+
+      if (file.type.startsWith('video/')) {
+        // Upload videos to Cloudflare Stream
+        const uploadResult = await initiateStreamUpload(projectId, fileName, file.size);
+        
+        if (!uploadResult.success || !uploadResult.uploadUrl) {
+          throw new Error('Failed to get upload URL from Cloudflare Stream');
+        }
+
+        const uploadResponse = await fetch(uploadResult.uploadUrl, {
+          method: 'POST',
+          body: file,
+        });
+
+        return uploadResponse.ok;
+      } else {
+        // Upload images to Cloudflare R2
+        const fileContent = await file.arrayBuffer();
+        const uploadResult = await uploadToR2(projectId, fileName, fileContent);
+        
+        return uploadResult.success;
+      }
+    } catch (error) {
+      console.error('Cloudflare upload failed:', error);
+      return false;
+    }
+  };
+
   const handleUpload = async () => {
     if (files.length === 0) return;
 
@@ -133,14 +173,35 @@ const MobileFileUpload = ({
     setUploadProgress(0);
 
     try {
-      const fileList = files.map(f => f as File);
-      await onUpload(fileList);
-      
-      triggerConfetti();
-      toast({
-        title: "Upload successful! 🎉",
-        description: `${files.length} file(s) uploaded successfully!`,
-      });
+      // If projectId is provided, use Cloudflare upload
+      if (projectId) {
+        let successCount = 0;
+        for (let i = 0; i < files.length; i++) {
+          const success = await uploadToCloudflare(files[i]);
+          if (success) successCount++;
+          setUploadProgress(((i + 1) / files.length) * 100);
+        }
+        
+        if (successCount > 0) {
+          triggerConfetti();
+          toast({
+            title: "Upload successful! 🎉",
+            description: `${successCount} file(s) uploaded to Cloudflare successfully!`,
+          });
+        } else {
+          throw new Error('All uploads failed');
+        }
+      } else {
+        // Fallback to provided onUpload function
+        const fileList = files.map(f => f as File);
+        await onUpload(fileList);
+        
+        triggerConfetti();
+        toast({
+          title: "Upload successful! 🎉",
+          description: `${files.length} file(s) uploaded successfully!`,
+        });
+      }
       
       setFiles([]);
     } catch (error) {
@@ -190,6 +251,12 @@ const MobileFileUpload = ({
           </Button>
         </motion.div>
       </div>
+
+      {projectId && (
+        <p className="text-xs text-center text-blue-600">
+          Files will be uploaded to Cloudflare for optimal performance
+        </p>
+      )}
 
       {/* Hidden File Inputs */}
       <input
@@ -297,7 +364,7 @@ const MobileFileUpload = ({
             {uploading && (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span>Uploading files...</span>
+                  <span>Uploading to Cloudflare...</span>
                   <span>{Math.round(uploadProgress)}%</span>
                 </div>
                 <Progress value={uploadProgress} className="w-full" />
@@ -314,7 +381,7 @@ const MobileFileUpload = ({
                 size="lg"
                 className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
               >
-                {uploading ? 'Uploading...' : `Upload ${files.length} File${files.length !== 1 ? 's' : ''}`}
+                {uploading ? 'Uploading to Cloudflare...' : `Upload ${files.length} File${files.length !== 1 ? 's' : ''}`}
               </Button>
             </motion.div>
           </motion.div>
