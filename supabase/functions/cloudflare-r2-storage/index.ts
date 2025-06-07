@@ -24,6 +24,8 @@ serve(async (req) => {
       hasAccountId: !!cfAccountId,
       hasApiToken: !!cfApiToken,
       hasBucketName: !!r2BucketName,
+      accountIdLength: cfAccountId?.length,
+      tokenLength: cfApiToken?.length,
       action,
       projectId,
       fileName
@@ -51,11 +53,13 @@ serve(async (req) => {
       const uint8Array = new Uint8Array(fileContent);
       console.log('Converted to Uint8Array, size:', uint8Array.length);
       
-      // Upload to R2
+      // Upload to R2 - Use the correct API endpoint format
       const objectKey = `media/${projectId}/${fileName}`;
       console.log('Uploading to R2 with key:', objectKey);
       
-      const uploadUrl = `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/r2/buckets/${r2BucketName}/objects/${objectKey}`;
+      // Encode the object key for URL
+      const encodedObjectKey = encodeURIComponent(objectKey);
+      const uploadUrl = `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/r2/buckets/${r2BucketName}/objects/${encodedObjectKey}`;
       console.log('Upload URL:', uploadUrl);
       
       const uploadResponse = await fetch(uploadUrl, {
@@ -63,11 +67,13 @@ serve(async (req) => {
         headers: {
           'Authorization': `Bearer ${cfApiToken}`,
           'Content-Type': 'application/octet-stream',
+          'Content-Length': uint8Array.length.toString(),
         },
         body: uint8Array
       });
 
       console.log('R2 upload response status:', uploadResponse.status);
+      console.log('R2 upload response headers:', Object.fromEntries(uploadResponse.headers.entries()));
       
       if (!uploadResponse.ok) {
         const errorText = await uploadResponse.text();
@@ -77,6 +83,18 @@ serve(async (req) => {
         try {
           const errorData = JSON.parse(errorText);
           console.error('Cloudflare error details:', errorData);
+          
+          // Provide more specific error messages
+          if (errorData.errors && errorData.errors.length > 0) {
+            const firstError = errorData.errors[0];
+            if (firstError.code === 10001) {
+              throw new Error('Cloudflare authentication failed. Please check your API token and account ID.');
+            } else if (firstError.code === 10006) {
+              throw new Error('Cloudflare R2 bucket not found. Please check your bucket name.');
+            } else {
+              throw new Error(`Cloudflare error: ${firstError.message}`);
+            }
+          }
         } catch (parseError) {
           console.error('Could not parse error response as JSON');
         }
@@ -84,7 +102,7 @@ serve(async (req) => {
         throw new Error(`R2 upload failed: ${uploadResponse.status} ${errorText}`);
       }
 
-      // Create public URL (assuming R2 bucket is configured with a custom domain)
+      // Create public URL - R2 public URLs follow this pattern
       const publicUrl = `https://${r2BucketName}.r2.dev/${objectKey}`;
       console.log('Upload successful, public URL:', publicUrl);
       
@@ -100,7 +118,8 @@ serve(async (req) => {
       // Generate signed URL for download
       const objectKey = `media/${projectId}/${fileName}`;
       
-      // For now, return the public URL - in production you'd generate a signed URL
+      // For R2, we'll return the public URL for now
+      // In production, you might want to generate actual signed URLs using the R2 API
       const publicUrl = `https://${r2BucketName}.r2.dev/${objectKey}`;
       
       console.log('Generated signed URL for:', objectKey);
