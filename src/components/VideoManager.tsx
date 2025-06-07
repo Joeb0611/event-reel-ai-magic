@@ -1,221 +1,209 @@
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { useStorageLifecycle } from '@/hooks/useStorageLifecycle';
-import StorageWarningBanner from '@/components/storage/StorageWarningBanner';
-import VideoInfoSection from '@/components/video/VideoInfoSection';
-import VideoPreviewSection from '@/components/video/VideoPreviewSection';
-import VideoActionsSection from '@/components/video/VideoActionsSection';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Trash2, Download, Eye } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { VideoFile } from '@/hooks/useVideos';
+import { getCloudflareStreamThumbnail, extractStreamId, isCloudflareStream } from '@/utils/cloudflareHelpers';
+import VideoDisplay from './VideoDisplay';
 
 interface VideoManagerProps {
-  project: {
-    id: string;
-    name: string;
-    edited_video_url?: string;
-    local_video_path?: string;
-  };
-  onVideoDeleted: () => void;
+  videos: VideoFile[];
+  onDeleteVideo: (videoId: string) => void;
+  mustIncludeItems: Set<string>;
+  onToggleMustInclude: (videoId: string) => void;
 }
 
-const VideoManager = ({ project, onVideoDeleted }: VideoManagerProps) => {
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [videoReady, setVideoReady] = useState(false);
-  const [videoError, setVideoError] = useState(false);
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const { storageInfo, upgradeStorageTier } = useStorageLifecycle(project.id);
+const VideoManager = ({ videos, onDeleteVideo, mustIncludeItems, onToggleMustInclude }: VideoManagerProps) => {
+  const [selectedVideo, setSelectedVideo] = useState<VideoFile | null>(null);
 
-  // Use local video path if available, fallback to edited_video_url
-  const videoUrl = project.local_video_path || project.edited_video_url;
-
-  // Check if video is ready when component mounts or URL changes
-  useEffect(() => {
-    if (videoUrl) {
-      checkVideoReady();
+  const getThumbnailUrl = (video: VideoFile): string => {
+    if (video.thumbnail_url) {
+      return video.thumbnail_url;
     }
-  }, [videoUrl]);
 
-  const checkVideoReady = async () => {
-    if (!videoUrl) return;
-
-    setVideoError(false);
-    setVideoReady(false);
-
-    try {
-      // For Cloudflare Stream videos, check if they're ready
-      if (videoUrl.includes('videodelivery.net') || videoUrl.includes('iframe.videodelivery.net')) {
-        // Extract video ID from URL
-        const videoId = videoUrl.match(/([a-f0-9]{32})/)?.[1];
-        if (videoId) {
-          // Try to load the video metadata to check if it's ready
-          const testUrl = `https://videodelivery.net/${videoId}/manifest/video.m3u8`;
-          const response = await fetch(testUrl, { method: 'HEAD' });
-          setVideoReady(response.ok);
-          if (!response.ok) {
-            console.log('Video still processing on Cloudflare Stream');
-          }
-        } else {
-          setVideoReady(true); // Assume ready if we can't parse ID
-        }
-      } else {
-        // For other video URLs, assume they're ready
-        setVideoReady(true);
+    // For Cloudflare Stream videos, generate thumbnail
+    if (isCloudflareStream(video.file_path)) {
+      const streamId = extractStreamId(video.file_path);
+      if (streamId) {
+        return getCloudflareStreamThumbnail(streamId, { width: 320, height: 180 });
       }
-    } catch (error) {
-      console.error('Error checking video status:', error);
-      setVideoError(true);
+    }
+
+    // For stream_video_id field
+    if (video.stream_video_id) {
+      return getCloudflareStreamThumbnail(video.stream_video_id, { width: 320, height: 180 });
+    }
+
+    // Fallback for other video types
+    return video.url || '';
+  };
+
+  const handleThumbnailClick = (video: VideoFile) => {
+    setSelectedVideo(video);
+  };
+
+  const handleDownload = async (video: VideoFile) => {
+    if (video.url) {
+      try {
+        const link = document.createElement('a');
+        link.href = video.url;
+        link.download = video.name;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (error) {
+        console.error('Download failed:', error);
+      }
     }
   };
 
-  const handleExport = () => {
-    if (!videoUrl || !videoReady) return;
-    
-    // Check if storage is expired
-    if (storageInfo?.isExpired || storageInfo?.isArchived) {
-      toast({
-        title: "Download Unavailable",
-        description: "This video has expired. Please upgrade your storage plan to access it.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Create a download link
-    const link = document.createElement('a');
-    link.href = videoUrl;
-    link.download = `${project.name}-highlight-reel.mp4`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    toast({
-      title: "Export Started",
-      description: "Video download has started",
-    });
-  };
-
-  const handleDelete = async () => {
-    if (!videoUrl) return;
-    
-    setIsDeleting(true);
-    try {
-      // Remove both the edited video URL and local video path from the project
-      const { error } = await supabase
-        .from('projects')
-        .update({ 
-          edited_video_url: null,
-          local_video_path: null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', project.id);
-
-      if (error) throw error;
-
-      onVideoDeleted();
-      toast({
-        title: "Success",
-        description: "AI-edited video has been deleted",
-      });
-    } catch (error) {
-      console.error('Error deleting video:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete video",
-        variant: "destructive",
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleShare = async () => {
-    if (!videoUrl || !videoReady) return;
-    
-    try {
-      await navigator.clipboard.writeText(videoUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      
-      toast({
-        title: "Link Copied",
-        description: "Video link has been copied to clipboard",
-      });
-    } catch (error) {
-      console.error('Error copying to clipboard:', error);
-      toast({
-        title: "Error",
-        description: "Failed to copy link",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleUpgrade = () => {
-    navigate(`/subscription?project=${project.id}`);
-  };
-
-  const handleVideoError = () => {
-    setVideoError(true);
-  };
-
-  const handleVideoLoad = () => {
-    setVideoReady(true);
-    setVideoError(false);
-  };
-
-  if (!videoUrl) {
-    return null;
+  if (videos.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        <p>No videos uploaded yet.</p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
-      {storageInfo && (
-        <StorageWarningBanner
-          storageInfo={storageInfo}
-          projectId={project.id}
-          onUpgrade={handleUpgrade}
-        />
+      {selectedVideo && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl max-h-[90vh] overflow-hidden">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h3 className="text-lg font-semibold">{selectedVideo.name}</h3>
+              <Button variant="outline" onClick={() => setSelectedVideo(null)}>
+                Close
+              </Button>
+            </div>
+            <div className="p-4">
+              <div className="aspect-video bg-black rounded">
+                <VideoDisplay
+                  url={selectedVideo.url}
+                  className="w-full h-full"
+                  showControls={true}
+                  autoPlay={false}
+                />
+              </div>
+              {selectedVideo.guest_name && (
+                <div className="mt-4 p-3 bg-gray-50 rounded">
+                  <p className="text-sm text-gray-600">
+                    <strong>From:</strong> {selectedVideo.guest_name}
+                  </p>
+                  {selectedVideo.guest_message && (
+                    <p className="text-sm text-gray-600 mt-1">
+                      <strong>Message:</strong> {selectedVideo.guest_message}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
-      
-      <Card className="border-green-200 bg-gradient-to-r from-green-50 to-blue-50">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2 text-green-700">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            AI-Edited Video Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <VideoInfoSection
-            videoUrl={videoUrl}
-            projectName={project.name}
-            storageInfo={storageInfo}
-            onUpgrade={handleUpgrade}
-          />
 
-          <VideoPreviewSection
-            videoUrl={videoUrl}
-            videoReady={videoReady}
-            videoError={videoError}
-            onVideoError={handleVideoError}
-            onVideoLoad={handleVideoLoad}
-            onCheckVideoReady={checkVideoReady}
-          />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {videos.map((video) => {
+          const thumbnailUrl = getThumbnailUrl(video);
+          const isSelected = mustIncludeItems.has(video.id);
           
-          <VideoActionsSection
-            videoReady={videoReady}
-            storageInfo={storageInfo}
-            copied={copied}
-            isDeleting={isDeleting}
-            onExport={handleExport}
-            onShare={handleShare}
-            onDelete={handleDelete}
-          />
-        </CardContent>
-      </Card>
+          return (
+            <div key={video.id} className="relative group">
+              <div 
+                className={`relative aspect-video bg-gray-100 rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
+                  isSelected ? 'border-blue-500 shadow-lg' : 'border-transparent hover:border-gray-300'
+                }`}
+                onClick={() => handleThumbnailClick(video)}
+              >
+                {thumbnailUrl ? (
+                  <img
+                    src={thumbnailUrl}
+                    alt={video.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('Thumbnail failed to load:', thumbnailUrl);
+                      // Hide broken image
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                    <div className="text-gray-400 text-center">
+                      <Eye className="w-8 h-8 mx-auto mb-2" />
+                      <p className="text-xs">Preview</p>
+                    </div>
+                  </div>
+                )}
+                
+                {isSelected && (
+                  <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
+                    Must Include
+                  </div>
+                )}
+
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                  <Eye className="w-8 h-8 text-white" />
+                </div>
+              </div>
+
+              <div className="mt-2 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium truncate" title={video.name}>
+                    {video.name}
+                  </p>
+                </div>
+
+                {video.guest_name && (
+                  <p className="text-xs text-gray-500 truncate">
+                    From: {video.guest_name}
+                  </p>
+                )}
+
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant={isSelected ? "default" : "outline"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleMustInclude(video.id);
+                    }}
+                    className="flex-1 text-xs h-7"
+                  >
+                    {isSelected ? 'Must Include' : 'Optional'}
+                  </Button>
+                  
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDownload(video);
+                    }}
+                    className="h-7 px-2"
+                    title="Download"
+                  >
+                    <Download className="w-3 h-3" />
+                  </Button>
+                  
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteVideo(video.id);
+                    }}
+                    className="h-7 px-2 text-red-600 hover:text-red-700"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

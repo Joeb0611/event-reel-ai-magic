@@ -1,3 +1,4 @@
+
 /**
  * Cloudflare Stream and R2 helper utilities
  */
@@ -26,6 +27,9 @@ export const getCloudflareStreamThumbnail = (
     fit = 'scale-down'
   } = options;
 
+  // Clean the stream ID to ensure it's valid
+  const cleanStreamId = streamId.replace(/[^a-zA-Z0-9]/g, '');
+  
   const params = new URLSearchParams({
     time,
     width: width.toString(),
@@ -33,7 +37,7 @@ export const getCloudflareStreamThumbnail = (
     fit
   });
 
-  return `https://videodelivery.net/${streamId}/thumbnails/thumbnail.jpg?${params}`;
+  return `https://videodelivery.net/${cleanStreamId}/thumbnails/thumbnail.jpg?${params}`;
 };
 
 /**
@@ -61,8 +65,8 @@ export const extractStreamId = (input: string): string => {
     return match ? match[1] : '';
   }
   
-  // Assume it's already a clean stream ID
-  return input;
+  // Assume it's already a clean stream ID - extract only alphanumeric characters
+  return input.replace(/[^a-zA-Z0-9]/g, '');
 };
 
 /**
