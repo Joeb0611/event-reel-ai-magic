@@ -1,7 +1,8 @@
 
 import React from 'react';
-import { Video, X, CheckCircle, FileImage, Loader } from 'lucide-react';
+import { Video, X, CheckCircle, FileImage } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import ThumbnailImage from '@/components/ui/ThumbnailImage';
 
 interface VideoFileListProps {
   files: File[];
@@ -20,94 +21,52 @@ const VideoFileList = ({
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  const createImageThumbnail = (file: File): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      
-      img.onload = () => {
-        canvas.width = 160;
-        canvas.height = 90;
-        
-        if (ctx) {
-          // Calculate aspect ratio to maintain proportions
-          const aspectRatio = img.width / img.height;
-          let drawWidth = canvas.width;
-          let drawHeight = canvas.height;
-          let offsetX = 0;
-          let offsetY = 0;
-          
-          if (aspectRatio > canvas.width / canvas.height) {
-            drawHeight = canvas.width / aspectRatio;
-            offsetY = (canvas.height - drawHeight) / 2;
-          } else {
-            drawWidth = canvas.height * aspectRatio;
-            offsetX = (canvas.width - drawWidth) / 2;
-          }
-          
-          ctx.fillStyle = '#f3f4f6';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
-          resolve(canvas.toDataURL());
-        }
-      };
-      
-      img.onerror = () => {
-        resolve(''); // Return empty string on error
-      };
-      
-      img.src = URL.createObjectURL(file);
+  const createImagePreview = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target?.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
     });
   };
 
   const FilePreview = ({ file }: { file: File }) => {
-    const [thumbnail, setThumbnail] = React.useState<string>('');
+    const [imagePreview, setImagePreview] = React.useState<string>('');
     
     React.useEffect(() => {
       if (file.type.startsWith('image/')) {
-        createImageThumbnail(file).then(setThumbnail);
+        createImagePreview(file).then(setImagePreview).catch(() => {
+          // Ignore preview errors
+        });
       }
       
       return () => {
-        if (thumbnail) {
-          URL.revokeObjectURL(thumbnail);
+        if (imagePreview) {
+          URL.revokeObjectURL(imagePreview);
         }
       };
     }, [file]);
 
-    if (file.type.startsWith('video/')) {
-      // Show loading state for videos during upload/processing
-      if (uploading) {
-        return (
-          <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded">
-            <Loader className="w-4 h-4 text-blue-500 animate-spin" />
-          </div>
-        );
-      }
-      
-      // Show video placeholder when not uploading
+    if (file.type.startsWith('image/') && imagePreview) {
       return (
-        <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded">
-          <Video className="w-6 h-6 text-gray-400" />
-        </div>
-      );
-    }
-
-    if (thumbnail) {
-      return (
-        <img 
-          src={thumbnail} 
-          alt="Preview" 
-          className="w-full h-full object-cover rounded"
+        <ThumbnailImage
+          src={imagePreview}
+          alt={file.name}
+          className="w-full h-full"
+          fallbackIcon="image"
+          showRetry={false}
         />
       );
     }
 
+    // Show simple icons for videos (no loading states during selection)
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded">
-        <FileImage className="w-6 h-6 text-gray-400" />
-      </div>
+      <ThumbnailImage
+        alt={file.name}
+        className="w-full h-full"
+        fallbackIcon={file.type.startsWith('video/') ? 'video' : 'image'}
+        showRetry={false}
+      />
     );
   };
 
@@ -119,31 +78,40 @@ const VideoFileList = ({
         <CheckCircle className="w-5 h-5 text-green-500" />
         Selected Files ({files.length}/{maxFiles})
       </h3>
-      <div className="space-y-2 max-h-40 overflow-y-auto">
+      
+      <div className="space-y-2 max-h-48 overflow-y-auto">
         {files.map((file, index) => (
           <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="w-12 h-8 flex-shrink-0 overflow-hidden rounded">
+              {/* Mobile-optimized thumbnail size */}
+              <div className="w-16 h-10 md:w-20 md:h-12 flex-shrink-0 overflow-hidden rounded">
                 <FilePreview file={file} />
               </div>
+              
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium truncate">{file.name}</p>
                 <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <span>{formatFileSize(file.size)} • {file.type.startsWith('video/') ? 'Video' : 'Image'}</span>
-                  {file.type.startsWith('video/') && uploading && (
-                    <span className="text-blue-600 flex items-center gap-1">
-                      <Loader className="w-3 h-3 animate-spin" />
-                      Processing...
-                    </span>
+                  <span>{formatFileSize(file.size)}</span>
+                  <span>•</span>
+                  <span>{file.type.startsWith('video/') ? 'Video' : 'Image'}</span>
+                  
+                  {/* Only show uploading state when actually uploading */}
+                  {uploading && (
+                    <>
+                      <span>•</span>
+                      <span className="text-blue-600">Uploading...</span>
+                    </>
                   )}
                 </div>
               </div>
             </div>
+            
+            {/* Mobile-friendly touch target */}
             <Button
               variant="ghost"
               size="sm"
               onClick={() => onRemoveFile(index)}
-              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+              className="text-red-500 hover:text-red-700 hover:bg-red-50 min-w-[44px] min-h-[44px] p-2"
               disabled={uploading}
             >
               <X className="w-4 h-4" />
@@ -151,6 +119,18 @@ const VideoFileList = ({
           </div>
         ))}
       </div>
+      
+      {/* Upload status */}
+      {uploading && (
+        <div className="text-center p-3 bg-blue-50 rounded-lg">
+          <p className="text-sm text-blue-700 font-medium">
+            Uploading files to Cloudflare...
+          </p>
+          <p className="text-xs text-blue-600 mt-1">
+            Processing will begin after upload completes
+          </p>
+        </div>
+      )}
     </div>
   );
 };
