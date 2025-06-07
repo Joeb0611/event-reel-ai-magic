@@ -1,9 +1,10 @@
 
 import React from 'react';
-import PricingTier, { PricingTierProps } from './PricingTier';
+import PricingTier from './PricingTier';
+import { PricingTier as PricingTierType } from '@/data/PricingData';
 
 interface PricingTierListProps {
-  tiers: Omit<PricingTierProps, 'isCurrentPlan' | 'isLoading' | 'onUpgrade' | 'buttonText' | 'buttonVariant'>[];
+  tiers: PricingTierType[];
   currentPlan: string;
   loading: string | null;
   onUpgrade: (tierId: string) => void;

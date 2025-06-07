@@ -1,13 +1,16 @@
 
+import { Heart, Crown, Building2 } from 'lucide-react';
+
 export interface PricingTier {
   id: string;
   name: string;
-  price: number;
-  yearlyPrice?: number;
+  price: string;
+  priceAmount: number;
   description: string;
+  icon: typeof Heart;
   features: string[];
+  limitations?: string[];
   highlighted?: boolean;
-  buttonText: string;
   popular?: boolean;
   storageRetention: string;
   downloadRights: string;
@@ -17,8 +20,10 @@ export const pricingTiers: PricingTier[] = [
   {
     id: 'free',
     name: 'Free',
-    price: 0,
+    price: 'Free',
+    priceAmount: 0,
     description: 'Perfect for trying out our AI wedding video editing',
+    icon: Heart,
     features: [
       '1 wedding project',
       '30-day storage retention',
@@ -27,16 +32,22 @@ export const pricingTiers: PricingTier[] = [
       'Email delivery',
       'Download expires after 7 days'
     ],
-    buttonText: 'Get Started Free',
+    limitations: [
+      'Limited to 1 project',
+      'Videos deleted after 30 days',
+      'No raw footage retention',
+      'Basic support only'
+    ],
     storageRetention: '30 days',
     downloadRights: '7-day download window'
   },
   {
     id: 'premium',
     name: 'Premium',
-    price: 99,
-    yearlyPrice: 89,
+    price: '$99',
+    priceAmount: 9900, // in cents
     description: 'Best for couples who want professional-quality highlights',
+    icon: Crown,
     features: [
       'Unlimited wedding projects',
       '1-year storage retention',
@@ -50,16 +61,16 @@ export const pricingTiers: PricingTier[] = [
     ],
     highlighted: true,
     popular: true,
-    buttonText: 'Start Premium',
     storageRetention: '1 year',
     downloadRights: 'Unlimited downloads for 1 year'
   },
   {
     id: 'professional',
     name: 'Professional',
-    price: 199,
-    yearlyPrice: 179,
+    price: '$199',
+    priceAmount: 19900, // in cents
     description: 'For photographers and videographers serving multiple clients',
+    icon: Building2,
     features: [
       'Unlimited projects',
       '2-year storage retention',
@@ -74,7 +85,6 @@ export const pricingTiers: PricingTier[] = [
       'Phone & email support',
       'Advanced analytics'
     ],
-    buttonText: 'Go Professional',
     storageRetention: '2 years + raw footage',
     downloadRights: 'Unlimited downloads for 2 years'
   }
