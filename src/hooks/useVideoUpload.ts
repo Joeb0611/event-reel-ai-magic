@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -46,14 +45,20 @@ export const useVideoUpload = (projectId: string, projectName: string) => {
           throw new Error('Failed to get upload URL from Cloudflare Stream');
         }
 
-        // Upload compressed video directly to Cloudflare Stream
+        // Create FormData for multipart/form-data upload
+        const formData = new FormData();
+        formData.append('file', compressedFile, sanitizedFileName);
+
+        // Upload compressed video to Cloudflare Stream with proper form data
         const uploadResponse = await fetch(uploadResult.uploadUrl, {
           method: 'POST',
-          body: compressedFile,
+          body: formData, // Don't set Content-Type header - let browser set it for multipart/form-data
         });
 
         if (!uploadResponse.ok) {
-          throw new Error(`Video upload failed: ${uploadResponse.statusText}`);
+          const errorText = await uploadResponse.text();
+          console.error('Stream upload error:', uploadResponse.status, errorText);
+          throw new Error(`Video upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`);
         }
 
         // Transform to VideoFile format
