@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { Video, X, CheckCircle, FileImage } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
