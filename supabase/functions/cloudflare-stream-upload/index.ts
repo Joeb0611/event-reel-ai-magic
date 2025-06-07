@@ -14,17 +14,41 @@ serve(async (req) => {
   }
 
   try {
+    console.log('=== Stream Upload Function Start ===');
+    
     const { projectId, fileName, fileSize, guestName, guestMessage } = await req.json();
+    console.log('Request body received:', Object.keys({ projectId, fileName, fileSize, guestName, guestMessage }));
     
     // Get Cloudflare credentials from environment
     const cfAccountId = Deno.env.get('CLOUDFLARE_ACCOUNT_ID');
     const cfApiToken = Deno.env.get('CLOUDFLARE_API_TOKEN');
     
+    console.log('Environment check:', {
+      hasAccountId: !!cfAccountId,
+      hasApiToken: !!cfApiToken,
+      accountIdLength: cfAccountId?.length,
+      tokenLength: cfApiToken?.length
+    });
+    
     if (!cfAccountId || !cfApiToken) {
       throw new Error('Cloudflare credentials not configured');
     }
 
-    // Create upload URL from Cloudflare Stream
+    console.log('Creating Stream upload URL...');
+    
+    // Create upload URL from Cloudflare Stream - using correct format
+    const requestBody = {
+      maxDurationSeconds: 3600,
+      metadata: {
+        name: fileName,
+        projectId,
+        guestName: guestName || 'Anonymous',
+        uploadedAt: new Date().toISOString()
+      }
+    };
+    
+    console.log('Cloudflare request body:', requestBody);
+    
     const streamResponse = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/stream/direct_upload`,
       {
@@ -33,31 +57,30 @@ serve(async (req) => {
           'Authorization': `Bearer ${cfApiToken}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          maxDurationSeconds: 3600,
-          metadata: {
-            name: fileName,
-            projectId,
-            guestName: guestName || 'Anonymous',
-            uploadedAt: new Date().toISOString()
-          }
-        })
+        body: JSON.stringify(requestBody)
       }
     );
 
+    console.log('Cloudflare Stream API response status:', streamResponse.status);
+
     if (!streamResponse.ok) {
-      throw new Error(`Cloudflare Stream API error: ${streamResponse.status}`);
+      const errorText = await streamResponse.text();
+      console.error('Cloudflare Stream API error:', streamResponse.status, errorText);
+      throw new Error(`Cloudflare Stream API error: ${streamResponse.status} - ${errorText}`);
     }
 
     const streamData = await streamResponse.json();
+    console.log('Cloudflare Stream API success. Upload URL created:', !!streamData.result?.uploadURL);
     
     // Initialize Supabase client
+    console.log('Initializing Supabase client...');
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     // Store video record in database
+    console.log('Storing video record in database...');
     const { data: video, error: dbError } = await supabase
       .from('videos')
       .insert({
@@ -80,7 +103,10 @@ serve(async (req) => {
       throw new Error('Failed to store video record');
     }
 
+    console.log('Video record created with ID:', video.id);
+
     // Send notification
+    console.log('Sending storage notification...');
     await supabase
       .from('storage_notifications')
       .insert({
@@ -88,6 +114,8 @@ serve(async (req) => {
         user_id: video.user_id,
         notification_type: 'upload_confirmation'
       });
+
+    console.log('Stream upload function completed successfully');
 
     return new Response(JSON.stringify({
       success: true,
