@@ -1,8 +1,8 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Trash2, Share2, Copy, Check, AlertTriangle } from 'lucide-react';
+import { Download, Trash2, Share2, Copy, Check, AlertTriangle, Loader } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useStorageLifecycle } from '@/hooks/useStorageLifecycle';
@@ -22,6 +22,8 @@ interface VideoManagerProps {
 const VideoManager = ({ project, onVideoDeleted }: VideoManagerProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
+  const [videoError, setVideoError] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { storageInfo, upgradeStorageTier } = useStorageLifecycle(project.id);
@@ -29,8 +31,47 @@ const VideoManager = ({ project, onVideoDeleted }: VideoManagerProps) => {
   // Use local video path if available, fallback to edited_video_url
   const videoUrl = project.local_video_path || project.edited_video_url;
 
-  const handleExport = () => {
+  // Check if video is ready when component mounts or URL changes
+  useEffect(() => {
+    if (videoUrl) {
+      checkVideoReady();
+    }
+  }, [videoUrl]);
+
+  const checkVideoReady = async () => {
     if (!videoUrl) return;
+
+    setVideoError(false);
+    setVideoReady(false);
+
+    try {
+      // For Cloudflare Stream videos, check if they're ready
+      if (videoUrl.includes('videodelivery.net') || videoUrl.includes('iframe.videodelivery.net')) {
+        // Extract video ID from URL
+        const videoId = videoUrl.match(/([a-f0-9]{32})/)?.[1];
+        if (videoId) {
+          // Try to load the video metadata to check if it's ready
+          const testUrl = `https://videodelivery.net/${videoId}/manifest/video.m3u8`;
+          const response = await fetch(testUrl, { method: 'HEAD' });
+          setVideoReady(response.ok);
+          if (!response.ok) {
+            console.log('Video still processing on Cloudflare Stream');
+          }
+        } else {
+          setVideoReady(true); // Assume ready if we can't parse ID
+        }
+      } else {
+        // For other video URLs, assume they're ready
+        setVideoReady(true);
+      }
+    } catch (error) {
+      console.error('Error checking video status:', error);
+      setVideoError(true);
+    }
+  };
+
+  const handleExport = () => {
+    if (!videoUrl || !videoReady) return;
     
     // Check if storage is expired
     if (storageInfo?.isExpired || storageInfo?.isArchived) {
@@ -91,7 +132,7 @@ const VideoManager = ({ project, onVideoDeleted }: VideoManagerProps) => {
   };
 
   const handleShare = async () => {
-    if (!videoUrl) return;
+    if (!videoUrl || !videoReady) return;
     
     try {
       await navigator.clipboard.writeText(videoUrl);
@@ -160,12 +201,39 @@ const VideoManager = ({ project, onVideoDeleted }: VideoManagerProps) => {
           <div className="bg-white rounded-lg p-3">
             <p className="text-sm text-gray-600 mb-2">Video Preview:</p>
             <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
-              <video
-                src={videoUrl}
-                className="w-full h-full object-cover"
-                controls
-                preload="metadata"
-              />
+              {!videoReady && !videoError ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <Loader className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-2" />
+                    <p className="text-sm text-gray-600">Processing video...</p>
+                    <p className="text-xs text-gray-500">This may take a few minutes</p>
+                  </div>
+                </div>
+              ) : videoError ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
+                    <p className="text-sm text-red-600">Video not ready</p>
+                    <Button 
+                      onClick={checkVideoReady} 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2"
+                    >
+                      Check Again
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <video
+                  src={videoUrl}
+                  className="w-full h-full object-cover"
+                  controls
+                  preload="metadata"
+                  onError={() => setVideoError(true)}
+                  onLoadedData={() => setVideoReady(true)}
+                />
+              )}
             </div>
           </div>
           
@@ -177,6 +245,9 @@ const VideoManager = ({ project, onVideoDeleted }: VideoManagerProps) => {
             {project.local_video_path && (
               <p className="text-xs text-green-600 mt-1">✓ Stored in Supabase Storage</p>
             )}
+            {videoUrl.includes('videodelivery.net') && (
+              <p className="text-xs text-blue-600 mt-1">✓ Powered by Cloudflare Stream</p>
+            )}
           </div>
           
           <div className="flex flex-wrap gap-2">
@@ -185,10 +256,10 @@ const VideoManager = ({ project, onVideoDeleted }: VideoManagerProps) => {
               variant="outline"
               size="sm"
               className="flex-1 min-w-[120px] border-blue-200 text-blue-600 hover:bg-blue-50"
-              disabled={storageInfo?.isExpired || storageInfo?.isArchived}
+              disabled={storageInfo?.isExpired || storageInfo?.isArchived || !videoReady}
             >
               <Download className="w-4 h-4 mr-2" />
-              Export
+              {videoReady ? 'Export' : 'Processing...'}
             </Button>
             
             <Button
@@ -196,7 +267,7 @@ const VideoManager = ({ project, onVideoDeleted }: VideoManagerProps) => {
               variant="outline"
               size="sm"
               className="flex-1 min-w-[120px] border-purple-200 text-purple-600 hover:bg-purple-50"
-              disabled={storageInfo?.isExpired || storageInfo?.isArchived}
+              disabled={storageInfo?.isExpired || storageInfo?.isArchived || !videoReady}
             >
               {copied ? (
                 <>
