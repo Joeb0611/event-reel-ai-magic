@@ -122,10 +122,6 @@ const MediaGallery = ({
           className="w-full h-full cursor-pointer"
           size="lg"
           aspectRatio="video"
-          onRetry={() => {
-            // Force refresh by updating the component
-            window.location.reload();
-          }}
         />
       );
     } else {
