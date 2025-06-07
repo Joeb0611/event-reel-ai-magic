@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 
 interface VideoFileListProps {
   files: File[];
-  compressionProgress: { [key: string]: number };
   onRemoveFile: (index: number) => void;
   uploading: boolean;
   maxFiles: number;
@@ -12,7 +11,6 @@ interface VideoFileListProps {
 
 const VideoFileList = ({ 
   files, 
-  compressionProgress, 
   onRemoveFile, 
   uploading, 
   maxFiles 
@@ -20,8 +18,6 @@ const VideoFileList = ({
   const formatFileSize = (bytes: number) => {
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
-
-  const hasFilesInProgress = Object.keys(compressionProgress).length > 0;
 
   if (files.length === 0) return null;
 
@@ -45,20 +41,6 @@ const VideoFileList = ({
                 <p className="text-xs text-gray-500">
                   {formatFileSize(file.size)} • {file.type.startsWith('video/') ? 'Video' : 'Image'}
                 </p>
-                {compressionProgress[file.name] !== undefined && (
-                  <div className="mt-1">
-                    <div className="flex justify-between text-xs text-blue-600">
-                      <span>{file.type.startsWith('video/') ? 'Compressing...' : 'Processing...'}</span>
-                      <span>{Math.round(compressionProgress[file.name])}%</span>
-                    </div>
-                    <div className="w-full bg-blue-100 rounded-full h-1 mt-1">
-                      <div 
-                        className="bg-blue-500 h-1 rounded-full transition-all duration-300" 
-                        style={{ width: `${compressionProgress[file.name]}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
             <Button
@@ -66,7 +48,7 @@ const VideoFileList = ({
               size="sm"
               onClick={() => onRemoveFile(index)}
               className="text-red-500 hover:text-red-700 hover:bg-red-50"
-              disabled={uploading || hasFilesInProgress}
+              disabled={uploading}
             >
               <X className="w-4 h-4" />
             </Button>

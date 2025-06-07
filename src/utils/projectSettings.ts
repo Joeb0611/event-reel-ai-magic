@@ -9,29 +9,19 @@ export const VIDEO_QUALITY_OPTIONS = [
   {
     value: 'good' as const,
     label: 'Good Quality',
-    description: 'Standard compression, smaller file sizes',
+    description: 'Standard streaming quality, optimized for fast playback',
     tier: 'free'
   },
   {
     value: 'better' as const,
     label: 'Better Quality', 
-    description: 'Improved compression, balanced quality',
+    description: 'Enhanced streaming quality with improved clarity',
     tier: 'premium'
   },
   {
     value: 'best' as const,
     label: 'Best Quality',
-    description: 'Minimal compression, highest quality',
+    description: 'Premium streaming quality with maximum clarity',
     tier: 'professional'
   }
 ] as const;
-
-export const getCompressionSettingsFromQuality = (quality: VideoQuality) => {
-  const settings = {
-    good: { quality: 0.6 },
-    better: { quality: 0.8 },
-    best: { quality: 0.9 }
-  };
-  
-  return settings[quality];
-};

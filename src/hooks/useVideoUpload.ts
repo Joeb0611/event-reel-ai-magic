@@ -1,44 +1,27 @@
+
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { VideoFile } from '@/hooks/useVideos';
 import { sanitizeFileName } from '@/utils/security';
-import { compressVideo } from '@/utils/videoCompression';
-import { getCompressionSettingsFromQuality } from '@/utils/projectSettings';
 import { useCloudflareIntegration } from '@/hooks/useCloudflareIntegration';
 
 export const useVideoUpload = (projectId: string, projectName: string) => {
   const [uploading, setUploading] = useState(false);
-  const [compressionProgress, setCompressionProgress] = useState<{ [key: string]: number }>({});
   const { user } = useAuth();
   const { toast } = useToast();
   const { initiateStreamUpload, uploadToR2 } = useCloudflareIntegration();
 
-  const projectVideoQuality = 'good'; // This would come from project settings in real implementation
-  const compressionSettings = getCompressionSettingsFromQuality(projectVideoQuality);
-
-  const compressAndUploadFile = async (file: File): Promise<VideoFile | null> => {
+  const uploadFile = async (file: File): Promise<VideoFile | null> => {
     try {
       const sanitizedFileName = sanitizeFileName(file.name);
 
       if (file.type.startsWith('video/')) {
-        // Handle video files - compress then upload to Cloudflare Stream
-        const fileKey = file.name;
-        setCompressionProgress(prev => ({ ...prev, [fileKey]: 0 }));
-
-        const compressedFile = await compressVideo(
-          file,
-          compressionSettings,
-          (progress) => {
-            setCompressionProgress(prev => ({ ...prev, [fileKey]: progress.progress }));
-          }
-        );
-
-        // Upload to Cloudflare Stream
+        // Handle video files - upload to Cloudflare Stream
         const uploadResult = await initiateStreamUpload(
           projectId,
           sanitizedFileName,
-          compressedFile.size
+          file.size
         );
 
         if (!uploadResult.success || !uploadResult.uploadUrl) {
@@ -47,12 +30,12 @@ export const useVideoUpload = (projectId: string, projectName: string) => {
 
         // Create FormData for multipart/form-data upload
         const formData = new FormData();
-        formData.append('file', compressedFile, sanitizedFileName);
+        formData.append('file', file, sanitizedFileName);
 
-        // Upload compressed video to Cloudflare Stream with proper form data
+        // Upload video to Cloudflare Stream with proper form data
         const uploadResponse = await fetch(uploadResult.uploadUrl, {
           method: 'POST',
-          body: formData, // Don't set Content-Type header - let browser set it for multipart/form-data
+          body: formData,
         });
 
         if (!uploadResponse.ok) {
@@ -66,7 +49,7 @@ export const useVideoUpload = (projectId: string, projectName: string) => {
           id: uploadResult.databaseId || uploadResult.videoId || '',
           name: sanitizedFileName,
           file_path: `stream://${uploadResult.videoId}`,
-          size: compressedFile.size,
+          size: file.size,
           uploaded_at: new Date().toISOString(),
           created_at: new Date().toISOString(),
           edited: false,
@@ -105,11 +88,6 @@ export const useVideoUpload = (projectId: string, projectName: string) => {
 
     } catch (error) {
       console.error('Error uploading file:', error);
-      setCompressionProgress(prev => {
-        const newProgress = { ...prev };
-        delete newProgress[file.name];
-        return newProgress;
-      });
       throw error;
     }
   };
@@ -122,7 +100,7 @@ export const useVideoUpload = (projectId: string, projectName: string) => {
 
     try {
       for (const file of files) {
-        const uploadedFile = await compressAndUploadFile(file);
+        const uploadedFile = await uploadFile(file);
         if (uploadedFile) {
           uploadedFiles.push(uploadedFile);
         }
@@ -150,8 +128,6 @@ export const useVideoUpload = (projectId: string, projectName: string) => {
 
   return {
     uploading,
-    compressionProgress,
-    uploadFiles,
-    projectVideoQuality
+    uploadFiles
   };
 };
