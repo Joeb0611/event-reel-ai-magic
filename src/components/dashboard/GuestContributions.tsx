@@ -93,7 +93,10 @@ const GuestContributions = ({ guestVideos, onVideoDeleted }: GuestContributionsP
   };
 
   const MediaPreview = ({ video }: { video: VideoFile }) => {
-    if (!video.url) {
+    // Use thumbnail_url if available, otherwise fall back to url
+    const previewUrl = video.thumbnail_url || video.url;
+    
+    if (!previewUrl) {
       return (
         <div className="flex items-center justify-center">
           {isVideo(video.name) ? (
@@ -108,21 +111,31 @@ const GuestContributions = ({ guestVideos, onVideoDeleted }: GuestContributionsP
     if (isVideo(video.name)) {
       return (
         <div className="relative group">
-          <video
-            src={video.url}
+          <img
+            src={previewUrl}
+            alt={video.name}
             className="w-full h-full object-cover rounded"
-            muted
-            preload="metadata"
+            onError={(e) => {
+              console.error('Video thumbnail error:', e);
+              // Show fallback icon if thumbnail fails
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              target.parentElement?.classList.add('bg-gray-200', 'flex', 'items-center', 'justify-center');
+            }}
           />
           <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded">
             <Play className="w-4 h-4 text-white" />
+          </div>
+          {/* Small play icon to indicate it's a video */}
+          <div className="absolute bottom-0.5 right-0.5 bg-black/60 rounded-full p-0.5">
+            <Play className="w-2 h-2 text-white fill-current" />
           </div>
         </div>
       );
     } else {
       return (
         <img
-          src={video.url}
+          src={previewUrl}
           alt={video.name}
           className="w-full h-full object-cover rounded"
           loading="lazy"

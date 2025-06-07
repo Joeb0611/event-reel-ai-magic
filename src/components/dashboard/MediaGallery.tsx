@@ -111,7 +111,10 @@ const MediaGallery = ({
   };
 
   const MediaPreview = ({ video, onClick }: { video: VideoFile; onClick?: () => void }) => {
-    if (!video.url) {
+    // Use thumbnail_url if available, otherwise fall back to url
+    const previewUrl = video.thumbnail_url || video.url;
+    
+    if (!previewUrl) {
       return (
         <div className="text-center">
           {isVideo(video.name) ? (
@@ -125,36 +128,34 @@ const MediaGallery = ({
     }
 
     if (isVideo(video.name) || isCloudflareStream(video)) {
-      // For Cloudflare Stream, show a thumbnail placeholder
-      if (isCloudflareStream(video)) {
-        return (
-          <div className="relative group cursor-pointer bg-gray-900 flex items-center justify-center" onClick={onClick}>
+      // For videos, show thumbnail image with play overlay
+      return (
+        <div className="relative group cursor-pointer" onClick={onClick}>
+          <img
+            src={previewUrl}
+            alt={video.name}
+            className="w-full h-full object-cover rounded-lg"
+            onError={(e) => {
+              console.error('Thumbnail error:', e);
+              // Show fallback play icon if thumbnail fails
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              target.parentElement?.classList.add('bg-gray-900', 'flex', 'items-center', 'justify-center');
+            }}
+          />
+          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
             <Play className="w-8 h-8 text-white" />
-            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
-              <Play className="w-12 h-12 text-white" />
-            </div>
           </div>
-        );
-      } else {
-        return (
-          <div className="relative group cursor-pointer" onClick={onClick}>
-            <video
-              src={video.url}
-              className="w-full h-full object-cover rounded-lg"
-              muted
-              preload="metadata"
-              onError={(e) => console.error('Video error:', e)}
-            />
-            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
-              <Play className="w-8 h-8 text-white" />
-            </div>
+          {/* Always show small play icon to indicate it's a video */}
+          <div className="absolute bottom-1 right-1 bg-black/60 rounded-full p-1">
+            <Play className="w-3 h-3 text-white fill-current" />
           </div>
-        );
-      }
+        </div>
+      );
     } else {
       return (
         <img
-          src={video.url}
+          src={previewUrl}
           alt={video.name}
           className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
           onClick={onClick}

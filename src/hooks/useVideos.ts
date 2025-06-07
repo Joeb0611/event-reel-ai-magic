@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getCloudflareStreamThumbnail, extractStreamId, isCloudflareStream } from '@/utils/cloudflareHelpers';
 
 export interface VideoFile {
   id: string;
@@ -13,6 +14,7 @@ export interface VideoFile {
   project_id: string;
   user_id: string;
   url?: string;
+  thumbnail_url?: string;
   guest_name?: string;
   guest_message?: string;
   uploaded_by_guest?: boolean;
@@ -92,19 +94,29 @@ export const useVideos = (projectId: string | null) => {
           let url: string | undefined;
           
           // Handle different storage types
+          let thumbnail_url: string | undefined;
+          
           if (video.file_path?.startsWith('stream://')) {
             // Cloudflare Stream video
             const streamId = video.file_path.replace('stream://', '');
             // Use iframe embed URL for better compatibility
             url = `https://iframe.videodelivery.net/${streamId}`;
+            // Generate thumbnail URL
+            thumbnail_url = getCloudflareStreamThumbnail(streamId, { width: 320, height: 180 });
           } else if (video.file_path?.startsWith('r2://')) {
             // Cloudflare R2 file - construct public URL
             const objectKey = video.file_path.replace('r2://', '');
             // This assumes your R2 bucket is configured with a public domain
             url = `https://d067de0dad23153466dc9015deb5d9df.r2.cloudflarestorage.com/memorymixer/${objectKey}`;
+            // For R2 images, use the same URL as thumbnail
+            if (video.name.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+              thumbnail_url = url;
+            }
           } else if (video.stream_video_id) {
             // Fallback for stream video ID
             url = `https://iframe.videodelivery.net/${video.stream_video_id}`;
+            // Generate thumbnail URL
+            thumbnail_url = getCloudflareStreamThumbnail(video.stream_video_id, { width: 320, height: 180 });
           }
 
           return {
@@ -121,7 +133,8 @@ export const useVideos = (projectId: string | null) => {
             guest_message: video.guest_message,
             uploaded_by_guest: video.uploaded_by_guest || false,
             stream_video_id: video.stream_video_id,
-            url
+            url,
+            thumbnail_url
           };
         });
         allVideos.push(...videoData);
