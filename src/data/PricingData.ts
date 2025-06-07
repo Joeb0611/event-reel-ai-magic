@@ -1,68 +1,100 @@
 
-import { Crown, Star, Zap } from 'lucide-react';
+export interface PricingTier {
+  id: string;
+  name: string;
+  price: number;
+  yearlyPrice?: number;
+  description: string;
+  features: string[];
+  highlighted?: boolean;
+  buttonText: string;
+  popular?: boolean;
+  storageRetention: string;
+  downloadRights: string;
+}
 
-export const pricingTiers = [
+export const pricingTiers: PricingTier[] = [
   {
     id: 'free',
-    name: 'Memory Starter',
-    price: 'Free',
-    priceAmount: 0,
-    description: 'Perfect for trying out MemoryWeave',
-    icon: Star,
+    name: 'Free',
+    price: 0,
+    description: 'Perfect for trying out our AI wedding video editing',
     features: [
-      '1 wedding project only',
-      'Up to 25 guest uploads',
-      'Basic photo/video collection with QR codes',
-      '30-second AI highlight reel',
-      '720p video quality',
-      'Romantic style only',
-      'Stream only (no download)'
+      '1 wedding project',
+      '30-day storage retention',
+      'Basic AI editing (2-3 minutes)',
+      'Standard quality (1080p)',
+      'Email delivery',
+      'Download expires after 7 days'
     ],
-    limitations: [
-      'MemoryWeave watermark included',
-      'Limited AI styles',
-      'No download rights'
-    ]
+    buttonText: 'Get Started Free',
+    storageRetention: '30 days',
+    downloadRights: '7-day download window'
   },
   {
     id: 'premium',
-    name: 'Memory Maker',
-    price: '$99',
-    priceAmount: 9900, // $99 in cents
-    description: 'Most popular choice for wedding couples',
-    icon: Crown,
-    popular: true,
+    name: 'Premium',
+    price: 99,
+    yearlyPrice: 89,
+    description: 'Best for couples who want professional-quality highlights',
     features: [
       'Unlimited wedding projects',
-      'Unlimited guest uploads',
-      'All AI styles (romantic, cinematic, documentary, energetic)',
-      'Up to 3-minute highlight reels',
-      '1080p HD video quality',
-      'Download + sharing rights',
+      '1-year storage retention',
+      'Extended AI editing (up to 5 minutes)',
+      'High quality (1080p)',
+      'Priority processing',
       'Custom music upload',
-      'Advanced AI moment detection',
-      'Must-include content tagging',
-      'Guest analytics',
-      'No watermark'
-    ]
+      'Multiple download formats',
+      'Unlimited downloads for 1 year',
+      'Email support'
+    ],
+    highlighted: true,
+    popular: true,
+    buttonText: 'Start Premium',
+    storageRetention: '1 year',
+    downloadRights: 'Unlimited downloads for 1 year'
   },
   {
     id: 'professional',
-    name: 'Memory Master',
-    price: '$199',
-    priceAmount: 19900, // $199 in cents
-    description: 'Professional-grade features for perfect memories',
-    icon: Zap,
+    name: 'Professional',
+    price: 199,
+    yearlyPrice: 179,
+    description: 'For photographers and videographers serving multiple clients',
     features: [
-      'Everything in Premium plus:',
-      'Up to 5-minute highlight reels',
-      '4K video quality',
-      'Multiple video versions (30s, 2min, 5min)',
-      'Advanced AI personality settings',
-      'Custom branding',
-      'Guest recognition features',
-      'Raw footage download',
-      'Priority processing'
-    ]
+      'Unlimited projects',
+      '2-year storage retention',
+      'Professional AI editing (up to 10 minutes)',
+      '4K quality available',
+      'Priority processing queue',
+      'Custom branding options',
+      'Raw footage retention',
+      'Bulk project management',
+      'Client delivery portal',
+      'Unlimited downloads for 2 years',
+      'Phone & email support',
+      'Advanced analytics'
+    ],
+    buttonText: 'Go Professional',
+    storageRetention: '2 years + raw footage',
+    downloadRights: 'Unlimited downloads for 2 years'
+  }
+];
+
+export const features = [
+  {
+    title: 'AI-Powered Editing',
+    description: 'Our AI automatically identifies the best moments from your wedding footage'
+  },
+  {
+    title: 'Smart Storage Management',
+    description: 'Clear retention policies with multiple download opportunities before expiration'
+  },
+  {
+    title: 'Professional Quality',
+    description: 'High-quality output suitable for sharing and preservation'
+  },
+  {
+    title: 'Easy Sharing',
+    description: 'Share your highlight reel with family and friends instantly'
   }
 ];
