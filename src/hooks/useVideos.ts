@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -92,31 +93,26 @@ export const useVideos = (projectId: string | null) => {
       if (videosResult.data) {
         const videoData = videosResult.data.map((video) => {
           let url: string | undefined;
-          
-          // Handle different storage types
           let thumbnail_url: string | undefined;
           
           if (video.file_path?.startsWith('stream://')) {
-            // Cloudflare Stream video
+            // Cloudflare Stream video - use direct manifest URL for video playback
             const streamId = video.file_path.replace('stream://', '');
-            // Use iframe embed URL for better compatibility
-            url = `https://iframe.videodelivery.net/${streamId}`;
-            // Generate thumbnail URL
-            thumbnail_url = getCloudflareStreamThumbnail(streamId, { width: 320, height: 180 });
+            url = `https://videodelivery.net/${streamId}/manifest/video.m3u8`;
+            // Generate thumbnail URL - this will be checked for availability in the component
+            thumbnail_url = getCloudflareStreamThumbnail(streamId);
           } else if (video.file_path?.startsWith('r2://')) {
             // Cloudflare R2 file - construct public URL
             const objectKey = video.file_path.replace('r2://', '');
-            // This assumes your R2 bucket is configured with a public domain
             url = `https://d067de0dad23153466dc9015deb5d9df.r2.cloudflarestorage.com/memorymixer/${objectKey}`;
             // For R2 images, use the same URL as thumbnail
             if (video.name.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/)) {
               thumbnail_url = url;
             }
           } else if (video.stream_video_id) {
-            // Fallback for stream video ID
-            url = `https://iframe.videodelivery.net/${video.stream_video_id}`;
-            // Generate thumbnail URL
-            thumbnail_url = getCloudflareStreamThumbnail(video.stream_video_id, { width: 320, height: 180 });
+            // Fallback for stream video ID - use direct manifest URL
+            url = `https://videodelivery.net/${video.stream_video_id}/manifest/video.m3u8`;
+            thumbnail_url = getCloudflareStreamThumbnail(video.stream_video_id);
           }
 
           return {
@@ -140,7 +136,12 @@ export const useVideos = (projectId: string | null) => {
         allVideos.push(...videoData);
       }
 
-      console.log('Fetched videos with URLs:', allVideos.map(v => ({ name: v.name, url: v.url, file_path: v.file_path })));
+      console.log('Fetched videos with direct URLs:', allVideos.map(v => ({ 
+        name: v.name, 
+        url: v.url, 
+        thumbnail_url: v.thumbnail_url,
+        file_path: v.file_path 
+      })));
       setProjectVideos(allVideos);
     } catch (error) {
       console.error('Error fetching project videos:', error);

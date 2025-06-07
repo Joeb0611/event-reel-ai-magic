@@ -28,8 +28,10 @@ import {
 } from '@/components/ui/dialog';
 import VideoUpload from '@/components/VideoUpload';
 import VideoThumbnailWithLoading from '@/components/ui/VideoThumbnailWithLoading';
+import VideoDisplay from '@/components/VideoDisplay';
 import { VideoFile } from '@/hooks/useVideos';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { isCloudflareStream } from '@/utils/cloudflareHelpers';
 
 interface MediaGalleryProps {
   projectVideos: VideoFile[];
@@ -85,10 +87,6 @@ const MediaGallery = ({
     return filename.toLowerCase().includes('.mp4') || filename.toLowerCase().includes('.mov');
   };
 
-  const isCloudflareStream = (video: VideoFile) => {
-    return video.file_path?.startsWith('stream://') || video.stream_video_id;
-  };
-
   const handleDeleteVideo = () => {
     if (deleteVideoId) {
       onDeleteVideo(deleteVideoId);
@@ -101,18 +99,15 @@ const MediaGallery = ({
   };
 
   const handleMediaClick = (media: VideoFile) => {
-    // Only allow preview if it's not a Cloudflare video or if thumbnail is ready
-    if (!isCloudflareStream(media) || media.thumbnail_url) {
-      setSelectedMedia(media);
-    }
+    setSelectedMedia(media);
   };
 
   const handleCloseModal = () => {
     setSelectedMedia(null);
   };
 
-  const MediaPreview = ({ video, onClick }: { video: VideoFile; onClick?: () => void }) => {
-    if (isVideo(video.name) || isCloudflareStream(video)) {
+  const MediaPreview = ({ video }: { video: VideoFile }) => {
+    if (isVideo(video.name) || isCloudflareStream(video.file_path || '')) {
       return (
         <VideoThumbnailWithLoading
           videoUrl={video.url}
@@ -134,7 +129,6 @@ const MediaGallery = ({
             src={previewUrl}
             alt={video.name}
             className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-            onClick={onClick}
             onError={(e) => {
               console.error('Image error:', e);
               (e.target as HTMLImageElement).style.display = 'none';
@@ -168,8 +162,9 @@ const MediaGallery = ({
             </Button>
           </div>
         </CardHeader>
+        
+        {/* Filter and Sort Section - Mobile Optimized */}
         <CardContent className="pt-0 space-y-4">
-          {/* Filter and Sort Section - Mobile Optimized */}
           <div className="space-y-3 sm:space-y-0">
             {/* Filter Row */}
             <div className="flex items-center gap-3">
@@ -255,18 +250,13 @@ const MediaGallery = ({
             >
               <CardContent className="p-3">
                 {viewMode === 'grid' ? (
-                  // Grid View
                   <>
                     <div 
                       className="aspect-video bg-gray-100 rounded-lg mb-2 flex items-center justify-center relative overflow-hidden"
                       onClick={() => handleMediaClick(video)}
                     >
-                      <MediaPreview 
-                        video={video} 
-                        onClick={() => handleMediaClick(video)}
-                      />
+                      <MediaPreview video={video} />
                       
-                      {/* Action buttons */}
                       <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
                           variant="ghost"
@@ -328,16 +318,12 @@ const MediaGallery = ({
                     </div>
                   </>
                 ) : (
-                  // List View
                   <div className="flex items-start gap-3">
                     <div 
                       className={`${isMobile ? 'w-14 h-11' : 'w-12 h-9 sm:w-14 sm:h-10'} bg-gray-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden`}
                       onClick={() => handleMediaClick(video)}
                     >
-                      <MediaPreview 
-                        video={video} 
-                        onClick={() => handleMediaClick(video)}
-                      />
+                      <MediaPreview video={video} />
                     </div>
                     
                     <div className="flex-1 min-w-0 space-y-1">
@@ -433,7 +419,7 @@ const MediaGallery = ({
         </Card>
       )}
 
-      {/* Custom Media Modal */}
+      {/* Media Modal - NO IFRAME, use VideoDisplay component */}
       <Dialog open={!!selectedMedia} onOpenChange={handleCloseModal}>
         <DialogPortal>
           <DialogOverlay 
@@ -441,7 +427,6 @@ const MediaGallery = ({
             onClick={handleCloseModal}
           />
           <div className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-4xl translate-x-[-50%] translate-y-[-50%] gap-0 border bg-background shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg max-h-[90vh] overflow-hidden">
-            {/* Custom Header */}
             <div className="flex items-center justify-between p-4 border-b bg-white">
               <h2 className="text-lg font-semibold truncate pr-4">
                 {selectedMedia?.name}
@@ -456,38 +441,16 @@ const MediaGallery = ({
               </Button>
             </div>
             
-            {/* Media Content */}
             <div className="flex-1 flex items-center justify-center p-4 bg-white min-h-[50vh]">
               {selectedMedia?.url ? (
-                isVideo(selectedMedia.name) || isCloudflareStream(selectedMedia) ? (
-                  isCloudflareStream(selectedMedia) ? (
-                    // Cloudflare Stream iframe embed
-                    <iframe
-                      src={selectedMedia.url}
-                      className="w-full h-full min-h-[400px]"
-                      frameBorder="0"
-                      allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                      allowFullScreen
-                    />
-                  ) : (
-                    // Regular video file
-                    <video
-                      src={selectedMedia.url}
-                      controls
-                      autoPlay
-                      controlsList="nodownload nofullscreen"
-                      disablePictureInPicture
-                      className="max-w-full max-h-full"
-                      style={{ aspectRatio: 'auto' }}
-                      onError={(e) => console.error('Video error:', e)}
-                      onClick={(e) => e.stopPropagation()}
-                      onDoubleClick={(e) => e.preventDefault()}
-                    >
-                      Your browser does not support the video tag.
-                    </video>
-                  )
+                isVideo(selectedMedia.name) || isCloudflareStream(selectedMedia.file_path || '') ? (
+                  <VideoDisplay
+                    url={selectedMedia.url}
+                    className="max-w-full max-h-full"
+                    showControls={true}
+                    autoPlay={false}
+                  />
                 ) : (
-                  // Image
                   <img
                     src={selectedMedia.url}
                     alt={selectedMedia.name}
@@ -503,7 +466,6 @@ const MediaGallery = ({
               )}
             </div>
             
-            {/* Media Info */}
             {selectedMedia && (
               <div className="px-4 py-3 border-t bg-white">
                 <div className="flex items-center justify-between text-sm text-gray-600">
@@ -537,7 +499,6 @@ const MediaGallery = ({
         />
       )}
 
-      {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteVideoId} onOpenChange={() => setDeleteVideoId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

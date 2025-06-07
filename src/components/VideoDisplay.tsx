@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import { Loader, AlertTriangle, Video } from 'lucide-react';
+import { Loader, AlertTriangle, Video, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { isCloudflareStream, extractStreamId } from '@/utils/cloudflareHelpers';
 
 interface VideoDisplayProps {
   url?: string;
@@ -42,22 +43,16 @@ const VideoDisplay = ({
     setIsReady(false);
 
     try {
-      // For Cloudflare Stream videos, check readiness
-      if (url.includes('videodelivery.net') || url.includes('iframe.videodelivery.net')) {
-        const videoId = url.match(/([a-f0-9]{32})/)?.[1];
-        if (videoId) {
-          // Check if video is ready by trying to access manifest
-          const manifestUrl = `https://videodelivery.net/${videoId}/manifest/video.m3u8`;
-          const response = await fetch(manifestUrl, { method: 'HEAD' });
-          
-          if (response.ok) {
-            setIsReady(true);
-          } else {
-            // Video might still be processing
-            setTimeout(checkVideoStatus, 5000); // Check again in 5 seconds
-          }
-        } else {
+      // For Cloudflare Stream videos, check if manifest is available
+      if (isCloudflareStream(url) || url.includes('videodelivery.net')) {
+        // Try to fetch the manifest to check if video is ready
+        const response = await fetch(url, { method: 'HEAD' });
+        
+        if (response.ok) {
           setIsReady(true);
+        } else {
+          // Video might still be processing
+          setTimeout(checkVideoStatus, 5000);
         }
       } else {
         // For other video sources, assume ready
@@ -95,7 +90,7 @@ const VideoDisplay = ({
       <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded">
         <div className="text-center">
           <Loader className="w-6 h-6 text-blue-500 animate-spin mx-auto mb-2" />
-          <p className="text-sm text-gray-600">Loading video...</p>
+          <p className="text-sm text-gray-600">Processing video...</p>
         </div>
       </div>
     );
@@ -113,26 +108,14 @@ const VideoDisplay = ({
             size="sm" 
             className="mt-2"
           >
-            Retry
+            Check Again
           </Button>
         </div>
       </div>
     );
   }
 
-  // For Cloudflare Stream, use iframe for better compatibility
-  if (url.includes('iframe.videodelivery.net')) {
-    return (
-      <iframe
-        src={url}
-        className={className}
-        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-        allowFullScreen
-      />
-    );
-  }
-
-  // Use regular video element for other sources
+  // Use HTML5 video element for all video playback - NO IFRAMES
   return (
     <video
       src={url}
@@ -145,7 +128,9 @@ const VideoDisplay = ({
       onError={handleVideoError}
       onLoadedData={handleVideoLoad}
       preload="metadata"
-    />
+    >
+      Your browser does not support the video tag.
+    </video>
   );
 };
 
