@@ -1,12 +1,13 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Download, Trash2, Share2, Copy, Check, AlertTriangle, Loader } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useStorageLifecycle } from '@/hooks/useStorageLifecycle';
 import StorageWarningBanner from '@/components/storage/StorageWarningBanner';
+import VideoInfoSection from '@/components/video/VideoInfoSection';
+import VideoPreviewSection from '@/components/video/VideoPreviewSection';
+import VideoActionsSection from '@/components/video/VideoActionsSection';
 import { useNavigate } from 'react-router-dom';
 
 interface VideoManagerProps {
@@ -157,6 +158,15 @@ const VideoManager = ({ project, onVideoDeleted }: VideoManagerProps) => {
     navigate(`/subscription?project=${project.id}`);
   };
 
+  const handleVideoError = () => {
+    setVideoError(true);
+  };
+
+  const handleVideoLoad = () => {
+    setVideoReady(true);
+    setVideoError(false);
+  };
+
   if (!videoUrl) {
     return null;
   }
@@ -179,130 +189,31 @@ const VideoManager = ({ project, onVideoDeleted }: VideoManagerProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Storage Info */}
-          {storageInfo && (
-            <div className="bg-white rounded-lg p-3 border border-gray-200">
-              <p className="text-sm text-gray-600 mb-2">Storage Information:</p>
-              <div className="text-xs space-y-1">
-                <p><span className="font-medium">Tier:</span> {storageInfo.storageTier.charAt(0).toUpperCase() + storageInfo.storageTier.slice(1)}</p>
-                {storageInfo.expiresAt && (
-                  <p><span className="font-medium">Expires:</span> {new Date(storageInfo.expiresAt).toLocaleDateString()}</p>
-                )}
-                {storageInfo.daysUntilExpiration !== null && (
-                  <p className={storageInfo.daysUntilExpiration <= 7 ? 'text-orange-600 font-medium' : ''}>
-                    <span className="font-medium">Days remaining:</span> {storageInfo.daysUntilExpiration}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
+          <VideoInfoSection
+            videoUrl={videoUrl}
+            projectName={project.name}
+            storageInfo={storageInfo}
+            onUpgrade={handleUpgrade}
+          />
 
-          {/* Video Preview */}
-          <div className="bg-white rounded-lg p-3">
-            <p className="text-sm text-gray-600 mb-2">Video Preview:</p>
-            <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
-              {!videoReady && !videoError ? (
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="text-center">
-                    <Loader className="w-8 h-8 text-blue-500 animate-spin mx-auto mb-2" />
-                    <p className="text-sm text-gray-600">Processing video...</p>
-                    <p className="text-xs text-gray-500">This may take a few minutes</p>
-                  </div>
-                </div>
-              ) : videoError ? (
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="text-center">
-                    <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-2" />
-                    <p className="text-sm text-red-600">Video not ready</p>
-                    <Button 
-                      onClick={checkVideoReady} 
-                      variant="outline" 
-                      size="sm" 
-                      className="mt-2"
-                    >
-                      Check Again
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <video
-                  src={videoUrl}
-                  className="w-full h-full object-cover"
-                  controls
-                  preload="metadata"
-                  onError={() => setVideoError(true)}
-                  onLoadedData={() => setVideoReady(true)}
-                />
-              )}
-            </div>
-          </div>
+          <VideoPreviewSection
+            videoUrl={videoUrl}
+            videoReady={videoReady}
+            videoError={videoError}
+            onVideoError={handleVideoError}
+            onVideoLoad={handleVideoLoad}
+            onCheckVideoReady={checkVideoReady}
+          />
           
-          <div className="bg-white rounded-lg p-3">
-            <p className="text-sm text-gray-600 mb-2">Video URL:</p>
-            <p className="text-xs font-mono bg-gray-100 p-2 rounded truncate">
-              {videoUrl}
-            </p>
-            {project.local_video_path && (
-              <p className="text-xs text-green-600 mt-1">✓ Stored in Supabase Storage</p>
-            )}
-            {videoUrl.includes('videodelivery.net') && (
-              <p className="text-xs text-blue-600 mt-1">✓ Powered by Cloudflare Stream</p>
-            )}
-          </div>
-          
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={handleExport}
-              variant="outline"
-              size="sm"
-              className="flex-1 min-w-[120px] border-blue-200 text-blue-600 hover:bg-blue-50"
-              disabled={storageInfo?.isExpired || storageInfo?.isArchived || !videoReady}
-            >
-              <Download className="w-4 h-4 mr-2" />
-              {videoReady ? 'Export' : 'Processing...'}
-            </Button>
-            
-            <Button
-              onClick={handleShare}
-              variant="outline"
-              size="sm"
-              className="flex-1 min-w-[120px] border-purple-200 text-purple-600 hover:bg-purple-50"
-              disabled={storageInfo?.isExpired || storageInfo?.isArchived || !videoReady}
-            >
-              {copied ? (
-                <>
-                  <Check className="w-4 h-4 mr-2" />
-                  Copied!
-                </>
-              ) : (
-                <>
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Share Link
-                </>
-              )}
-            </Button>
-            
-            <Button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              variant="outline"
-              size="sm"
-              className="flex-1 min-w-[120px] border-red-200 text-red-600 hover:bg-red-50"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              {isDeleting ? 'Deleting...' : 'Delete'}
-            </Button>
-          </div>
-
-          {(storageInfo?.isExpired || storageInfo?.isArchived) && (
-            <Button
-              onClick={handleUpgrade}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-            >
-              <AlertTriangle className="w-4 h-4 mr-2" />
-              Upgrade to Restore Access
-            </Button>
-          )}
+          <VideoActionsSection
+            videoReady={videoReady}
+            storageInfo={storageInfo}
+            copied={copied}
+            isDeleting={isDeleting}
+            onExport={handleExport}
+            onShare={handleShare}
+            onDelete={handleDelete}
+          />
         </CardContent>
       </Card>
     </div>
