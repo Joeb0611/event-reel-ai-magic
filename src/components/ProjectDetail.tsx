@@ -32,11 +32,28 @@ const ProjectDetail = ({
   onVideoDeleted 
 }: ProjectDetailProps) => {
   const [showVideoUpload, setShowVideoUpload] = useState(false);
+  const [mustIncludeItems, setMustIncludeItems] = useState<Set<string>>(new Set());
   const { currentJob } = useWeddingProcessing(project.id);
 
   const isWeddingProject = project.bride_name && project.groom_name;
   const guestVideos = projectVideos.filter(v => v.uploaded_by_guest);
   const userVideos = projectVideos.filter(v => !v.uploaded_by_guest);
+
+  const handleDeleteVideo = (videoId: string) => {
+    onVideoDeleted();
+  };
+
+  const handleToggleMustInclude = (videoId: string) => {
+    setMustIncludeItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(videoId)) {
+        newSet.delete(videoId);
+      } else {
+        newSet.add(videoId);
+      }
+      return newSet;
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -64,8 +81,10 @@ const ProjectDetail = ({
 
       {/* Video Manager Component */}
       <VideoManager 
-        project={project} 
-        onVideoDeleted={onVideoDeleted}
+        videos={projectVideos}
+        onDeleteVideo={handleDeleteVideo}
+        mustIncludeItems={mustIncludeItems}
+        onToggleMustInclude={handleToggleMustInclude}
       />
 
       {/* AI Processing Panel */}
