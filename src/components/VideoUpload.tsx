@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { VideoFile } from '@/hooks/useVideos';
 import { validateFileType, validateFileSize, sanitizeFileName } from '@/utils/security';
-import CompressionPreview, { FileCompressionStatus } from '@/components/CompressionPreview';
 import { compressVideo } from '@/utils/videoCompression';
 import { getCompressionSettingsFromQuality } from '@/utils/projectSettings';
 
@@ -20,15 +20,14 @@ interface VideoUploadProps {
 }
 
 const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/mov', 'video/quicktime', 'video/avi'];
-const MAX_FILE_SIZE = 500 * 1024 * 1024; // Increased to 500MB since we'll compress
+const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB since we'll compress
 const MAX_FILES_PER_UPLOAD = 20;
 
 const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName }: VideoUploadProps) => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [compressionFiles, setCompressionFiles] = useState<FileCompressionStatus[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [compressing, setCompressing] = useState(false);
+  const [compressionProgress, setCompressionProgress] = useState<{ [key: string]: number }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -109,205 +108,117 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleCompress = async () => {
-    if (selectedFiles.length === 0) return;
-
-    setCompressing(true);
-    const newCompressionFiles: FileCompressionStatus[] = selectedFiles.map((file, index) => ({
-      id: `${index}-${Date.now()}`,
-      file,
-      originalFile: file,
-      progress: { progress: 0, originalSize: file.size, estimatedSize: file.size, status: 'preparing' },
-      status: 'pending'
-    }));
-
-    setCompressionFiles(newCompressionFiles);
-
-    // Compress files one by one using project quality setting
-    for (let i = 0; i < newCompressionFiles.length; i++) {
-      const fileStatus = newCompressionFiles[i];
-      
-      try {
-        setCompressionFiles(prev => prev.map(f => 
-          f.id === fileStatus.id 
-            ? { ...f, status: 'compressing' }
-            : f
-        ));
-
-        const compressedFile = await compressVideo(
-          fileStatus.originalFile,
-          compressionSettings,
-          (progress) => {
-            setCompressionFiles(prev => prev.map(f => 
-              f.id === fileStatus.id 
-                ? { ...f, progress }
-                : f
-            ));
-          }
-        );
-
-        setCompressionFiles(prev => prev.map(f => 
-          f.id === fileStatus.id 
-            ? { ...f, file: compressedFile, status: 'completed' }
-            : f
-        ));
-
-      } catch (error) {
-        console.error('Compression failed for file:', fileStatus.originalFile.name, error);
-        setCompressionFiles(prev => prev.map(f => 
-          f.id === fileStatus.id 
-            ? { ...f, status: 'error' }
-            : f
-        ));
-      }
-    }
-
-    setCompressing(false);
-  };
-
-  const handleCompressionCancel = (fileId: string) => {
-    setCompressionFiles(prev => prev.map(f => 
-      f.id === fileId 
-        ? { ...f, status: 'cancelled' }
-        : f
-    ));
-  };
-
-  const handleCompressionRetry = async (fileId: string) => {
-    const fileStatus = compressionFiles.find(f => f.id === fileId);
-    if (!fileStatus) return;
-
+  const compressAndUploadFile = async (file: File): Promise<VideoFile | null> => {
     try {
-      setCompressionFiles(prev => prev.map(f => 
-        f.id === fileId 
-          ? { ...f, status: 'compressing', progress: { ...f.progress, progress: 0, status: 'preparing' } }
-          : f
-      ));
+      // Compress video automatically based on project settings
+      const fileKey = file.name;
+      setCompressionProgress(prev => ({ ...prev, [fileKey]: 0 }));
 
       const compressedFile = await compressVideo(
-        fileStatus.originalFile,
+        file,
         compressionSettings,
         (progress) => {
-          setCompressionFiles(prev => prev.map(f => 
-            f.id === fileId 
-              ? { ...f, progress }
-              : f
-          ));
+          setCompressionProgress(prev => ({ ...prev, [fileKey]: progress.progress }));
         }
       );
 
-      setCompressionFiles(prev => prev.map(f => 
-        f.id === fileId 
-          ? { ...f, file: compressedFile, status: 'completed' }
-          : f
-      ));
+      // Create secure file path with user and project validation
+      const sanitizedFileName = sanitizeFileName(compressedFile.name);
+      const fileExt = sanitizedFileName.split('.').pop();
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(2, 15);
+      const fileName = `${user!.id}/${projectId}/${timestamp}-${randomId}.${fileExt}`;
+      
+      // Upload compressed file to secure videos bucket
+      const { error: uploadError } = await supabase.storage
+        .from('videos')
+        .upload(fileName, compressedFile, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+      }
+
+      // Save video metadata with validation
+      const { data: videoData, error: dbError } = await supabase
+        .from('media_assets')
+        .insert([
+          {
+            user_id: user!.id,
+            project_id: projectId,
+            file_name: sanitizedFileName,
+            file_path: fileName,
+            file_type: compressedFile.type,
+            file_size: compressedFile.size,
+            description: `Video uploaded for ${projectName} (compressed)`,
+          },
+        ])
+        .select()
+        .single();
+
+      if (dbError) {
+        console.error('Database error:', dbError);
+        // Clean up uploaded file
+        await supabase.storage.from('videos').remove([fileName]);
+        throw new Error(`Failed to save ${file.name}: ${dbError.message}`);
+      }
+
+      // Get signed URL for immediate display
+      const { data: urlData } = await supabase.storage
+        .from('videos')
+        .createSignedUrl(fileName, 3600);
+
+      // Transform to VideoFile format
+      return {
+        id: videoData.id,
+        name: videoData.file_name,
+        file_path: videoData.file_path,
+        size: videoData.file_size || 0,
+        uploaded_at: videoData.upload_date || new Date().toISOString(),
+        created_at: videoData.upload_date || new Date().toISOString(),
+        edited: false,
+        project_id: projectId,
+        user_id: user!.id,
+        url: urlData?.signedUrl,
+        uploaded_by_guest: false
+      };
 
     } catch (error) {
-      console.error('Retry compression failed:', error);
-      setCompressionFiles(prev => prev.map(f => 
-        f.id === fileId 
-          ? { ...f, status: 'error' }
-          : f
-      ));
+      console.error('Error compressing and uploading video:', error);
+      setCompressionProgress(prev => {
+        const newProgress = { ...prev };
+        delete newProgress[file.name];
+        return newProgress;
+      });
+      throw error;
     }
-  };
-
-  const handleCompressionRemove = (fileId: string) => {
-    setCompressionFiles(prev => prev.filter(f => f.id !== fileId));
-  };
-
-  const getFilesToUpload = (): File[] => {
-    // Always use compressed files if available, otherwise use original files
-    if (compressionFiles.length > 0) {
-      return compressionFiles
-        .filter(f => f.status === 'completed')
-        .map(f => f.file);
-    }
-    return selectedFiles;
   };
 
   const handleUpload = async () => {
-    const filesToUpload = getFilesToUpload();
-    if (filesToUpload.length === 0 || !user) return;
+    if (selectedFiles.length === 0 || !user) return;
 
     setUploading(true);
     const uploadedVideos: VideoFile[] = [];
 
     try {
-      for (const file of filesToUpload) {
-        // Create secure file path with user and project validation
-        const sanitizedFileName = sanitizeFileName(file.name);
-        const fileExt = sanitizedFileName.split('.').pop();
-        const timestamp = Date.now();
-        const randomId = Math.random().toString(36).substring(2, 15);
-        const fileName = `${user.id}/${projectId}/${timestamp}-${randomId}.${fileExt}`;
-        
-        // Upload file to secure videos bucket
-        const { error: uploadError } = await supabase.storage
-          .from('videos')
-          .upload(fileName, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          throw new Error(`Failed to upload ${file.name}: ${uploadError.message}`);
+      for (const file of selectedFiles) {
+        const uploadedVideo = await compressAndUploadFile(file);
+        if (uploadedVideo) {
+          uploadedVideos.push(uploadedVideo);
         }
-
-        // Save video metadata with validation
-        const { data: videoData, error: dbError } = await supabase
-          .from('media_assets')
-          .insert([
-            {
-              user_id: user.id,
-              project_id: projectId,
-              file_name: sanitizedFileName,
-              file_path: fileName,
-              file_type: file.type,
-              file_size: file.size,
-              description: `Video uploaded for ${projectName}`,
-            },
-          ])
-          .select()
-          .single();
-
-        if (dbError) {
-          console.error('Database error:', dbError);
-          // Clean up uploaded file
-          await supabase.storage.from('videos').remove([fileName]);
-          throw new Error(`Failed to save ${file.name}: ${dbError.message}`);
-        }
-
-        // Get signed URL for immediate display
-        const { data: urlData } = await supabase.storage
-          .from('videos')
-          .createSignedUrl(fileName, 3600);
-
-        // Transform to VideoFile format
-        uploadedVideos.push({
-          id: videoData.id,
-          name: videoData.file_name,
-          file_path: videoData.file_path,
-          size: videoData.file_size || 0,
-          uploaded_at: videoData.upload_date || new Date().toISOString(),
-          created_at: videoData.upload_date || new Date().toISOString(),
-          edited: false,
-          project_id: projectId,
-          user_id: user.id,
-          url: urlData?.signedUrl,
-          uploaded_by_guest: false
-        });
       }
 
       onVideosUploaded(uploadedVideos);
       setSelectedFiles([]);
-      setCompressionFiles([]);
+      setCompressionProgress({});
       onClose();
 
       toast({
         title: "Upload Successful",
-        description: `Successfully uploaded ${uploadedVideos.length} video(s)`,
+        description: `Successfully uploaded and compressed ${uploadedVideos.length} video(s)`,
       });
 
     } catch (error) {
@@ -326,9 +237,7 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   };
 
-  const totalSizeMB = selectedFiles.reduce((sum, file) => sum + file.size, 0) / (1024 * 1024);
-  const readyToUpload = compressionFiles.filter(f => f.status === 'completed').length > 0 || 
-    (selectedFiles.length > 0 && compressionFiles.length === 0);
+  const hasFilesInProgress = Object.keys(compressionProgress).length > 0;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -336,7 +245,7 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
         <DialogHeader>
           <DialogTitle className="text-xl">Video Upload</DialogTitle>
           <DialogDescription>
-            Upload videos to {projectName}. Videos will be automatically compressed based on your project quality setting.
+            Upload videos to {projectName}. Videos will be automatically compressed to {projectVideoQuality} quality based on your project settings.
           </DialogDescription>
         </DialogHeader>
 
@@ -344,7 +253,7 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
           {/* Security Notice */}
           <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
             <AlertTriangle className="h-4 w-4" />
-            <span>All uploads are scanned for security and validated before processing.</span>
+            <span>All uploads are scanned for security and automatically compressed for optimal storage.</span>
           </div>
 
           {/* Drop Zone */}
@@ -380,10 +289,10 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
           {selectedFiles.length > 0 && (
             <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
               <p className="text-sm text-green-800">
-                <strong>Video Quality:</strong> {projectVideoQuality.charAt(0).toUpperCase() + projectVideoQuality.slice(1)} quality compression will be applied automatically.
+                <strong>Auto-Compression:</strong> Videos will be automatically compressed to {projectVideoQuality} quality during upload.
               </p>
               <p className="text-xs text-green-600 mt-1">
-                This setting is configured by the project owner and ensures consistent video quality across all uploads.
+                This reduces file sizes and upload times while maintaining quality standards for your project.
               </p>
             </div>
           )}
@@ -403,6 +312,20 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium truncate">{file.name}</p>
                         <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                        {compressionProgress[file.name] !== undefined && (
+                          <div className="mt-1">
+                            <div className="flex justify-between text-xs text-blue-600">
+                              <span>Compressing...</span>
+                              <span>{Math.round(compressionProgress[file.name])}%</span>
+                            </div>
+                            <div className="w-full bg-blue-100 rounded-full h-1 mt-1">
+                              <div 
+                                className="bg-blue-500 h-1 rounded-full transition-all duration-300" 
+                                style={{ width: `${compressionProgress[file.name]}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <Button
@@ -410,7 +333,7 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
                       size="sm"
                       onClick={() => removeFile(index)}
                       className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      disabled={uploading || compressing}
+                      disabled={uploading || hasFilesInProgress}
                     >
                       <X className="w-4 h-4" />
                     </Button>
@@ -420,38 +343,18 @@ const VideoUpload = ({ isOpen, onClose, onVideosUploaded, projectId, projectName
             </div>
           )}
 
-          {/* Compression Preview */}
-          {compressionFiles.length > 0 && (
-            <CompressionPreview
-              files={compressionFiles}
-              onCancel={handleCompressionCancel}
-              onRetry={handleCompressionRetry}
-              onRemove={handleCompressionRemove}
-            />
-          )}
-
           {/* Actions */}
           <div className="flex gap-3 pt-4">
-            <Button variant="outline" onClick={onClose} className="flex-1" disabled={uploading || compressing}>
+            <Button variant="outline" onClick={onClose} className="flex-1" disabled={uploading}>
               Cancel
             </Button>
             
-            {selectedFiles.length > 0 && compressionFiles.length === 0 && (
-              <Button 
-                onClick={handleCompress}
-                disabled={compressing || selectedFiles.length === 0}
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
-              >
-                {compressing ? 'Compressing...' : `Compress ${selectedFiles.length} Video${selectedFiles.length !== 1 ? 's' : ''}`}
-              </Button>
-            )}
-            
             <Button 
               onClick={handleUpload}
-              disabled={!readyToUpload || uploading || compressing}
+              disabled={selectedFiles.length === 0 || uploading}
               className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
             >
-              {uploading ? 'Uploading...' : `Upload ${getFilesToUpload().length} Video${getFilesToUpload().length !== 1 ? 's' : ''}`}
+              {uploading ? 'Compressing & Uploading...' : `Upload ${selectedFiles.length} Video${selectedFiles.length !== 1 ? 's' : ''}`}
             </Button>
           </div>
         </div>
