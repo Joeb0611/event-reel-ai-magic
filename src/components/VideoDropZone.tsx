@@ -41,16 +41,16 @@ const VideoDropZone = ({ onFileSelect, maxFiles }: VideoDropZoneProps) => {
     >
       <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-purple-500' : 'text-gray-400'}`} />
       <p className="text-lg font-medium mb-2">
-        {isDragging ? 'Drop videos here' : 'Drag & drop videos or click to browse'}
+        {isDragging ? 'Drop files here' : 'Drag & drop photos & videos or click to browse'}
       </p>
       <p className="text-sm text-gray-500">
-        MP4, MOV, QuickTime, AVI files up to 500MB each (max {maxFiles} files)
+        Images (JPG, PNG, GIF, WEBP, HEIC) and Videos (MP4, MOV, QuickTime, AVI) up to 500MB each (max {maxFiles} files)
       </p>
       <input
         ref={fileInputRef}
         type="file"
         multiple
-        accept="video/mp4,video/mov,video/quicktime,video/avi"
+        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp,image/heic,video/mp4,video/mov,video/quicktime,video/avi"
         className="hidden"
         onChange={(e) => onFileSelect(e.target.files)}
       />

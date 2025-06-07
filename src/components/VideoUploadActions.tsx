@@ -25,7 +25,7 @@ const VideoUploadActions = ({
         disabled={fileCount === 0 || uploading}
         className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
       >
-        {uploading ? 'Compressing & Uploading...' : `Upload ${fileCount} Video${fileCount !== 1 ? 's' : ''}`}
+        {uploading ? 'Processing & Uploading...' : `Upload ${fileCount} File${fileCount !== 1 ? 's' : ''}`}
       </Button>
     </div>
   );

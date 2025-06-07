@@ -1,5 +1,5 @@
 
-import { Video, X, CheckCircle } from 'lucide-react';
+import { Video, X, CheckCircle, FileImage } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface VideoFileListProps {
@@ -29,20 +29,26 @@ const VideoFileList = ({
     <div className="space-y-3">
       <h3 className="font-medium flex items-center gap-2">
         <CheckCircle className="w-5 h-5 text-green-500" />
-        Selected Videos ({files.length}/{maxFiles})
+        Selected Files ({files.length}/{maxFiles})
       </h3>
       <div className="space-y-2 max-h-40 overflow-y-auto">
         {files.map((file, index) => (
           <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <Video className="w-5 h-5 text-blue-500 flex-shrink-0" />
+              {file.type.startsWith('video/') ? (
+                <Video className="w-5 h-5 text-blue-500 flex-shrink-0" />
+              ) : (
+                <FileImage className="w-5 h-5 text-green-500 flex-shrink-0" />
+              )}
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium truncate">{file.name}</p>
-                <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                <p className="text-xs text-gray-500">
+                  {formatFileSize(file.size)} • {file.type.startsWith('video/') ? 'Video' : 'Image'}
+                </p>
                 {compressionProgress[file.name] !== undefined && (
                   <div className="mt-1">
                     <div className="flex justify-between text-xs text-blue-600">
-                      <span>Compressing...</span>
+                      <span>{file.type.startsWith('video/') ? 'Compressing...' : 'Processing...'}</span>
                       <span>{Math.round(compressionProgress[file.name])}%</span>
                     </div>
                     <div className="w-full bg-blue-100 rounded-full h-1 mt-1">
