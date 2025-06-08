@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Filter, Grid, List, Star, Video, Image, Clock, User, Trash2, MoreVertical, Play, X } from 'lucide-react';
+import { Plus, Filter, Grid, List, Star, Video, Image, Clock, User, Trash2, MoreVertical, Play, X, Loader } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
