@@ -1,4 +1,3 @@
-
 /**
  * Cloudflare Stream and R2 helper utilities with enhanced thumbnail support
  */
@@ -64,23 +63,40 @@ export const getCloudflareStreamThumbnail = (
 };
 
 /**
- * Check if a Cloudflare Stream thumbnail is available
+ * Check if a Cloudflare Stream thumbnail is available by testing the thumbnail URL
  */
 export const checkThumbnailAvailability = async (streamId: string): Promise<ThumbnailStatus> => {
   try {
     const thumbnailUrl = getCloudflareStreamThumbnail(streamId);
-    const response = await fetch(thumbnailUrl, { method: 'HEAD' });
+    
+    // Use a simple fetch with a timeout to check thumbnail availability
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    
+    const response = await fetch(thumbnailUrl, { 
+      method: 'HEAD',
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
     
     if (response.ok) {
+      // Thumbnail is available
       return 'ready';
     } else if (response.status === 404) {
+      // Video is still processing
       return 'processing';
     } else {
+      // Other error
       return 'error';
     }
   } catch (error) {
+    if (error.name === 'AbortError') {
+      // Request was aborted due to timeout - likely still processing
+      return 'processing';
+    }
     console.error('Error checking thumbnail availability:', error);
-    return 'error';
+    return 'processing'; // Assume still processing rather than error
   }
 };
 
@@ -121,13 +137,13 @@ export const extractStreamId = (input: string): string => {
     return input.replace('stream://', '');
   }
   
-  // Handle iframe URLs
+  // Handle iframe URLs (should not be used, but handle for backwards compatibility)
   if (input.includes('iframe.videodelivery.net')) {
     const match = input.match(/iframe\.videodelivery\.net\/([a-zA-Z0-9]+)/);
     return match ? match[1] : '';
   }
   
-  // Handle videodelivery.net URLs
+  // Handle videodelivery.net URLs (manifest URLs)
   if (input.includes('videodelivery.net')) {
     const match = input.match(/videodelivery\.net\/([a-zA-Z0-9]+)/);
     return match ? match[1] : '';
@@ -144,8 +160,7 @@ export const isCloudflareStream = (filePath: string): boolean => {
   if (!filePath) return false;
   
   return filePath.startsWith('stream://') || 
-         filePath.includes('videodelivery.net') || 
-         filePath.includes('iframe.videodelivery.net');
+         filePath.includes('videodelivery.net');
 };
 
 /**

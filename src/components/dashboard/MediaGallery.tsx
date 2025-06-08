@@ -59,6 +59,7 @@ const MediaGallery = ({
   const [viewMode, setViewMode] = useState(isMobile ? 'list' : 'grid');
   const [deleteVideoId, setDeleteVideoId] = useState<string | null>(null);
   const [selectedMedia, setSelectedMedia] = useState<VideoFile | null>(null);
+  const [videoReadyStates, setVideoReadyStates] = useState<Map<string, boolean>>(new Map());
 
   const filteredVideos = projectVideos.filter(video => {
     switch (filter) {
@@ -99,7 +100,17 @@ const MediaGallery = ({
   };
 
   const handleMediaClick = (media: VideoFile) => {
-    setSelectedMedia(media);
+    // For Cloudflare videos, only allow preview if video is ready
+    const isCloudflareVideo = isCloudflareStream(media.file_path || '') || media.stream_video_id;
+    const isVideoReady = videoReadyStates.get(media.id) || false;
+    
+    if (!isCloudflareVideo || isVideoReady) {
+      setSelectedMedia(media);
+    }
+  };
+
+  const handleVideoReadyChange = (mediaId: string, isReady: boolean) => {
+    setVideoReadyStates(prev => new Map(prev.set(mediaId, isReady)));
   };
 
   const handleCloseModal = () => {
@@ -117,6 +128,7 @@ const MediaGallery = ({
           className="w-full h-full cursor-pointer"
           size="lg"
           aspectRatio="video"
+          onVideoReady={(isReady) => handleVideoReadyChange(video.id, isReady)}
         />
       );
     } else {
@@ -239,125 +251,60 @@ const MediaGallery = ({
             ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3'
             : 'space-y-2'
         }>
-          {sortedVideos.map((video) => (
-            <Card 
-              key={video.id} 
-              className={`relative group hover:shadow-md transition-shadow ${
-                mustIncludeItems.has(video.id) ? 'ring-2 ring-yellow-400' : ''
-              } ${
-                video.uploaded_by_guest ? 'border-purple-200 bg-purple-50/50' : 'border-gray-200'
-              }`}
-            >
-              <CardContent className="p-3">
-                {viewMode === 'grid' ? (
-                  <>
-                    <div 
-                      className="aspect-video bg-gray-100 rounded-lg mb-2 flex items-center justify-center relative overflow-hidden"
-                      onClick={() => handleMediaClick(video)}
-                    >
-                      <MediaPreview video={video} />
-                      
-                      <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className={`h-7 w-7 p-0 ${mustIncludeItems.has(video.id) ? 'bg-yellow-500 text-white' : 'bg-white/80'}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleMustInclude(video.id);
-                          }}
-                        >
-                          <Star className={`w-3 h-3 ${mustIncludeItems.has(video.id) ? 'fill-current' : ''}`} />
-                        </Button>
+          {sortedVideos.map((video) => {
+            const isCloudflareVideo = isCloudflareStream(video.file_path || '') || video.stream_video_id;
+            const isVideoReady = videoReadyStates.get(video.id) || false;
+            const canPreview = !isCloudflareVideo || isVideoReady;
+            
+            return (
+              <Card 
+                key={video.id} 
+                className={`relative group hover:shadow-md transition-shadow ${
+                  mustIncludeItems.has(video.id) ? 'ring-2 ring-yellow-400' : ''
+                } ${
+                  video.uploaded_by_guest ? 'border-purple-200 bg-purple-50/50' : 'border-gray-200'
+                } ${
+                  !canPreview ? 'opacity-75' : ''
+                }`}
+              >
+                <CardContent className="p-3">
+                  {viewMode === 'grid' ? (
+                    <>
+                      <div 
+                        className={`aspect-video bg-gray-100 rounded-lg mb-2 flex items-center justify-center relative overflow-hidden ${
+                          canPreview ? 'cursor-pointer' : 'cursor-not-allowed'
+                        }`}
+                        onClick={() => canPreview && handleMediaClick(video)}
+                      >
+                        <MediaPreview video={video} />
                         
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 bg-white/80">
-                              <MoreVertical className="w-3 h-3" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem 
-                              onClick={() => setDeleteVideoId(video.id)}
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <p className="font-medium text-xs truncate">{video.name}</p>
-                      
-                      {video.uploaded_by_guest ? (
-                        <div className="space-y-1">
-                          {video.guest_name && (
-                            <div className="flex items-center gap-1">
-                              <User className="w-3 h-3 text-purple-600" />
-                              <span className="text-xs text-purple-600 font-medium truncate">{video.guest_name}</span>
+                        {/* Processing indicator for Cloudflare videos */}
+                        {isCloudflareVideo && !isVideoReady && (
+                          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                            <div className="text-white text-center">
+                              <Loader className="w-6 h-6 animate-spin mx-auto mb-1" />
+                              <p className="text-xs">Processing...</p>
                             </div>
-                          )}
-                          {video.guest_message && (
-                            <p className="text-xs text-gray-600 italic line-clamp-2">"{video.guest_message}"</p>
-                          )}
-                        </div>
-                      ) : (
-                        <Badge variant="secondary" className="text-xs h-5">Your Upload</Badge>
-                      )}
-                      
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>{(video.size / (1024 * 1024)).toFixed(1)} MB</span>
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          <span className="text-xs">{new Date(video.uploaded_at).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex items-start gap-3">
-                    <div 
-                      className={`${isMobile ? 'w-14 h-11' : 'w-12 h-9 sm:w-14 sm:h-10'} bg-gray-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden`}
-                      onClick={() => handleMediaClick(video)}
-                    >
-                      <MediaPreview video={video} />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className={`font-medium truncate ${isMobile ? 'text-sm' : 'text-sm'}`}>{video.name}</p>
-                          <div className={`flex items-center gap-2 text-gray-500 mt-0.5 ${isMobile ? 'text-xs' : 'text-xs'}`}>
-                            <span>{(video.size / (1024 * 1024)).toFixed(1)} MB</span>
-                            <span>•</span>
-                            <span>{new Date(video.uploaded_at).toLocaleDateString()}</span>
                           </div>
-                        </div>
+                        )}
                         
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          {mustIncludeItems.has(video.id) && (
-                            <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                          )}
+                        <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button
                             variant="ghost"
-                            size={isMobile ? "default" : "sm"}
-                            onClick={() => onToggleMustInclude(video.id)}
-                            className={`${isMobile ? 'h-9 w-9 touch-target' : 'h-7 w-7'} p-0`}
+                            size="sm"
+                            className={`h-7 w-7 p-0 ${mustIncludeItems.has(video.id) ? 'bg-yellow-500 text-white' : 'bg-white/80'}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onToggleMustInclude(video.id);
+                            }}
                           >
-                            <Star className={`w-4 h-4 ${mustIncludeItems.has(video.id) ? 'text-yellow-500 fill-current' : 'text-gray-400'}`} />
+                            <Star className={`w-3 h-3 ${mustIncludeItems.has(video.id) ? 'fill-current' : ''}`} />
                           </Button>
                           
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button 
-                                variant="ghost" 
-                                size={isMobile ? "default" : "sm"} 
-                                className={`${isMobile ? 'h-9 w-9 touch-target' : 'h-7 w-7'} p-0`}
-                              >
-                                <MoreVertical className="w-4 h-4" />
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 bg-white/80">
+                                <MoreVertical className="w-3 h-3" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -373,25 +320,117 @@ const MediaGallery = ({
                         </div>
                       </div>
                       
-                      {video.uploaded_by_guest && (
-                        <div className="space-y-1">
-                          {video.guest_name && (
-                            <div className="flex items-center gap-1">
-                              <User className="w-3 h-3 text-purple-600 flex-shrink-0" />
-                              <span className="text-xs text-purple-600 font-medium truncate">{video.guest_name}</span>
-                            </div>
-                          )}
-                          {video.guest_message && (
-                            <p className="text-xs text-gray-600 italic line-clamp-1">"{video.guest_message}"</p>
-                          )}
+                      <div className="space-y-2">
+                        <p className="font-medium text-xs truncate">{video.name}</p>
+                        
+                        {video.uploaded_by_guest ? (
+                          <div className="space-y-1">
+                            {video.guest_name && (
+                              <div className="flex items-center gap-1">
+                                <User className="w-3 h-3 text-purple-600" />
+                                <span className="text-xs text-purple-600 font-medium truncate">{video.guest_name}</span>
+                              </div>
+                            )}
+                            {video.guest_message && (
+                              <p className="text-xs text-gray-600 italic line-clamp-2">"{video.guest_message}"</p>
+                            )}
+                          </div>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs h-5">Your Upload</Badge>
+                        )}
+                        
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span>{(video.size / (1024 * 1024)).toFixed(1)} MB</span>
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span className="text-xs">{new Date(video.uploaded_at).toLocaleDateString()}</span>
+                          </div>
                         </div>
-                      )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex items-start gap-3">
+                      <div 
+                        className={`${isMobile ? 'w-14 h-11' : 'w-12 h-9 sm:w-14 sm:h-10'} bg-gray-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden relative ${
+                          canPreview ? 'cursor-pointer' : 'cursor-not-allowed'
+                        }`}
+                        onClick={() => canPreview && handleMediaClick(video)}
+                      >
+                        <MediaPreview video={video} />
+                        {isCloudflareVideo && !isVideoReady && (
+                          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                            <Loader className="w-3 h-3 animate-spin text-white" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className={`font-medium truncate ${isMobile ? 'text-sm' : 'text-sm'}`}>{video.name}</p>
+                            <div className={`flex items-center gap-2 text-gray-500 mt-0.5 ${isMobile ? 'text-xs' : 'text-xs'}`}>
+                              <span>{(video.size / (1024 * 1024)).toFixed(1)} MB</span>
+                              <span>•</span>
+                              <span>{new Date(video.uploaded_at).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {mustIncludeItems.has(video.id) && (
+                              <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                            )}
+                            <Button
+                              variant="ghost"
+                              size={isMobile ? "default" : "sm"}
+                              onClick={() => onToggleMustInclude(video.id)}
+                              className={`${isMobile ? 'h-9 w-9 touch-target' : 'h-7 w-7'} p-0`}
+                            >
+                              <Star className={`w-4 h-4 ${mustIncludeItems.has(video.id) ? 'text-yellow-500 fill-current' : 'text-gray-400'}`} />
+                            </Button>
+                            
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button 
+                                  variant="ghost" 
+                                  size={isMobile ? "default" : "sm"} 
+                                  className={`${isMobile ? 'h-9 w-9 touch-target' : 'h-7 w-7'} p-0`}
+                                >
+                                  <MoreVertical className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem 
+                                  onClick={() => setDeleteVideoId(video.id)}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                        
+                        {video.uploaded_by_guest && (
+                          <div className="space-y-1">
+                            {video.guest_name && (
+                              <div className="flex items-center gap-1">
+                                <User className="w-3 h-3 text-purple-600 flex-shrink-0" />
+                                <span className="text-xs text-purple-600 font-medium truncate">{video.guest_name}</span>
+                              </div>
+                            )}
+                            {video.guest_message && (
+                              <p className="text-xs text-gray-600 italic line-clamp-1">"{video.guest_message}"</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <Card>
@@ -419,7 +458,7 @@ const MediaGallery = ({
         </Card>
       )}
 
-      {/* Media Modal - NO IFRAME, use VideoDisplay component */}
+      {/* Media Modal - Only show for ready videos */}
       <Dialog open={!!selectedMedia} onOpenChange={handleCloseModal}>
         <DialogPortal>
           <DialogOverlay 
@@ -446,6 +485,7 @@ const MediaGallery = ({
                 isVideo(selectedMedia.name) || isCloudflareStream(selectedMedia.file_path || '') ? (
                   <VideoDisplay
                     url={selectedMedia.url}
+                    streamId={selectedMedia.stream_video_id}
                     className="max-w-full max-h-full"
                     showControls={true}
                     autoPlay={false}

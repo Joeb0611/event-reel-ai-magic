@@ -20,6 +20,7 @@ export interface VideoThumbnailWithLoadingProps {
   aspectRatio?: 'video' | 'square' | 'auto';
   pollInterval?: number;
   maxPollAttempts?: number;
+  onVideoReady?: (isReady: boolean) => void;
 }
 
 const VideoThumbnailWithLoading = ({
@@ -32,11 +33,13 @@ const VideoThumbnailWithLoading = ({
   size = 'md',
   aspectRatio = 'video',
   pollInterval = 5000,
-  maxPollAttempts = 20
+  maxPollAttempts = 20,
+  onVideoReady
 }: VideoThumbnailWithLoadingProps) => {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | undefined>();
   const [status, setStatus] = useState<ThumbnailStatus>('loading');
   const [pollAttempts, setPollAttempts] = useState(0);
+  const [isVideoReady, setIsVideoReady] = useState(false);
 
   // Extract stream ID from various sources
   const getStreamId = useCallback((): string | null => {
@@ -60,24 +63,36 @@ const VideoThumbnailWithLoading = ({
       if (thumbnailStatus === 'ready') {
         const url = getCloudflareStreamThumbnail(streamId);
         setThumbnailUrl(url);
+        setIsVideoReady(true);
         return true; // Stop polling
       } else if (thumbnailStatus === 'error') {
+        setIsVideoReady(false);
         return true; // Stop polling on error
       }
       
+      setIsVideoReady(false);
       return false; // Continue polling
     } catch (error) {
       console.error('Error checking thumbnail:', error);
       setStatus('error');
+      setIsVideoReady(false);
       return true; // Stop polling on error
     }
   }, []);
+
+  // Notify parent component when video readiness changes
+  useEffect(() => {
+    if (onVideoReady) {
+      onVideoReady(isVideoReady);
+    }
+  }, [isVideoReady, onVideoReady]);
 
   // Start polling for thumbnail
   useEffect(() => {
     const streamId = getStreamId();
     if (!streamId) {
       setStatus('not-found');
+      setIsVideoReady(false);
       return;
     }
 
@@ -93,6 +108,7 @@ const VideoThumbnailWithLoading = ({
       const poll = async () => {
         if (attempts >= maxPollAttempts) {
           setStatus('error');
+          setIsVideoReady(false);
           return;
         }
 
@@ -117,13 +133,19 @@ const VideoThumbnailWithLoading = ({
     if (streamId) {
       setStatus('loading');
       setPollAttempts(0);
+      setIsVideoReady(false);
       checkThumbnail(streamId);
     }
   }, [getStreamId, checkThumbnail]);
 
-  // For non-Cloudflare videos, just use the provided URL
+  // For non-Cloudflare videos, just use the provided URL and assume ready
   const streamId = getStreamId();
   if (!streamId) {
+    // Non-Cloudflare video, assume it's ready
+    if (!isVideoReady) {
+      setIsVideoReady(true);
+    }
+    
     return (
       <ThumbnailImage
         src={videoUrl}
