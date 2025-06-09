@@ -22,6 +22,7 @@ export interface Project {
   budget?: number;
   guest_count?: number;
   venue?: string;
+  guest_signup_enabled?: boolean;
 }
 
 export interface WeddingProjectData {
@@ -32,6 +33,16 @@ export interface WeddingProjectData {
   wedding_date: string;
   location: string;
   theme: string;
+}
+
+export interface EventProjectData {
+  name: string;
+  description: string;
+  host_name?: string;
+  co_host_name?: string;
+  event_date?: string;
+  location?: string;
+  theme?: string;
 }
 
 export const useProjects = () => {
@@ -197,6 +208,70 @@ export const useProjects = () => {
     }
   };
 
+  const createEventProject = async (projectData: EventProjectData) => {
+    try {
+      console.log('Creating event project...', projectData);
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        console.error('Auth error:', userError);
+        throw new Error('Not authenticated');
+      }
+
+      console.log('Authenticated user:', user.id);
+
+      const qrCode = `event-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+      console.log('Generated event QR code:', qrCode);
+      
+      const insertData = {
+        name: projectData.name,
+        title: projectData.name,
+        description: projectData.description,
+        bride_name: projectData.host_name, // Reusing existing field for host
+        groom_name: projectData.co_host_name, // Reusing existing field for co-host
+        wedding_date: projectData.event_date,
+        location: projectData.location,
+        privacy_settings: stringifyPrivacySettings({ public_qr: true, guest_upload: true }),
+        qr_code: qrCode,
+        user_id: user.id,
+        guest_signup_enabled: false, // Default to disabled
+      };
+
+      console.log('Inserting event project data:', insertData);
+
+      const { data, error } = await supabase
+        .from('projects')
+        .insert([insertData])
+        .select()
+        .single();
+
+      console.log('Event project insert result:', { data, error });
+
+      if (error) throw error;
+
+      const newProject: Project = {
+        ...data,
+        privacy_settings: parsePrivacySettings(data.privacy_settings),
+      };
+
+      console.log('Created event project:', newProject);
+      setProjects([newProject, ...projects]);
+      toast({
+        title: "Success",
+        description: "Event project created successfully",
+      });
+
+      return newProject;
+    } catch (error) {
+      console.error('Error creating event project:', error);
+      toast({
+        title: "Error",
+        description: `Failed to create event project: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
   const updateProject = async (updatedProject: Project) => {
     try {
       const updateData = {
@@ -275,6 +350,7 @@ export const useProjects = () => {
     loadingProjects,
     createProject,
     createWeddingProject,
+    createEventProject,
     updateProject,
     deleteProject,
     triggerAIEditing,

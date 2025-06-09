@@ -51,6 +51,113 @@ export type Database = {
         }
         Relationships: []
       }
+      event_access_permissions: {
+        Row: {
+          can_download: boolean | null
+          can_view: boolean | null
+          granted_at: string | null
+          granted_by: string | null
+          guest_account_id: string | null
+          id: string
+          project_id: string | null
+        }
+        Insert: {
+          can_download?: boolean | null
+          can_view?: boolean | null
+          granted_at?: string | null
+          granted_by?: string | null
+          guest_account_id?: string | null
+          id?: string
+          project_id?: string | null
+        }
+        Update: {
+          can_download?: boolean | null
+          can_view?: boolean | null
+          granted_at?: string | null
+          granted_by?: string | null
+          guest_account_id?: string | null
+          id?: string
+          project_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_access_permissions_guest_account_id_fkey"
+            columns: ["guest_account_id"]
+            isOneToOne: false
+            referencedRelation: "guest_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_access_permissions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guest_accounts: {
+        Row: {
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          password_hash: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          full_name: string
+          id?: string
+          password_hash: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          password_hash?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      live_displays: {
+        Row: {
+          created_at: string | null
+          display_key: string
+          id: string
+          is_active: boolean | null
+          project_id: string | null
+          settings: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_key: string
+          id?: string
+          is_active?: boolean | null
+          project_id?: string | null
+          settings?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          display_key?: string
+          id?: string
+          is_active?: boolean | null
+          project_id?: string | null
+          settings?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_displays_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media_assets: {
         Row: {
           description: string | null
@@ -215,6 +322,7 @@ export type Database = {
           expires_at: string | null
           groom_name: string | null
           guest_count: number | null
+          guest_signup_enabled: boolean | null
           id: string
           local_video_path: string | null
           location: string | null
@@ -239,6 +347,7 @@ export type Database = {
           expires_at?: string | null
           groom_name?: string | null
           guest_count?: number | null
+          guest_signup_enabled?: boolean | null
           id?: string
           local_video_path?: string | null
           location?: string | null
@@ -263,6 +372,7 @@ export type Database = {
           expires_at?: string | null
           groom_name?: string | null
           guest_count?: number | null
+          guest_signup_enabled?: boolean | null
           id?: string
           local_video_path?: string | null
           location?: string | null
@@ -278,6 +388,41 @@ export type Database = {
           wedding_date?: string | null
         }
         Relationships: []
+      }
+      slideshow_queue: {
+        Row: {
+          added_at: string | null
+          display_order: number | null
+          id: string
+          is_approved: boolean | null
+          media_id: string | null
+          project_id: string | null
+        }
+        Insert: {
+          added_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_approved?: boolean | null
+          media_id?: string | null
+          project_id?: string | null
+        }
+        Update: {
+          added_at?: string | null
+          display_order?: number | null
+          id?: string
+          is_approved?: boolean | null
+          media_id?: string | null
+          project_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slideshow_queue_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       storage_notifications: {
         Row: {
@@ -396,8 +541,6 @@ export type Database = {
           name: string
           project_id: string
           size: number
-          stream_playback_url: string | null
-          stream_status: string | null
           stream_video_id: string | null
           uploaded_at: string
           uploaded_by_guest: boolean | null
@@ -412,8 +555,6 @@ export type Database = {
           name: string
           project_id: string
           size?: number
-          stream_playback_url?: string | null
-          stream_status?: string | null
           stream_video_id?: string | null
           uploaded_at?: string
           uploaded_by_guest?: boolean | null
@@ -428,8 +569,6 @@ export type Database = {
           name?: string
           project_id?: string
           size?: number
-          stream_playback_url?: string | null
-          stream_status?: string | null
           stream_video_id?: string | null
           uploaded_at?: string
           uploaded_by_guest?: boolean | null
@@ -453,6 +592,10 @@ export type Database = {
       archive_expired_content: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      generate_display_key: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       get_project_by_qr: {
         Args: { qr_code_param: string }

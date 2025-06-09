@@ -1,96 +1,152 @@
-
-import { Heart, Calendar, MapPin, Camera, Upload } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Project } from '@/hooks/useProjects';
-import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Heart, Upload, Share2, MapPin } from 'lucide-react';
+import GuestSignupOption from './GuestSignupOption';
 
 interface GuestWelcomeProps {
-  project: Project;
-  onStartUpload: () => void;
+  project: {
+    id: string;
+    name: string;
+    bride_name?: string;
+    groom_name?: string;
+    description?: string;
+    location?: string;
+    wedding_date?: string;
+    guest_signup_enabled?: boolean;
+  };
+  onContinue: (guestName: string, guestMessage: string) => void;
 }
 
-const GuestWelcome = ({ project, onStartUpload }: GuestWelcomeProps) => {
-  const isWeddingProject = project.bride_name && project.groom_name;
+const GuestWelcome = ({ project, onContinue }: GuestWelcomeProps) => {
+  const [guestName, setGuestName] = useState('');
+  const [guestMessage, setGuestMessage] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onContinue(guestName, guestMessage);
+  };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <div className="text-center mb-8">
-        <div className="w-20 h-20 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Heart className="w-10 h-10 text-white" />
-        </div>
-        
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">
-          {isWeddingProject 
-            ? `${project.bride_name} & ${project.groom_name}'s Wedding`
-            : project.name
-          }
-        </h1>
-        
-        <p className="text-xl text-gray-600 mb-6">
-          Share your photos and videos with us! 📸✨
-        </p>
-        
-        <p className="text-gray-500">
-          Help us capture every special moment by uploading your photos and videos.
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex items-center justify-center px-4">
+      <div className="w-full max-w-md space-y-6">
+        {/* Main Welcome Card */}
+        <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-xl">
+          <CardHeader className="text-center pb-4">
+            <div className="w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Heart className="w-8 h-8 text-white" />
+            </div>
+            <CardTitle className="text-2xl bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              Welcome to MemoryMixer!
+            </CardTitle>
+            <CardDescription className="text-base">
+              {project.bride_name && project.groom_name
+                ? `${project.bride_name} & ${project.groom_name}'s ${project.wedding_date ? 'Wedding' : 'Event'}`
+                : project.name
+              }
+            </CardDescription>
+            {project.wedding_date && (
+              <p className="text-sm text-purple-600 font-medium">
+                {new Date(project.wedding_date).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </p>
+            )}
+            {project.location && (
+              <p className="text-sm text-gray-600 flex items-center justify-center mt-2">
+                <MapPin className="w-4 h-4 mr-1" />
+                {project.location}
+              </p>
+            )}
+          </CardHeader>
+          
+          <CardContent className="space-y-6">
+            {project.description && (
+              <p className="text-center text-gray-600 text-sm">
+                {project.description}
+              </p>
+            )}
+            
+            <div className="text-center">
+              <p className="text-gray-700 mb-4">
+                Share your photos and videos to help create lasting memories!
+              </p>
+              
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="text-center">
+                  <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Upload className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <p className="text-xs text-gray-600">Upload</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Share2 className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <p className="text-xs text-gray-600">Share</p>
+                </div>
+                <div className="text-center">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                    <Heart className="w-4 h-4 text-green-600" />
+                  </div>
+                  <p className="text-xs text-gray-600">Memories</p>
+                </div>
+              </div>
+            </div>
 
-      <Card className="mb-8 bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Heart className="w-5 h-5 text-pink-500" />
-            Event Details
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {project.wedding_date && (
-            <div className="flex items-center gap-3">
-              <Calendar className="w-5 h-5 text-blue-500" />
-              <span className="font-medium">Date:</span>
-              <span>{format(new Date(project.wedding_date), 'MMMM dd, yyyy')}</span>
-            </div>
-          )}
-          
-          {project.location && (
-            <div className="flex items-center gap-3">
-              <MapPin className="w-5 h-5 text-green-500" />
-              <span className="font-medium">Location:</span>
-              <span>{project.location}</span>
-            </div>
-          )}
-          
-          {project.theme && (
-            <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="text-sm">
-                {project.theme}
-              </Badge>
-            </div>
-          )}
-          
-          {project.description && (
-            <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
-              <p className="text-gray-700">{project.description}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="guest-name" className="text-sm font-medium">
+                  Your Name
+                </Label>
+                <Input
+                  id="guest-name"
+                  type="text"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder="Enter your name"
+                  required
+                  className="mt-1"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="guest-message" className="text-sm font-medium">
+                  Leave a Message (Optional)
+                </Label>
+                <Textarea
+                  id="guest-message"
+                  value={guestMessage}
+                  onChange={(e) => setGuestMessage(e.target.value)}
+                  placeholder="Share your wishes or memories..."
+                  rows={3}
+                  className="mt-1"
+                />
+              </div>
 
-      <div className="space-y-4">
-        <Button
-          onClick={onStartUpload}
-          size="lg"
-          className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white py-4 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-        >
-          <Camera className="w-6 h-6 mr-3" />
-          Start Uploading Photos & Videos
-        </Button>
-        
-        <div className="text-center text-sm text-gray-500">
-          <p>• No account required • Upload multiple files at once •</p>
-          <p>• Supported formats: JPG, PNG, MP4, MOV, HEIC •</p>
-        </div>
+              <Button
+                type="submit"
+                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+              >
+                Continue to Upload
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Guest Signup Option - Only show if enabled by host */}
+        {project.guest_signup_enabled && (
+          <GuestSignupOption
+            projectId={project.id}
+            projectName={project.name}
+          />
+        )}
       </div>
     </div>
   );
