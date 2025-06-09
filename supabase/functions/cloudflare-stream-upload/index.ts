@@ -57,14 +57,13 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Store video record in database
+    // Store video record in database without stream_status column
     const { data: video, error: dbError } = await supabase
       .from('videos')
       .insert({
         name: fileName,
         file_path: `stream://${streamData.result.uid}`,
         stream_video_id: streamData.result.uid,
-        stream_status: 'pending',
         project_id: projectId,
         user_id: projectId, // Will be updated with actual user context
         size: fileSize || 0,

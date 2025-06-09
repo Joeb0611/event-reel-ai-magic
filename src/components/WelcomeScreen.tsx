@@ -1,5 +1,5 @@
 
-import { Heart, Camera, Sparkles, Users } from 'lucide-react';
+import { Heart, Camera, Share2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -11,7 +11,6 @@ const WelcomeScreen = ({ onGetStarted }: WelcomeScreenProps) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-purple-100 flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center space-y-8">
-        {/* Logo and Title */}
         <div className="space-y-4">
           <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto shadow-lg">
             <Heart className="w-10 h-10 text-white" />
@@ -22,11 +21,10 @@ const WelcomeScreen = ({ onGetStarted }: WelcomeScreenProps) => {
           </h1>
           
           <p className="text-lg text-gray-600">
-            Turn your special moments into cinematic memories
+            Easily collect and share photos from your special moments
           </p>
         </div>
 
-        {/* Feature Cards */}
         <div className="space-y-4">
           <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
             <CardContent className="p-6">
@@ -35,8 +33,8 @@ const WelcomeScreen = ({ onGetStarted }: WelcomeScreenProps) => {
                   <Camera className="w-6 h-6 text-purple-600" />
                 </div>
                 <div className="text-left">
-                  <h3 className="font-semibold text-gray-900">Smart Collection</h3>
-                  <p className="text-sm text-gray-600">Gather photos & videos from all your guests</p>
+                  <h3 className="font-semibold text-gray-900">Easy Collection</h3>
+                  <p className="text-sm text-gray-600">Gather photos from all your guests in one place</p>
                 </div>
               </div>
             </CardContent>
@@ -46,11 +44,11 @@ const WelcomeScreen = ({ onGetStarted }: WelcomeScreenProps) => {
             <CardContent className="p-6">
               <div className="flex items-center space-x-4">
                 <div className="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-pink-600" />
+                  <Share2 className="w-6 h-6 text-pink-600" />
                 </div>
                 <div className="text-left">
-                  <h3 className="font-semibold text-gray-900">AI Magic</h3>
-                  <p className="text-sm text-gray-600">Automatically create stunning highlight reels</p>
+                  <h3 className="font-semibold text-gray-900">Simple Sharing</h3>
+                  <p className="text-sm text-gray-600">Share a link and everyone can contribute photos</p>
                 </div>
               </div>
             </CardContent>
@@ -63,15 +61,14 @@ const WelcomeScreen = ({ onGetStarted }: WelcomeScreenProps) => {
                   <Users className="w-6 h-6 text-red-600" />
                 </div>
                 <div className="text-left">
-                  <h3 className="font-semibold text-gray-900">Easy Sharing</h3>
-                  <p className="text-sm text-gray-600">Share your memories with family & friends</p>
+                  <h3 className="font-semibold text-gray-900">Live Feed</h3>
+                  <p className="text-sm text-gray-600">Watch photos come in real-time during your event</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Get Started Button */}
         <div className="space-y-4">
           <Button
             onClick={onGetStarted}
@@ -82,7 +79,7 @@ const WelcomeScreen = ({ onGetStarted }: WelcomeScreenProps) => {
           </Button>
           
           <p className="text-sm text-gray-500">
-            Create beautiful memories in minutes
+            Create your photo collection in minutes
           </p>
         </div>
       </div>
