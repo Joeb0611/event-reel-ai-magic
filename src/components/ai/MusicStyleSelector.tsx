@@ -1,11 +1,11 @@
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Music } from 'lucide-react';
-import { WeddingAISettings } from './AISettingsPanel';
 
 interface MusicStyleSelectorProps {
-  value: WeddingAISettings['musicStyle'];
-  onChange: (value: WeddingAISettings['musicStyle']) => void;
+  value: string;
+  onChange: (value: string) => void;
   disabled?: boolean;
 }
 
