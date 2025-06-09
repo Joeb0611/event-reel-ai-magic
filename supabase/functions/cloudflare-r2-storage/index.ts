@@ -8,6 +8,106 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper function to create AWS signature v4
+async function createSignature(method: string, url: string, headers: Record<string, string>, payload: Uint8Array, accessKeyId: string, secretAccessKey: string, region: string = 'auto') {
+  const encoder = new TextEncoder();
+  
+  // Create canonical request
+  const urlObj = new URL(url);
+  const canonicalUri = urlObj.pathname;
+  const canonicalQueryString = urlObj.search.slice(1);
+  
+  const canonicalHeaders = Object.keys(headers)
+    .sort()
+    .map(key => `${key.toLowerCase()}:${headers[key]}`)
+    .join('\n');
+    
+  const signedHeaders = Object.keys(headers)
+    .sort()
+    .map(key => key.toLowerCase())
+    .join(';');
+    
+  // Hash payload
+  const payloadHash = await crypto.subtle.digest('SHA-256', payload);
+  const payloadHashHex = Array.from(new Uint8Array(payloadHash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+    
+  const canonicalRequest = [
+    method,
+    canonicalUri,
+    canonicalQueryString,
+    canonicalHeaders,
+    '',
+    signedHeaders,
+    payloadHashHex
+  ].join('\n');
+  
+  // Create string to sign
+  const algorithm = 'AWS4-HMAC-SHA256';
+  const dateTime = headers['x-amz-date'];
+  const date = dateTime.slice(0, 8);
+  const credentialScope = `${date}/${region}/s3/aws4_request`;
+  
+  const canonicalRequestHash = await crypto.subtle.digest('SHA-256', encoder.encode(canonicalRequest));
+  const canonicalRequestHashHex = Array.from(new Uint8Array(canonicalRequestHash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+    
+  const stringToSign = [
+    algorithm,
+    dateTime,
+    credentialScope,
+    canonicalRequestHashHex
+  ].join('\n');
+  
+  // Calculate signature
+  const kDate = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(`AWS4${secretAccessKey}`),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const kDateResult = await crypto.subtle.sign('HMAC', kDate, encoder.encode(date));
+  
+  const kRegion = await crypto.subtle.importKey(
+    'raw',
+    new Uint8Array(kDateResult),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const kRegionResult = await crypto.subtle.sign('HMAC', kRegion, encoder.encode(region));
+  
+  const kService = await crypto.subtle.importKey(
+    'raw',
+    new Uint8Array(kRegionResult),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const kServiceResult = await crypto.subtle.sign('HMAC', kService, encoder.encode('s3'));
+  
+  const kSigning = await crypto.subtle.importKey(
+    'raw',
+    new Uint8Array(kServiceResult),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  
+  const signature = await crypto.subtle.sign('HMAC', kSigning, encoder.encode(stringToSign));
+  const signatureHex = Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+    
+  return signatureHex;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -17,26 +117,29 @@ serve(async (req) => {
     const { action, projectId, fileName, fileContent } = await req.json();
     
     const cfAccountId = Deno.env.get('CLOUDFLARE_ACCOUNT_ID');
-    const cfApiToken = Deno.env.get('CLOUDFLARE_API_TOKEN');
     const r2BucketName = Deno.env.get('CLOUDFLARE_R2_BUCKET');
+    const r2AccessKeyId = Deno.env.get('CLOUDFLARE_R2_ACCESS_KEY_ID');
+    const r2SecretAccessKey = Deno.env.get('CLOUDFLARE_R2_SECRET_ACCESS_KEY');
     
     console.log('Environment check:', {
       hasAccountId: !!cfAccountId,
-      hasApiToken: !!cfApiToken,
+      hasAccessKeyId: !!r2AccessKeyId,
+      hasSecretAccessKey: !!r2SecretAccessKey,
       hasBucketName: !!r2BucketName,
       action,
       projectId,
       fileName
     });
     
-    if (!cfAccountId || !r2BucketName || !cfApiToken) {
+    if (!cfAccountId || !r2BucketName || !r2AccessKeyId || !r2SecretAccessKey) {
       const missingVars = [];
       if (!cfAccountId) missingVars.push('CLOUDFLARE_ACCOUNT_ID');
       if (!r2BucketName) missingVars.push('CLOUDFLARE_R2_BUCKET');
-      if (!cfApiToken) missingVars.push('CLOUDFLARE_API_TOKEN');
+      if (!r2AccessKeyId) missingVars.push('CLOUDFLARE_R2_ACCESS_KEY_ID');
+      if (!r2SecretAccessKey) missingVars.push('CLOUDFLARE_R2_SECRET_ACCESS_KEY');
       
-      console.error('Missing Cloudflare credentials:', missingVars);
-      throw new Error(`Missing Cloudflare credentials: ${missingVars.join(', ')}`);
+      console.error('Missing Cloudflare R2 credentials:', missingVars);
+      throw new Error(`Missing Cloudflare R2 credentials: ${missingVars.join(', ')}`);
     }
 
     const supabase = createClient(
@@ -51,21 +154,42 @@ serve(async (req) => {
       const uint8Array = new Uint8Array(fileContent);
       console.log('Converted to Uint8Array, size:', uint8Array.length);
       
-      // Upload to R2 using Cloudflare API
+      // Upload to R2 using S3-compatible API
       const objectKey = `media/${projectId}/${fileName}`;
       console.log('Uploading to R2 with key:', objectKey);
       
-      // Use Cloudflare R2 API endpoint
-      const uploadUrl = `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/r2/buckets/${r2BucketName}/objects/${objectKey}`;
+      // Use R2 S3-compatible endpoint
+      const uploadUrl = `https://${cfAccountId}.r2.cloudflarestorage.com/${r2BucketName}/${objectKey}`;
       console.log('Upload URL:', uploadUrl);
+      
+      // Prepare headers for AWS signature
+      const now = new Date();
+      const amzDate = now.toISOString().replace(/[:\-]|\.\d{3}/g, '');
+      
+      const headers: Record<string, string> = {
+        'host': `${cfAccountId}.r2.cloudflarestorage.com`,
+        'x-amz-date': amzDate,
+        'x-amz-content-sha256': 'UNSIGNED-PAYLOAD',
+        'content-type': 'application/octet-stream',
+        'content-length': uint8Array.length.toString(),
+      };
+      
+      console.log('Preparing to sign request with headers:', headers);
+      
+      // Create authorization header
+      const signature = await createSignature('PUT', uploadUrl, headers, uint8Array, r2AccessKeyId, r2SecretAccessKey);
+      const date = amzDate.slice(0, 8);
+      const credentialScope = `${date}/auto/s3/aws4_request`;
+      const credential = `${r2AccessKeyId}/${credentialScope}`;
+      const signedHeaders = Object.keys(headers).sort().map(k => k.toLowerCase()).join(';');
+      
+      headers['authorization'] = `AWS4-HMAC-SHA256 Credential=${credential}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+      
+      console.log('Authorization header created, making upload request');
       
       const uploadResponse = await fetch(uploadUrl, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${cfApiToken}`,
-          'Content-Type': 'application/octet-stream',
-          'Content-Length': uint8Array.length.toString(),
-        },
+        headers,
         body: uint8Array
       });
 
