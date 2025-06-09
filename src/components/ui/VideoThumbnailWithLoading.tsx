@@ -1,19 +1,17 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  getCloudflareStreamThumbnail, 
-  extractStreamId, 
-  isCloudflareStream,
-  checkThumbnailAvailability,
-  ThumbnailStatus
+  isCloudflareR2,
+  isImageFile,
+  isVideoFile,
+  checkFileAvailability,
+  MediaStatus
 } from '@/utils/cloudflareHelpers';
 import ThumbnailImage from './ThumbnailImage';
 
 export interface VideoThumbnailWithLoadingProps {
   videoUrl?: string;
-  videoId?: string;
   filePath?: string;
-  streamVideoId?: string;
   alt: string;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
@@ -25,97 +23,98 @@ export interface VideoThumbnailWithLoadingProps {
 
 const VideoThumbnailWithLoading = ({
   videoUrl,
-  videoId,
   filePath,
-  streamVideoId,
   alt,
   className,
   size = 'md',
   aspectRatio = 'video',
-  pollInterval = 5000,
-  maxPollAttempts = 20,
+  pollInterval = 3000,
+  maxPollAttempts = 5,
   onVideoReady
 }: VideoThumbnailWithLoadingProps) => {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | undefined>();
-  const [status, setStatus] = useState<ThumbnailStatus>('loading');
+  const [status, setStatus] = useState<MediaStatus>('loading');
   const [pollAttempts, setPollAttempts] = useState(0);
-  const [isVideoReady, setIsVideoReady] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
-  // Extract stream ID from various sources
-  const getStreamId = useCallback((): string | null => {
-    if (streamVideoId) return streamVideoId;
-    if (videoId) return videoId;
-    if (filePath && isCloudflareStream(filePath)) {
-      return extractStreamId(filePath);
-    }
-    if (videoUrl && isCloudflareStream(videoUrl)) {
-      return extractStreamId(videoUrl);
+  // Determine the file URL to use
+  const getFileUrl = useCallback((): string | null => {
+    if (videoUrl) return videoUrl;
+    if (filePath && isCloudflareR2(filePath)) {
+      // Convert R2 path to public URL
+      const objectKey = filePath.replace('r2://', '');
+      return `https://d067de0dad23153466dc9015deb5d9df.r2.cloudflarestorage.com/memorymixer/${objectKey}`;
     }
     return null;
-  }, [streamVideoId, videoId, filePath, videoUrl]);
+  }, [videoUrl, filePath]);
 
-  // Check thumbnail availability and update state
-  const checkThumbnail = useCallback(async (streamId: string) => {
+  // Check file availability
+  const checkFile = useCallback(async (fileUrl: string) => {
     try {
-      const thumbnailStatus = await checkThumbnailAvailability(streamId);
-      setStatus(thumbnailStatus);
+      const fileStatus = await checkFileAvailability(fileUrl);
+      setStatus(fileStatus);
 
-      if (thumbnailStatus === 'ready') {
-        const url = getCloudflareStreamThumbnail(streamId);
-        setThumbnailUrl(url);
-        setIsVideoReady(true);
+      if (fileStatus === 'ready') {
+        // For images, use the same URL as thumbnail
+        if (isImageFile(alt) || (filePath && isImageFile(filePath))) {
+          setThumbnailUrl(fileUrl);
+        } else {
+          // For videos, we don't have thumbnail generation yet
+          setThumbnailUrl(undefined);
+        }
+        setIsReady(true);
         return true; // Stop polling
-      } else if (thumbnailStatus === 'error') {
-        setIsVideoReady(false);
+      } else if (fileStatus === 'error' || fileStatus === 'not-found') {
+        setIsReady(false);
         return true; // Stop polling on error
       }
       
-      setIsVideoReady(false);
+      setIsReady(false);
       return false; // Continue polling
     } catch (error) {
-      console.error('Error checking thumbnail:', error);
+      console.error('Error checking file:', error);
       setStatus('error');
-      setIsVideoReady(false);
+      setIsReady(false);
       return true; // Stop polling on error
     }
-  }, []);
+  }, [alt, filePath]);
 
-  // Notify parent component when video readiness changes
+  // Notify parent component when readiness changes
   useEffect(() => {
     if (onVideoReady) {
-      onVideoReady(isVideoReady);
+      onVideoReady(isReady);
     }
-  }, [isVideoReady, onVideoReady]);
+  }, [isReady, onVideoReady]);
 
-  // Start polling for thumbnail
+  // Start checking for file availability
   useEffect(() => {
-    const streamId = getStreamId();
-    if (!streamId) {
+    const fileUrl = getFileUrl();
+    if (!fileUrl) {
       setStatus('not-found');
-      setIsVideoReady(false);
+      setIsReady(false);
       return;
     }
 
-    // Try to get thumbnail immediately
+    // Try to check file immediately
     const immediateCheck = async () => {
-      const shouldStop = await checkThumbnail(streamId);
+      const shouldStop = await checkFile(fileUrl);
       if (shouldStop) return;
 
-      // Start polling if thumbnail is not ready
+      // Start polling if file is not ready
       const pollInterval_ms = pollInterval;
       let attempts = 0;
 
       const poll = async () => {
         if (attempts >= maxPollAttempts) {
           setStatus('error');
-          setIsVideoReady(false);
+          setIsReady(false);
           return;
         }
 
         attempts++;
         setPollAttempts(attempts);
         
-        const shouldStop = await checkThumbnail(streamId);
+        const shouldStop = await checkFile(fileUrl);
         if (!shouldStop) {
           setTimeout(poll, pollInterval_ms);
         }
@@ -125,35 +124,29 @@ const VideoThumbnailWithLoading = ({
     };
 
     immediateCheck();
-  }, [getStreamId, checkThumbnail, pollInterval, maxPollAttempts]);
+  }, [getFileUrl, checkFile, pollInterval, maxPollAttempts]);
 
   // Handle retry
   const handleRetry = useCallback(() => {
-    const streamId = getStreamId();
-    if (streamId) {
+    const fileUrl = getFileUrl();
+    if (fileUrl) {
       setStatus('loading');
       setPollAttempts(0);
-      setIsVideoReady(false);
-      checkThumbnail(streamId);
+      setIsReady(false);
+      checkFile(fileUrl);
     }
-  }, [getStreamId, checkThumbnail]);
+  }, [getFileUrl, checkFile]);
 
-  // For non-Cloudflare videos, just use the provided URL and assume ready
-  const streamId = getStreamId();
-  if (!streamId) {
-    // Non-Cloudflare video, assume it's ready
-    if (!isVideoReady) {
-      setIsVideoReady(true);
-    }
-    
+  const fileUrl = getFileUrl();
+  if (!fileUrl) {
     return (
       <ThumbnailImage
-        src={videoUrl}
+        src={undefined}
         alt={alt}
         className={className}
         size={size}
         aspectRatio={aspectRatio}
-        fallbackIcon="video"
+        fallbackIcon="file"
         showRetry={false}
       />
     );
@@ -164,12 +157,12 @@ const VideoThumbnailWithLoading = ({
 
   return (
     <ThumbnailImage
-      src={thumbnailUrl}
+      src={thumbnailUrl || (isReady ? fileUrl : undefined)}
       alt={alt}
       className={className}
       size={size}
       aspectRatio={aspectRatio}
-      fallbackIcon="video"
+      fallbackIcon={isVideoFile(alt) ? "video" : "image"}
       loading={isLoading}
       showRetry={showRetry}
       onRetry={handleRetry}

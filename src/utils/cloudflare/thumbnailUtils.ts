@@ -1,5 +1,5 @@
 
-import { CloudflareStreamOptions, ThumbnailSizes } from './types';
+import { MediaOptions, ThumbnailSizes } from './types';
 
 export const RESPONSIVE_THUMBNAIL_SIZES: ThumbnailSizes = {
   mobile: { width: 160, height: 90 },
@@ -19,41 +19,35 @@ export const getResponsiveThumbnailSize = (): { width: number; height: number } 
 };
 
 /**
- * Generate a thumbnail URL for a Cloudflare Stream video
+ * Generate a thumbnail URL for R2 images (using Cloudflare Image Resizing if available)
  */
-export const getCloudflareStreamThumbnail = (
-  streamId: string, 
-  options: CloudflareStreamOptions = {}
+export const getR2ImageThumbnail = (
+  r2Url: string, 
+  options: MediaOptions = {}
 ): string => {
+  if (!r2Url) return '';
+  
   const responsiveSize = getResponsiveThumbnailSize();
   const {
     width = responsiveSize.width,
     height = responsiveSize.height,
-    time = '1s',
-    fit = 'scale-down'
+    quality = 85,
+    format = 'auto'
   } = options;
 
-  // Clean the stream ID to ensure it's valid
-  const cleanStreamId = streamId.replace(/[^a-zA-Z0-9]/g, '');
-  
-  const params = new URLSearchParams({
-    time,
-    width: width.toString(),
-    height: height.toString(),
-    fit
-  });
-
-  return `https://videodelivery.net/${cleanStreamId}/thumbnails/thumbnail.jpg?${params}`;
+  // For now, return the original R2 URL since we're not using Cloudflare Images transform
+  // In the future, this could be enhanced with Cloudflare Images transforms
+  return r2Url;
 };
 
 /**
  * Generate different thumbnail sizes for responsive display
  */
-export const getCloudflareStreamThumbnails = (streamId: string) => {
+export const getR2ImageThumbnails = (r2Url: string) => {
   return {
-    mobile: getCloudflareStreamThumbnail(streamId, RESPONSIVE_THUMBNAIL_SIZES.mobile),
-    tablet: getCloudflareStreamThumbnail(streamId, RESPONSIVE_THUMBNAIL_SIZES.tablet),
-    desktop: getCloudflareStreamThumbnail(streamId, RESPONSIVE_THUMBNAIL_SIZES.desktop),
-    original: getCloudflareStreamThumbnail(streamId, { width: 1280, height: 720 })
+    mobile: getR2ImageThumbnail(r2Url, RESPONSIVE_THUMBNAIL_SIZES.mobile),
+    tablet: getR2ImageThumbnail(r2Url, RESPONSIVE_THUMBNAIL_SIZES.tablet),
+    desktop: getR2ImageThumbnail(r2Url, RESPONSIVE_THUMBNAIL_SIZES.desktop),
+    original: r2Url
   };
 };

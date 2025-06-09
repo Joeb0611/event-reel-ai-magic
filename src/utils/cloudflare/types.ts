@@ -1,13 +1,13 @@
 
 /**
- * Cloudflare Stream types and interfaces
+ * Cloudflare R2 and general media types
  */
 
-export interface CloudflareStreamOptions {
+export interface MediaOptions {
   width?: number;
   height?: number;
-  time?: string; // e.g., "10s", "1m30s", "25%"
-  fit?: 'scale-down' | 'contain' | 'cover' | 'crop' | 'pad';
+  quality?: number;
+  format?: 'auto' | 'jpg' | 'png' | 'webp';
 }
 
 export interface ThumbnailSizes {
@@ -16,4 +16,4 @@ export interface ThumbnailSizes {
   desktop: { width: number; height: number };
 }
 
-export type ThumbnailStatus = 'loading' | 'ready' | 'processing' | 'error' | 'not-found';
+export type MediaStatus = 'loading' | 'ready' | 'processing' | 'error' | 'not-found';

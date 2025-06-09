@@ -1,65 +1,61 @@
-import { ThumbnailStatus } from './types';
-import { getCloudflareStreamThumbnail } from './thumbnailUtils';
+
+import { MediaStatus } from './types';
 
 /**
- * Check if a Cloudflare Stream thumbnail is available by testing the thumbnail URL
+ * Check if an R2 file is available by testing the URL
  */
-export const checkThumbnailAvailability = async (streamId: string): Promise<ThumbnailStatus> => {
+export const checkFileAvailability = async (fileUrl: string): Promise<MediaStatus> => {
+  if (!fileUrl) return 'not-found';
+  
   try {
-    const thumbnailUrl = getCloudflareStreamThumbnail(streamId);
-    
-    // Use a simple fetch with a timeout to check thumbnail availability
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
     
-    const response = await fetch(thumbnailUrl, { 
+    const response = await fetch(fileUrl, { 
       method: 'HEAD',
-      signal: controller.signal
+      signal: controller.signal,
+      cache: 'no-cache'
     });
     
     clearTimeout(timeoutId);
     
     if (response.ok) {
-      // Thumbnail is available
       return 'ready';
     } else if (response.status === 404) {
-      // Video is still processing
-      return 'processing';
+      return 'not-found';
     } else {
-      // Other error
       return 'error';
     }
   } catch (error) {
     if (error.name === 'AbortError') {
-      // Request was aborted due to timeout - likely still processing
-      return 'processing';
+      return 'error';
     }
-    console.error('Error checking thumbnail availability:', error);
-    return 'processing'; // Assume still processing rather than error
+    console.error('Error checking file availability:', error);
+    return 'error';
   }
 };
 
 /**
- * Poll for thumbnail availability with exponential backoff
+ * Poll for file availability with exponential backoff
  */
-export const pollForThumbnail = async (
-  streamId: string,
-  maxAttempts: number = 10,
-  initialDelay: number = 2000
-): Promise<ThumbnailStatus> => {
+export const pollForFile = async (
+  fileUrl: string,
+  maxAttempts: number = 5,
+  initialDelay: number = 1000
+): Promise<MediaStatus> => {
   let attempts = 0;
   let delay = initialDelay;
 
   while (attempts < maxAttempts) {
-    const status = await checkThumbnailAvailability(streamId);
+    const status = await checkFileAvailability(fileUrl);
     
-    if (status === 'ready' || status === 'error') {
+    if (status === 'ready' || status === 'error' || status === 'not-found') {
       return status;
     }
 
     attempts++;
     await new Promise(resolve => setTimeout(resolve, delay));
-    delay = Math.min(delay * 1.5, 30000); // Cap at 30 seconds
+    delay = Math.min(delay * 1.5, 10000); // Cap at 10 seconds
   }
 
   return 'error';

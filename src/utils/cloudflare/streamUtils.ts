@@ -1,39 +1,23 @@
 
 /**
- * Extract Stream ID from various Cloudflare Stream URL formats
+ * Extract file ID from various URL formats (focusing on R2 now)
  */
-export const extractStreamId = (input: string): string => {
+export const extractFileId = (input: string): string => {
   if (!input) return '';
   
-  // Handle stream:// prefix
-  if (input.startsWith('stream://')) {
-    return input.replace('stream://', '');
+  // Handle r2:// prefix
+  if (input.startsWith('r2://')) {
+    return input.replace('r2://', '');
   }
   
-  // Handle iframe URLs (should not be used, but handle for backwards compatibility)
-  if (input.includes('iframe.videodelivery.net')) {
-    const match = input.match(/iframe\.videodelivery\.net\/([a-zA-Z0-9]+)/);
+  // Extract from R2 public URLs
+  if (input.includes('r2.cloudflarestorage.com')) {
+    const match = input.match(/r2\.cloudflarestorage\.com\/[^\/]+\/(.+)/);
     return match ? match[1] : '';
   }
   
-  // Handle videodelivery.net URLs (manifest URLs)
-  if (input.includes('videodelivery.net')) {
-    const match = input.match(/videodelivery\.net\/([a-zA-Z0-9]+)/);
-    return match ? match[1] : '';
-  }
-  
-  // Assume it's already a clean stream ID - extract only alphanumeric characters
-  return input.replace(/[^a-zA-Z0-9]/g, '');
-};
-
-/**
- * Check if a file path or URL is a Cloudflare Stream video
- */
-export const isCloudflareStream = (filePath: string): boolean => {
-  if (!filePath) return false;
-  
-  return filePath.startsWith('stream://') || 
-         filePath.includes('videodelivery.net');
+  // Assume it's already a clean file path
+  return input;
 };
 
 /**
@@ -41,5 +25,21 @@ export const isCloudflareStream = (filePath: string): boolean => {
  */
 export const isCloudflareR2 = (filePath: string): boolean => {
   if (!filePath) return false;
-  return filePath.startsWith('r2://');
+  return filePath.startsWith('r2://') || filePath.includes('r2.cloudflarestorage.com');
+};
+
+/**
+ * Check if file is an image based on extension
+ */
+export const isImageFile = (fileName: string): boolean => {
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+  return imageExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
+};
+
+/**
+ * Check if file is a video based on extension
+ */
+export const isVideoFile = (fileName: string): boolean => {
+  const videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v'];
+  return videoExtensions.some(ext => fileName.toLowerCase().endsWith(ext));
 };
