@@ -22,7 +22,7 @@ const WelcomeScreen = ({ onGetStarted }: WelcomeScreenProps) => {
           </h1>
           
           <p className="text-lg text-gray-600">
-            Turn your wedding moments into cinematic memories
+            Turn your special moments into cinematic memories
           </p>
         </div>
 
@@ -82,7 +82,7 @@ const WelcomeScreen = ({ onGetStarted }: WelcomeScreenProps) => {
           </Button>
           
           <p className="text-sm text-gray-500">
-            Create beautiful wedding memories in minutes
+            Create beautiful memories in minutes
           </p>
         </div>
       </div>

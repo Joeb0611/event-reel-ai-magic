@@ -1,179 +1,179 @@
 
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Plus } from 'lucide-react';
-import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { Calendar, MapPin, Users } from 'lucide-react';
 
 export interface EventProjectData {
   name: string;
   description: string;
-  host_name?: string;
-  co_host_name?: string;
-  event_date?: string;
-  location?: string;
-  theme?: string;
+  host_name: string;
+  co_host_name: string;
+  event_date: string;
+  location: string;
+  theme: string;
 }
 
 interface EventProjectModalProps {
-  children: React.ReactNode;
+  isOpen: boolean;
+  onClose: () => void;
   onCreateProject: (projectData: EventProjectData) => void;
 }
 
-const EventProjectModal = ({ children, onCreateProject }: EventProjectModalProps) => {
-  const [open, setOpen] = useState(false);
-  const [projectData, setProjectData] = useState<EventProjectData>({
+const EventProjectModal = ({ isOpen, onClose, onCreateProject }: EventProjectModalProps) => {
+  const [formData, setFormData] = useState<EventProjectData>({
     name: '',
     description: '',
     host_name: '',
     co_host_name: '',
     event_date: '',
     location: '',
-    theme: ''
+    theme: 'celebration'
   });
-  const [eventDate, setEventDate] = useState<Date>();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const finalData = {
-      ...projectData,
-      event_date: eventDate ? format(eventDate, 'yyyy-MM-dd') : ''
-    };
-    
-    onCreateProject(finalData);
-    setOpen(false);
+    if (!formData.name || !formData.host_name || !formData.event_date) {
+      return;
+    }
+
+    onCreateProject(formData);
     
     // Reset form
-    setProjectData({
+    setFormData({
       name: '',
       description: '',
       host_name: '',
       co_host_name: '',
       event_date: '',
       location: '',
-      theme: ''
+      theme: 'celebration'
     });
-    setEventDate(undefined);
+  };
+
+  const handleInputChange = (field: keyof EventProjectData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-            Create New Event
+          <DialogTitle className="text-2xl flex items-center gap-2 text-purple-600">
+            <Users className="w-6 h-6" />
+            Create Your Event Project
           </DialogTitle>
+          <DialogDescription>
+            Set up your event memory collection to gather photos and videos from your special occasion
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Event Name *</Label>
-            <Input
-              id="name"
-              value={projectData.name}
-              onChange={(e) => setProjectData({ ...projectData, name: e.target.value })}
-              placeholder="e.g., Sarah's Birthday Party, Company Retreat 2024"
-              required
-            />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={projectData.description}
-              onChange={(e) => setProjectData({ ...projectData, description: e.target.value })}
-              placeholder="Tell us about your event..."
-              rows={3}
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Project Name */}
+            <div className="md:col-span-2">
+              <Label htmlFor="name" className="text-sm font-medium">
+                Event Name *
+              </Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                placeholder="e.g., Sarah's Birthday Party"
+                className="mt-1"
+                required
+              />
+            </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="host_name">Host Name</Label>
+            {/* Host Names */}
+            <div>
+              <Label htmlFor="host_name" className="text-sm font-medium">
+                Host Name *
+              </Label>
               <Input
                 id="host_name"
-                value={projectData.host_name}
-                onChange={(e) => setProjectData({ ...projectData, host_name: e.target.value })}
-                placeholder="Primary host"
+                value={formData.host_name}
+                onChange={(e) => handleInputChange('host_name', e.target.value)}
+                placeholder="Main host name"
+                className="mt-1"
+                required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="co_host_name">Co-Host Name</Label>
+
+            <div>
+              <Label htmlFor="co_host_name" className="text-sm font-medium">
+                Co-Host Name
+              </Label>
               <Input
                 id="co_host_name"
-                value={projectData.co_host_name}
-                onChange={(e) => setProjectData({ ...projectData, co_host_name: e.target.value })}
-                placeholder="Secondary host (optional)"
+                value={formData.co_host_name}
+                onChange={(e) => handleInputChange('co_host_name', e.target.value)}
+                placeholder="Co-host name (optional)"
+                className="mt-1"
+              />
+            </div>
+
+            {/* Event Date */}
+            <div>
+              <Label htmlFor="event_date" className="text-sm font-medium flex items-center gap-1">
+                <Calendar className="w-4 h-4" />
+                Event Date *
+              </Label>
+              <Input
+                id="event_date"
+                type="date"
+                value={formData.event_date}
+                onChange={(e) => handleInputChange('event_date', e.target.value)}
+                className="mt-1"
+                required
+              />
+            </div>
+
+            {/* Location */}
+            <div>
+              <Label htmlFor="location" className="text-sm font-medium flex items-center gap-1">
+                <MapPin className="w-4 h-4" />
+                Location
+              </Label>
+              <Input
+                id="location"
+                value={formData.location}
+                onChange={(e) => handleInputChange('location', e.target.value)}
+                placeholder="Event venue/location"
+                className="mt-1"
+              />
+            </div>
+
+            {/* Description */}
+            <div className="md:col-span-2">
+              <Label htmlFor="description" className="text-sm font-medium">
+                Description
+              </Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                placeholder="Tell us about your special event..."
+                className="mt-1 min-h-[80px]"
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Event Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !eventDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {eventDate ? format(eventDate, "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={eventDate}
-                  onSelect={setEventDate}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              value={projectData.location}
-              onChange={(e) => setProjectData({ ...projectData, location: e.target.value })}
-              placeholder="Where is your event taking place?"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="theme">Theme/Style</Label>
-            <Input
-              id="theme"
-              value={projectData.theme}
-              onChange={(e) => setProjectData({ ...projectData, theme: e.target.value })}
-              placeholder="e.g., Casual, Formal, Beach Party, Vintage"
-            />
-          </div>
-
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               Cancel
             </Button>
             <Button 
-              type="submit" 
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+              type="submit"
+              className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+              disabled={!formData.name || !formData.host_name || !formData.event_date}
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Event
+              Create Event Project
             </Button>
           </div>
         </form>
