@@ -12,7 +12,7 @@ import ProcessingDashboard from '@/components/ProcessingDashboard';
 import QRCodeManager from '@/components/QRCodeManager';
 import { Project } from '@/hooks/useProjects';
 import { VideoFile } from '@/hooks/useVideos';
-import { useWeddingProcessing } from '@/hooks/useWeddingProcessing';
+import { useEventProcessing } from '@/hooks/useEventProcessing';
 
 interface ProjectDetailProps {
   project: Project;
@@ -33,7 +33,7 @@ const ProjectDetail = ({
 }: ProjectDetailProps) => {
   const [showVideoUpload, setShowVideoUpload] = useState(false);
   const [mustIncludeItems, setMustIncludeItems] = useState<Set<string>>(new Set());
-  const { currentJob } = useWeddingProcessing(project.id);
+  const { currentJob } = useEventProcessing(project.id);
 
   const isWeddingProject = project.bride_name && project.groom_name;
   const guestVideos = projectVideos.filter(v => v.uploaded_by_guest);

@@ -7,10 +7,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const AI_SERVICE_URL = 'https://wedding-ai-service.onrender.com';
+const AI_SERVICE_URL = 'https://event-ai-service.onrender.com';
 
-interface WeddingMoment {
-  type: 'ceremony' | 'reception' | 'emotional' | 'group';
+interface EventMoment {
+  type: 'main_event' | 'celebration' | 'emotional' | 'group' | 'performance' | 'speech';
   subtype: string;
   timestamp: number;
   duration: number;

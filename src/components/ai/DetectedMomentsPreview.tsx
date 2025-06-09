@@ -3,16 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Heart, Users, Video, Calendar, Star } from 'lucide-react';
-import { WeddingMoment } from '@/hooks/useWeddingProcessing';
+import { EventMoment } from '@/hooks/useEventProcessing';
 
 interface DetectedMomentsPreviewProps {
-  moments: WeddingMoment[];
+  moments: EventMoment[];
   onApprove: () => void;
   onReject: () => void;
 }
 
 const DetectedMomentsPreview = ({ moments, onApprove, onReject }: DetectedMomentsPreviewProps) => {
-  const getMomentIcon = (type: WeddingMoment['type']) => {
+  const getMomentIcon = (type: EventMoment['type']) => {
     switch (type) {
       case 'ceremony':
         return Heart;
@@ -27,7 +27,7 @@ const DetectedMomentsPreview = ({ moments, onApprove, onReject }: DetectedMoment
     }
   };
 
-  const getMomentColor = (type: WeddingMoment['type']) => {
+  const getMomentColor = (type: EventMoment['type']) => {
     switch (type) {
       case 'ceremony':
         return 'bg-purple-100 text-purple-700 border-purple-200';
@@ -69,7 +69,7 @@ const DetectedMomentsPreview = ({ moments, onApprove, onReject }: DetectedMoment
         <div className="grid grid-cols-4 gap-3 mb-4">
           {['ceremony', 'reception', 'emotional', 'group'].map(type => {
             const count = moments.filter(m => m.type === type).length;
-            const Icon = getMomentIcon(type as WeddingMoment['type']);
+            const Icon = getMomentIcon(type as EventMoment['type']);
             return (
               <div key={type} className="text-center p-2 bg-white rounded border">
                 <Icon className="w-4 h-4 mx-auto mb-1 text-gray-600" />

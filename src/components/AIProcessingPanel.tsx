@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Brain, Play, Square, RefreshCw, CheckCircle, XCircle, Clock, AlertTriangle, Wifi, WifiOff } from 'lucide-react';
-import { useWeddingProcessing, WeddingMoment } from '@/hooks/useWeddingProcessing';
+import { useEventProcessing, EventMoment } from '@/hooks/useEventProcessing';
 import { useVideos } from '@/hooks/useVideos';
 
 interface AIProcessingPanelProps {
@@ -13,7 +13,7 @@ interface AIProcessingPanelProps {
 }
 
 const AIProcessingPanel = ({ projectId, hasVideos, onProcessingComplete }: AIProcessingPanelProps) => {
-  const { currentJob, isProcessing, serviceStatus, startProcessing, cancelProcessing, checkServiceHealth } = useWeddingProcessing(projectId);
+  const { currentJob, isProcessing, serviceStatus, startProcessing, cancelProcessing, checkServiceHealth } = useEventProcessing(projectId);
   const { projectVideos } = useVideos(projectId);
 
   const getStatusIcon = () => {
@@ -70,7 +70,7 @@ const AIProcessingPanel = ({ projectId, hasVideos, onProcessingComplete }: AIPro
     }
   };
 
-  const getMomentTypeColor = (type: WeddingMoment['type']) => {
+  const getMomentTypeColor = (type: EventMoment['type']) => {
     switch (type) {
       case 'ceremony':
         return 'bg-purple-100 text-purple-700';

@@ -4,14 +4,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAIService } from '@/hooks/useAIService';
-import { parseWeddingMoments, stringifyWeddingMoments, WeddingMoment } from '@/utils/typeConverters';
-import { WeddingAISettings } from '@/components/ai/AISettingsPanel';
+import { parseEventMoments, stringifyEventMoments, EventMoment } from '@/utils/typeConverters';
+import { EventAISettings } from '@/components/ai/AISettingsPanel';
 import { VideoFile } from '@/hooks/useVideos';
 
 export interface AIInsights {
   total_people_detected: number;
-  ceremony_moments: number;
-  reception_moments: number;
+  main_event_moments: number;
+  celebration_moments: number;
 }
 
 export interface ProcessingJob {
@@ -20,7 +20,7 @@ export interface ProcessingJob {
   user_id: string;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   progress: number;
-  detected_moments: WeddingMoment[];
+  detected_moments: EventMoment[];
   error_message?: string;
   started_at?: string;
   completed_at?: string;
@@ -31,10 +31,10 @@ export interface ProcessingJob {
   ai_insights?: AIInsights;
 }
 
-// Re-export WeddingMoment for other components
-export type { WeddingMoment };
+// Re-export EventMoment for other components
+export type { EventMoment };
 
-export const useWeddingProcessing = (projectId: string | null) => {
+export const useEventProcessing = (projectId: string | null) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [currentJob, setCurrentJob] = useState<ProcessingJob | null>(null);
@@ -87,8 +87,8 @@ export const useWeddingProcessing = (projectId: string | null) => {
     if (parsedInsights && typeof parsedInsights === 'object') {
       return {
         total_people_detected: parsedInsights.total_people_detected || 0,
-        ceremony_moments: parsedInsights.ceremony_moments || 0,
-        reception_moments: parsedInsights.reception_moments || 0
+        main_event_moments: parsedInsights.main_event_moments || parsedInsights.ceremony_moments || 0,
+        celebration_moments: parsedInsights.celebration_moments || parsedInsights.reception_moments || 0
       };
     }
     
@@ -113,7 +113,7 @@ export const useWeddingProcessing = (projectId: string | null) => {
         const typedJob: ProcessingJob = {
           ...data,
           status: data.status as ProcessingJob['status'],
-          detected_moments: parseWeddingMoments(data.detected_moments),
+          detected_moments: parseEventMoments(data.detected_moments),
           progress: data.progress || 0,
           ai_insights: parseAIInsights(data.ai_insights)
         };
@@ -190,7 +190,7 @@ export const useWeddingProcessing = (projectId: string | null) => {
     }
   };
 
-  const startProcessing = async (videos: VideoFile[], settings: WeddingAISettings, customMusicUrl?: string) => {
+  const startProcessing = async (videos: VideoFile[], settings: EventAISettings, customMusicUrl?: string) => {
     if (!projectId || !user) return;
 
     if (serviceStatus === 'sleeping') {

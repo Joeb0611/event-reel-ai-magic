@@ -23,14 +23,14 @@ npm run preview
 
 ## Architecture Overview
 
-This is a React + TypeScript wedding video processing application built with Vite, using Supabase as the backend and Cloudflare for video storage/streaming.
+This is a React + TypeScript event media sharing application built with Vite, using Supabase as the backend and Cloudflare R2 for media storage.
 
 ### Core Technologies
 - **Frontend**: React 18, TypeScript, Vite
 - **UI**: shadcn/ui components with Radix UI primitives, Tailwind CSS
 - **Backend**: Supabase (auth, database, edge functions)
 - **Video Processing**: External AI service at Modal.run
-- **Storage**: Cloudflare R2 and Stream
+- **Storage**: Cloudflare R2
 - **State Management**: React Query, React Context (Auth, Subscription)
 - **Routing**: React Router DOM
 
@@ -52,11 +52,11 @@ This is a React + TypeScript wedding video processing application built with Vit
 - `src/contexts/` - React context providers
 - `src/integrations/supabase/` - Supabase client and types
 
-**Video Processing Flow**:
-1. Users upload wedding videos via VideoUpload components
-2. Videos are stored in Cloudflare R2 via Supabase edge functions
-3. AI processing is triggered via external service (Modal.run)
-4. Results are stored back in Supabase and displayed via VideoManager
+**Media Processing Flow**:
+1. Users upload event media (photos/videos) via upload components
+2. Media is stored in Cloudflare R2 via Supabase edge functions
+3. AI processing is triggered for video content via external service (Modal.run)
+4. Results are stored back in Supabase and displayed via media management components
 
 **Guest Upload System**:
 - QR code generation for guest access

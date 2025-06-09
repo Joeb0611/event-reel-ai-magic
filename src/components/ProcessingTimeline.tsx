@@ -2,10 +2,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Play } from 'lucide-react';
-import { WeddingMoment } from '@/hooks/useWeddingProcessing';
+import { EventMoment } from '@/hooks/useEventProcessing';
 
 interface ProcessingTimelineProps {
-  moments: WeddingMoment[];
+  moments: EventMoment[];
 }
 
 const ProcessingTimeline = ({ moments }: ProcessingTimelineProps) => {
@@ -15,7 +15,7 @@ const ProcessingTimeline = ({ moments }: ProcessingTimelineProps) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getMomentIcon = (type: WeddingMoment['type']) => {
+  const getMomentIcon = (type: EventMoment['type']) => {
     switch (type) {
       case 'ceremony':
         return '💒';

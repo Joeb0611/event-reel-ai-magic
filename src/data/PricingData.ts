@@ -1,5 +1,5 @@
 
-import { Heart, Crown, Building2 } from 'lucide-react';
+import { CalendarCheck, Crown, Building2 } from 'lucide-react';
 
 export interface PricingTier {
   id: string;
@@ -7,7 +7,7 @@ export interface PricingTier {
   price: string;
   priceAmount: number;
   description: string;
-  icon: typeof Heart;
+  icon: typeof CalendarCheck;
   features: string[];
   limitations?: string[];
   highlighted?: boolean;
@@ -22,10 +22,10 @@ export const pricingTiers: PricingTier[] = [
     name: 'Free',
     price: 'Free',
     priceAmount: 0,
-    description: 'Perfect for trying out our AI wedding video editing',
-    icon: Heart,
+    description: 'Perfect for trying out our AI event video editing',
+    icon: CalendarCheck,
     features: [
-      '1 wedding project',
+      '1 event project',
       '30-day storage retention',
       'Basic AI editing (2-3 minutes)',
       'Standard quality (1080p)',
@@ -46,10 +46,10 @@ export const pricingTiers: PricingTier[] = [
     name: 'Premium',
     price: '$99',
     priceAmount: 9900, // in cents
-    description: 'Best for couples who want professional-quality highlights',
+    description: 'Best for event hosts who want professional-quality highlights',
     icon: Crown,
     features: [
-      'Unlimited wedding projects',
+      'Unlimited event projects',
       '1-year storage retention',
       'Extended AI editing (up to 5 minutes)',
       'High quality (1080p)',
@@ -93,7 +93,7 @@ export const pricingTiers: PricingTier[] = [
 export const features = [
   {
     title: 'AI-Powered Editing',
-    description: 'Our AI automatically identifies the best moments from your wedding footage'
+    description: 'Our AI automatically identifies the best moments from your event footage'
   },
   {
     title: 'Smart Storage Management',

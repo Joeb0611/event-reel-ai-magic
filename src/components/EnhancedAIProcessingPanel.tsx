@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Brain, Bug } from 'lucide-react';
-import AISettingsPanel, { WeddingAISettings } from '@/components/ai/AISettingsPanel';
+import AISettingsPanel, { EventAISettings } from '@/components/ai/AISettingsPanel';
 import ProcessingProgressCard from '@/components/ai/ProcessingProgressCard';
 import DetectedMomentsPreview from '@/components/ai/DetectedMomentsPreview';
-import { useWeddingProcessing } from '@/hooks/useWeddingProcessing';
+import { useEventProcessing } from '@/hooks/useEventProcessing';
 import { useVideos } from '@/hooks/useVideos';
 
 interface EnhancedAIProcessingPanelProps {
@@ -24,14 +24,14 @@ const EnhancedAIProcessingPanel = ({
   mustIncludeCount = 0,
   onProcessingComplete 
 }: EnhancedAIProcessingPanelProps) => {
-  const { currentJob, isProcessing, startProcessing, cancelProcessing } = useWeddingProcessing(projectId);
+  const { currentJob, isProcessing, startProcessing, cancelProcessing } = useEventProcessing(projectId);
   const { projectVideos } = useVideos(projectId);
   
   const [showPreview, setShowPreview] = useState(false);
   const [testPremium, setTestPremium] = useState(false);
   
   // AI Configuration State using the new interface
-  const [aiSettings, setAiSettings] = useState<WeddingAISettings>({
+  const [aiSettings, setAiSettings] = useState<EventAISettings>({
     videoStyle: 'romantic',
     duration: '2min',
     contentFocus: 'balanced',

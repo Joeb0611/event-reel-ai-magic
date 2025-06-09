@@ -6,8 +6,8 @@ export interface PrivacySettings {
   guest_upload: boolean;
 }
 
-export interface WeddingMoment {
-  type: 'ceremony' | 'reception' | 'emotional' | 'group';
+export interface EventMoment {
+  type: 'main_event' | 'celebration' | 'emotional' | 'group' | 'performance' | 'speech';
   subtype: string;
   timestamp: number;
   duration: number;
@@ -15,13 +15,13 @@ export interface WeddingMoment {
   description: string;
 }
 
-// Type guard function to validate WeddingMoment objects
-function isWeddingMoment(obj: any): obj is WeddingMoment {
+// Type guard function to validate EventMoment objects
+function isEventMoment(obj: any): obj is EventMoment {
   return (
     obj &&
     typeof obj === 'object' &&
     typeof obj.type === 'string' &&
-    ['ceremony', 'reception', 'emotional', 'group'].includes(obj.type) &&
+    ['main_event', 'celebration', 'emotional', 'group', 'performance', 'speech', 'ceremony', 'reception'].includes(obj.type) &&
     typeof obj.subtype === 'string' &&
     typeof obj.timestamp === 'number' &&
     typeof obj.duration === 'number' &&
@@ -55,8 +55,8 @@ export function parsePrivacySettings(json: Json | null | undefined): PrivacySett
   return defaultSettings;
 }
 
-// Convert Json type to WeddingMoment array
-export function parseWeddingMoments(json: Json | null | undefined): WeddingMoment[] {
+// Convert Json type to EventMoment array
+export function parseEventMoments(json: Json | null | undefined): EventMoment[] {
   if (!json) return [];
   
   try {
@@ -70,10 +70,15 @@ export function parseWeddingMoments(json: Json | null | undefined): WeddingMomen
     
     if (Array.isArray(parsed)) {
       // Filter and validate each item using the type guard
-      return parsed.filter(isWeddingMoment);
+      // Also map old wedding types to new event types for backward compatibility
+      return parsed.map(item => {
+        if (item.type === 'ceremony') item.type = 'main_event';
+        if (item.type === 'reception') item.type = 'celebration';
+        return item;
+      }).filter(isEventMoment);
     }
   } catch (error) {
-    console.error('Error parsing wedding moments:', error);
+    console.error('Error parsing event moments:', error);
   }
   
   return [];
@@ -84,7 +89,12 @@ export function stringifyPrivacySettings(settings: PrivacySettings): Json {
   return JSON.stringify(settings);
 }
 
-// Convert WeddingMoment array to Json for database
-export function stringifyWeddingMoments(moments: WeddingMoment[]): Json {
+// Convert EventMoment array to Json for database
+export function stringifyEventMoments(moments: EventMoment[]): Json {
   return JSON.stringify(moments);
 }
+
+// Legacy support - keep old function names for backward compatibility
+export const parseWeddingMoments = parseEventMoments;
+export const stringifyWeddingMoments = stringifyEventMoments;
+export type WeddingMoment = EventMoment;

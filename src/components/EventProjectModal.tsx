@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar, MapPin, Users } from 'lucide-react';
+import { CalendarCheck, Calendar, MapPin } from 'lucide-react';
 
 export interface EventProjectData {
   name: string;
@@ -63,8 +63,8 @@ const EventProjectModal = ({ isOpen, onClose, onCreateProject }: EventProjectMod
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl flex items-center gap-2 text-purple-600">
-            <Users className="w-6 h-6" />
+          <DialogTitle className="text-2xl flex items-center gap-2 text-blue-600">
+            <CalendarCheck className="w-6 h-6" />
             Create Your Event Project
           </DialogTitle>
           <DialogDescription>
@@ -77,13 +77,13 @@ const EventProjectModal = ({ isOpen, onClose, onCreateProject }: EventProjectMod
             {/* Project Name */}
             <div className="md:col-span-2">
               <Label htmlFor="name" className="text-sm font-medium">
-                Event Name *
+                Project Name *
               </Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
-                placeholder="e.g., Sarah's Birthday Party"
+                placeholder="e.g., Sarah's Birthday Party, Company Retreat 2024"
                 className="mt-1"
                 required
               />
@@ -98,7 +98,7 @@ const EventProjectModal = ({ isOpen, onClose, onCreateProject }: EventProjectMod
                 id="host_name"
                 value={formData.host_name}
                 onChange={(e) => handleInputChange('host_name', e.target.value)}
-                placeholder="Main host name"
+                placeholder="Primary host name"
                 className="mt-1"
                 required
               />

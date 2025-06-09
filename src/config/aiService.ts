@@ -2,10 +2,10 @@
 export const AI_SERVICE_CONFIG = {
   baseUrl: 'https://joeb0611--memoryweave-ai-fastapi-app-dev.modal.run',
   endpoints: {
-    processProject: '/api/wedding/process-project',
-    status: '/api/wedding/status',
-    results: '/api/wedding/results',
-    analyzeSingle: '/api/wedding/analyze-single',
+    processProject: '/api/event/process-project',
+    status: '/api/event/status',
+    results: '/api/event/results',
+    analyzeSingle: '/api/event/analyze-single',
     health: '/health'
   }
 };
@@ -41,8 +41,10 @@ export const mapDurationToAI = (duration: string): string => {
 
 export const mapContentFocusToAI = (focus: string): string => {
   const mapping: Record<string, string> = {
-    'ceremony': 'ceremony',
-    'reception': 'reception',
+    'main_event': 'main_event',
+    'celebration': 'celebration',
+    'ceremony': 'main_event', // backward compatibility
+    'reception': 'celebration', // backward compatibility
     'balanced': 'balanced',
     'highlights': 'balanced',
     'emotional': 'people',

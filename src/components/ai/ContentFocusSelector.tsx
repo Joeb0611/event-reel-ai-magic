@@ -2,11 +2,11 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users } from 'lucide-react';
-import { WeddingAISettings } from './AISettingsPanel';
+import { EventAISettings } from './AISettingsPanel';
 
 interface ContentFocusSelectorProps {
-  value: WeddingAISettings['contentFocus'];
-  onChange: (value: WeddingAISettings['contentFocus']) => void;
+  value: EventAISettings['contentFocus'];
+  onChange: (value: EventAISettings['contentFocus']) => void;
 }
 
 const contentFocusOptions = [

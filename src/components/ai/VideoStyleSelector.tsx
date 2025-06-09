@@ -2,11 +2,11 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Heart, Camera, FileText, Zap } from 'lucide-react';
-import { WeddingAISettings } from './AISettingsPanel';
+import { EventAISettings } from './AISettingsPanel';
 
 interface VideoStyleSelectorProps {
-  value: WeddingAISettings['videoStyle'];
-  onChange: (value: WeddingAISettings['videoStyle']) => void;
+  value: EventAISettings['videoStyle'];
+  onChange: (value: EventAISettings['videoStyle']) => void;
 }
 
 const videoStyleOptions = [

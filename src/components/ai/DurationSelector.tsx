@@ -3,12 +3,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Crown } from 'lucide-react';
-import { WeddingAISettings } from './AISettingsPanel';
+import { EventAISettings } from './AISettingsPanel';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 
 interface DurationSelectorProps {
-  value: WeddingAISettings['duration'];
-  onChange: (value: WeddingAISettings['duration']) => void;
+  value: EventAISettings['duration'];
+  onChange: (value: EventAISettings['duration']) => void;
   projectId?: string;
   testPremiumMode?: boolean;
 }
@@ -69,7 +69,7 @@ const DurationSelector = ({ value, onChange, projectId, testPremiumMode = false 
         return;
       }
     }
-    onChange(newValue as WeddingAISettings['duration']);
+    onChange(newValue as EventAISettings['duration']);
   };
 
   return (

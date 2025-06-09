@@ -11,7 +11,7 @@ import {
   Users,
   RotateCcw 
 } from 'lucide-react';
-import { ProcessingJob } from '@/hooks/useWeddingProcessing';
+import { ProcessingJob } from '@/hooks/useEventProcessing';
 
 interface ProcessingDashboardProps {
   job: ProcessingJob;

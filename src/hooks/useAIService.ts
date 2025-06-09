@@ -2,9 +2,9 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { AI_SERVICE_CONFIG, mapVideoStyleToAI, mapDurationToAI, mapContentFocusToAI } from '@/config/aiService';
-import { WeddingAISettings } from '@/components/ai/AISettingsPanel';
+import { EventAISettings } from '@/components/ai/AISettingsPanel';
 import { VideoFile } from '@/hooks/useVideos';
-import { AIInsights } from '@/hooks/useWeddingProcessing';
+import { AIInsights } from '@/hooks/useEventProcessing';
 
 interface MediaFile {
   id: string;
@@ -71,7 +71,7 @@ export const useAIService = () => {
     }));
   };
 
-  const mapProcessingSettings = (settings: WeddingAISettings, customMusicUrl?: string): ProcessingSettings => {
+  const mapProcessingSettings = (settings: EventAISettings, customMusicUrl?: string): ProcessingSettings => {
     return {
       style: mapVideoStyleToAI(settings.videoStyle),
       duration: mapDurationToAI(settings.duration),
@@ -87,7 +87,7 @@ export const useAIService = () => {
     projectId: string, 
     userId: string, 
     videos: VideoFile[], 
-    settings: WeddingAISettings,
+    settings: EventAISettings,
     customMusicUrl?: string
   ): Promise<AIProcessingResult | null> => {
     setIsProcessing(true);

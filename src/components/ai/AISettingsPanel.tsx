@@ -11,17 +11,20 @@ import MustIncludeToggle from './MustIncludeToggle';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { Button } from '@/components/ui/button';
 
-export interface WeddingAISettings {
+export interface EventAISettings {
   videoStyle: 'romantic' | 'cinematic' | 'upbeat' | 'elegant' | 'vintage' | 'modern';
   duration: '30s' | '1min' | '2min' | '3min' | '5min';
-  contentFocus: 'ceremony' | 'reception' | 'balanced' | 'highlights';
+  contentFocus: 'main_event' | 'celebration' | 'balanced' | 'highlights';
   includeMustInclude: boolean;
   useCustomMusic: boolean;
 }
 
+// Legacy support
+export type WeddingAISettings = EventAISettings;
+
 interface AISettingsPanelProps {
-  settings: WeddingAISettings;
-  onSettingsChange: (settings: WeddingAISettings) => void;
+  settings: EventAISettings;
+  onSettingsChange: (settings: EventAISettings) => void;
   mustIncludeCount: number;
   projectId: string;
   testPremiumMode?: boolean;
@@ -38,9 +41,9 @@ const AISettingsPanel = ({
 
   const hasAIAccess = testPremiumMode || hasFeatureAccess('ai_editing', projectId);
 
-  const updateSetting = <K extends keyof WeddingAISettings>(
+  const updateSetting = <K extends keyof EventAISettings>(
     key: K, 
-    value: WeddingAISettings[K]
+    value: EventAISettings[K]
   ) => {
     onSettingsChange({ ...settings, [key]: value });
   };
