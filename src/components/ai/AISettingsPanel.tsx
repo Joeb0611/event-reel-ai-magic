@@ -123,14 +123,13 @@ const AISettingsPanel = ({
           
           {settings.useCustomMusic && (
             <CustomMusicUpload
-              projectId={projectId}
               onMusicUploaded={(url) => console.log('Music uploaded:', url)}
             />
           )}
         </div>
 
         <MustIncludeToggle
-          enabled={settings.includeMustInclude}
+          isEnabled={settings.includeMustInclude}
           onToggle={(enabled) => updateSetting('includeMustInclude', enabled)}
           count={mustIncludeCount}
         />

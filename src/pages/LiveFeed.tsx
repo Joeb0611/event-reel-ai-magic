@@ -13,7 +13,8 @@ import MediaPreview from '@/components/dashboard/MediaPreview';
 interface Project {
   id: string;
   name: string;
-  host_name?: string;
+  bride_name?: string;
+  groom_name?: string;
 }
 
 const LiveFeed = () => {
@@ -30,7 +31,7 @@ const LiveFeed = () => {
     
     const { data, error } = await supabase
       .from('projects')
-      .select('id, name, host_name')
+      .select('id, name, bride_name, groom_name')
       .eq('id', projectId)
       .single();
     
@@ -49,14 +50,20 @@ const LiveFeed = () => {
       .from('videos')
       .select('*')
       .eq('project_id', projectId)
-      .order('created_at', { ascending: false });
+      .order('uploaded_at', { ascending: false });
     
     if (error) {
       console.error('Error fetching media:', error);
       return;
     }
     
-    setMedia(data || []);
+    // Convert uploaded_at to created_at for VideoFile interface compatibility
+    const convertedData = data?.map(video => ({
+      ...video,
+      created_at: video.uploaded_at
+    })) || [];
+    
+    setMedia(convertedData);
   };
 
   const handleRefresh = async () => {
@@ -87,7 +94,11 @@ const LiveFeed = () => {
         },
         (payload) => {
           console.log('New media uploaded:', payload);
-          setMedia(prev => [payload.new as VideoFile, ...prev]);
+          const newVideo = {
+            ...payload.new as any,
+            created_at: payload.new.uploaded_at
+          };
+          setMedia(prev => [newVideo, ...prev]);
         }
       )
       .subscribe();
