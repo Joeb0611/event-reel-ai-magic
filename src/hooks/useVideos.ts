@@ -5,7 +5,7 @@ import { useVideoDeletion } from './video/useVideoDeletion';
 import { useVideoUploadHandling } from './video/useVideoUploadHandling';
 import { VideoFile } from './video/types';
 
-export { VideoFile } from './video/types';
+export type { VideoFile } from './video/types';
 
 export const useVideos = (projectId: string | null) => {
   const [projectVideos, setProjectVideos] = useState<VideoFile[]>([]);
