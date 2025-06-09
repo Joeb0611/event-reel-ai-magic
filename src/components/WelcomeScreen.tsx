@@ -18,7 +18,7 @@ const WelcomeScreen = ({ onGetStarted }: WelcomeScreenProps) => {
           </div>
           
           <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-            MemoryWeave
+            MemoryMixer
           </h1>
           
           <p className="text-lg text-gray-600">

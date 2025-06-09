@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -108,8 +107,9 @@ const Index = () => {
       </div>;
   }
 
-  // Main home page with welcome screen design
-  return <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-purple-100">
+  // Main home page with MemoryMixer branding
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-purple-100">
       {/* Header with hamburger menu */}
       <div className="absolute top-4 right-4 z-10">
         <DropdownMenu>
@@ -147,7 +147,7 @@ const Index = () => {
             </div>
             
             <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent my-[7px] py-[7px]">
-              MemoryWeave
+              MemoryMixer
             </h1>
             
             <p className="text-lg text-gray-600">
@@ -156,13 +156,30 @@ const Index = () => {
           </div>
 
           {/* Projects list if any exist */}
-          {projects.length > 0 && <div className="space-y-4 max-h-60 overflow-y-auto">
-              {projects.map(project => <ProjectCard key={project.id} project={project} videoCount={0} onSelect={() => setSelectedProject(project)} onEdit={() => triggerAIEditing(project)} onDelete={() => handleDeleteProject(project.id)} />)}
-            </div>}
+          {projects.length > 0 && (
+            <div className="space-y-4 max-h-60 overflow-y-auto">
+              {projects.map(project => (
+                <ProjectCard
+                  key={project.id}
+                  project={project}
+                  videoCount={0}
+                  onSelect={() => setSelectedProject(project)}
+                  onEdit={() => triggerAIEditing(project)}
+                  onDelete={() => handleDeleteProject(project.id)}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Create Project Button */}
           <div className="space-y-4">
-            <Button onClick={() => setIsWeddingModalOpen(true)} size="lg" className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white py-4 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300">Create New Project</Button>
+            <Button
+              onClick={() => setIsWeddingModalOpen(true)}
+              size="lg"
+              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white py-4 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              Create New Project
+            </Button>
             
             <p className="text-sm text-gray-500">
               Create beautiful wedding memories in minutes
@@ -171,9 +188,19 @@ const Index = () => {
         </div>
       </div>
 
-      <ProjectModal isOpen={isProjectModalOpen} onClose={() => setIsProjectModalOpen(false)} onCreateProject={handleCreateProject} />
+      <ProjectModal
+        isOpen={isProjectModalOpen}
+        onClose={() => setIsProjectModalOpen(false)}
+        onCreateProject={handleCreateProject}
+      />
 
-      <WeddingProjectModal isOpen={isWeddingModalOpen} onClose={() => setIsWeddingModalOpen(false)} onCreateProject={handleCreateWeddingProject} />
-    </div>;
+      <WeddingProjectModal
+        isOpen={isWeddingModalOpen}
+        onClose={() => setIsWeddingModalOpen(false)}
+        onCreateProject={handleCreateWeddingProject}
+      />
+    </div>
+  );
 };
+
 export default Index;
