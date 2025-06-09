@@ -50,24 +50,3 @@ export const mapContentFocusToAI = (focus: string): string => {
   };
   return mapping[focus] || 'balanced';
 };
-
-export const mapVideoQualityToAI = (quality: string): string => {
-  const mapping: Record<string, string> = {
-    'good': 'good_quality',
-    'better': 'high_quality',
-    'best': 'ultra_quality'
-  };
-  return mapping[quality] || 'good_quality';
-};
-
-export const mapMusicStyleToAI = (style: string): string => {
-  const mapping: Record<string, string> = {
-    'romantic': 'romantic',
-    'upbeat': 'upbeat',
-    'classical': 'classical',
-    'acoustic': 'romantic',
-    'modern': 'modern',
-    'cinematic': 'modern'
-  };
-  return mapping[style] || 'romantic';
-};

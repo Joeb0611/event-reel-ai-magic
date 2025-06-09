@@ -5,12 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface MustIncludeToggleProps {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  mustIncludeCount?: number;
+  isEnabled: boolean;
+  onToggle: (enabled: boolean) => void;
+  count?: number;
 }
 
-const MustIncludeToggle = ({ checked, onChange, mustIncludeCount = 0 }: MustIncludeToggleProps) => {
+const MustIncludeToggle = ({ isEnabled, onToggle, count = 0 }: MustIncludeToggleProps) => {
   return (
     <Card className="border-gray-200">
       <CardHeader>
@@ -20,18 +20,18 @@ const MustIncludeToggle = ({ checked, onChange, mustIncludeCount = 0 }: MustIncl
       <CardContent>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Switch checked={checked} onCheckedChange={onChange} />
+            <Switch checked={isEnabled} onCheckedChange={onToggle} />
             <Label className="font-medium">
               Include must-include content
             </Label>
           </div>
-          {mustIncludeCount > 0 && (
+          {count > 0 && (
             <Badge variant="secondary">
-              {mustIncludeCount} item{mustIncludeCount !== 1 ? 's' : ''}
+              {count} item{count !== 1 ? 's' : ''}
             </Badge>
           )}
         </div>
-        {checked && mustIncludeCount === 0 && (
+        {isEnabled && count === 0 && (
           <p className="text-sm text-amber-600 mt-2">
             No must-include items selected. Tag videos in the Media Gallery.
           </p>

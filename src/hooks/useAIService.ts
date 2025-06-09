@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { AI_SERVICE_CONFIG, mapVideoStyleToAI, mapDurationToAI, mapContentFocusToAI, mapVideoQualityToAI, mapMusicStyleToAI } from '@/config/aiService';
+import { AI_SERVICE_CONFIG, mapVideoStyleToAI, mapDurationToAI, mapContentFocusToAI } from '@/config/aiService';
 import { WeddingAISettings } from '@/components/ai/AISettingsPanel';
 import { VideoFile } from '@/hooks/useVideos';
 import { AIInsights } from '@/hooks/useWeddingProcessing';
@@ -17,8 +17,6 @@ interface ProcessingSettings {
   style: string;
   duration: string;
   contentFocus: string;
-  videoQuality: string;
-  musicStyle: string;
   customMusicUrl: string | null;
   aiEnhancement: boolean;
   faceDetectionPriority: boolean;
@@ -78,8 +76,6 @@ export const useAIService = () => {
       style: mapVideoStyleToAI(settings.videoStyle),
       duration: mapDurationToAI(settings.duration),
       contentFocus: mapContentFocusToAI(settings.contentFocus),
-      videoQuality: mapVideoQualityToAI(settings.videoQuality),
-      musicStyle: settings.useCustomMusic ? 'none' : mapMusicStyleToAI(settings.musicStyle),
       customMusicUrl: settings.useCustomMusic ? customMusicUrl || null : null,
       aiEnhancement: true,
       faceDetectionPriority: true,
@@ -108,7 +104,7 @@ export const useAIService = () => {
       const processingSettings = mapProcessingSettings(settings, customMusicUrl);
 
       console.log('Starting AI processing with:', {
-        project_id: `wedding_${projectId}`,
+        project_id: `event_${projectId}`,
         media_files: mediaFiles,
         processing_settings: processingSettings,
         user_id: userId
@@ -120,7 +116,7 @@ export const useAIService = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          project_id: `wedding_${projectId}`,
+          project_id: `event_${projectId}`,
           media_files: mediaFiles,
           processing_settings: processingSettings,
           user_id: userId
@@ -163,7 +159,7 @@ export const useAIService = () => {
 
   const checkStatus = async (projectId: string): Promise<AIStatusResponse | null> => {
     try {
-      const response = await fetch(`${AI_SERVICE_CONFIG.baseUrl}${AI_SERVICE_CONFIG.endpoints.status}/wedding_${projectId}`, {
+      const response = await fetch(`${AI_SERVICE_CONFIG.baseUrl}${AI_SERVICE_CONFIG.endpoints.status}/event_${projectId}`, {
         method: 'GET'
       });
 
@@ -180,7 +176,7 @@ export const useAIService = () => {
 
   const getResults = async (projectId: string): Promise<AIProcessingResult | null> => {
     try {
-      const response = await fetch(`${AI_SERVICE_CONFIG.baseUrl}${AI_SERVICE_CONFIG.endpoints.results}/wedding_${projectId}`, {
+      const response = await fetch(`${AI_SERVICE_CONFIG.baseUrl}${AI_SERVICE_CONFIG.endpoints.results}/event_${projectId}`, {
         method: 'GET'
       });
 

@@ -35,10 +35,8 @@ const EnhancedAIProcessingPanel = ({
     videoStyle: 'romantic',
     duration: '2min',
     contentFocus: 'balanced',
-    musicStyle: 'romantic',
     includeMustInclude: true,
-    useCustomMusic: false,
-    videoQuality: 'good'
+    useCustomMusic: false
   });
 
   const handleStartProcessing = async () => {
@@ -70,7 +68,7 @@ const EnhancedAIProcessingPanel = ({
       <Card className="border-gray-200">
         <CardContent className="text-center py-8">
           <Brain className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">Upload wedding videos to start AI processing</p>
+          <p className="text-gray-500">Upload photos and videos to start AI processing</p>
         </CardContent>
       </Card>
     );
@@ -111,7 +109,7 @@ const EnhancedAIProcessingPanel = ({
           <CardTitle className="text-green-900">🎉 AI Processing Complete!</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-green-800">Your wedding highlight reel has been created successfully!</p>
+          <p className="text-green-800">Your memory reel has been created successfully!</p>
           
           {/* Video Preview */}
           <div className="bg-white rounded-lg p-4">
@@ -140,13 +138,13 @@ const EnhancedAIProcessingPanel = ({
                 <div className="text-lg font-semibold text-pink-600">
                   {currentJob.ai_insights.ceremony_moments}
                 </div>
-                <div className="text-sm text-gray-600">Ceremony Moments</div>
+                <div className="text-sm text-gray-600">Key Moments</div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-semibold text-blue-600">
                   {currentJob.ai_insights.reception_moments}
                 </div>
-                <div className="text-sm text-gray-600">Reception Moments</div>
+                <div className="text-sm text-gray-600">Happy Moments</div>
               </div>
             </div>
           )}
@@ -156,14 +154,14 @@ const EnhancedAIProcessingPanel = ({
               onClick={() => window.open(videoUrl, '_blank')}
               className="flex-1 bg-green-600 hover:bg-green-700"
             >
-              View Highlight Reel
+              View Memory Reel
             </Button>
             <Button 
               variant="outline" 
               onClick={() => {
                 const link = document.createElement('a');
                 link.href = videoUrl;
-                link.download = 'wedding-highlight-reel.mp4';
+                link.download = 'memory-reel.mp4';
                 link.click();
               }}
               className="flex-1"
@@ -217,14 +215,11 @@ const EnhancedAIProcessingPanel = ({
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex-1">
               <h3 className="font-medium text-green-900 mb-1">
-                Ready to Create Your Highlight Reel
+                Ready to Create Your Memory Reel
               </h3>
               <div className="text-sm text-green-700 space-y-1">
                 <p>
-                  {aiSettings.duration} {aiSettings.videoStyle} style • 
-                  {aiSettings.contentFocus} focus • 
-                  {aiSettings.musicStyle} music • 
-                  {aiSettings.videoQuality} quality
+                  {aiSettings.duration} {aiSettings.videoStyle} style • {aiSettings.contentFocus} focus
                 </p>
                 {aiSettings.includeMustInclude && mustIncludeCount > 0 && (
                   <p>Including {mustIncludeCount} must-have moment{mustIncludeCount !== 1 ? 's' : ''}</p>
