@@ -8,6 +8,12 @@ interface GuestAccount {
   email: string;
   full_name: string;
   created_at: string;
+  access?: {
+    id: string;
+    can_download: boolean;
+    can_view: boolean;
+    granted_at: string;
+  };
 }
 
 interface EventAccess {

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,16 +19,16 @@ interface GuestWelcomeProps {
     wedding_date?: string;
     guest_signup_enabled?: boolean;
   };
-  onContinue: (guestName: string, guestMessage: string) => void;
+  onStartUpload: () => void;
 }
 
-const GuestWelcome = ({ project, onContinue }: GuestWelcomeProps) => {
+const GuestWelcome = ({ project, onStartUpload }: GuestWelcomeProps) => {
   const [guestName, setGuestName] = useState('');
   const [guestMessage, setGuestMessage] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onContinue(guestName, guestMessage);
+    onStartUpload();
   };
 
   return (

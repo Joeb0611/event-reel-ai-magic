@@ -106,9 +106,8 @@ const HostGuestManagement = ({ project, onUpdateProject }: HostGuestManagementPr
                       <Switch
                         checked={account.access?.can_view || false}
                         onCheckedChange={(value) => 
-                          handleTogglePermission(account.access?.id, 'can_view', value)
+                          handleTogglePermission(account.access?.id || '', 'can_view', value)
                         }
-                        size="sm"
                       />
                     </div>
                     
@@ -120,16 +119,15 @@ const HostGuestManagement = ({ project, onUpdateProject }: HostGuestManagementPr
                       <Switch
                         checked={account.access?.can_download || false}
                         onCheckedChange={(value) => 
-                          handleTogglePermission(account.access?.id, 'can_download', value)
+                          handleTogglePermission(account.access?.id || '', 'can_download', value)
                         }
-                        size="sm"
                       />
                     </div>
                     
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleRevokeAccess(account.access?.id)}
+                      onClick={() => handleRevokeAccess(account.access?.id || '')}
                       className="text-red-600 hover:text-red-700"
                     >
                       <Trash2 className="w-4 h-4" />
