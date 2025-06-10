@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +11,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import MediaPreview from './MediaPreview';
 import { VideoFile } from '@/hooks/useVideos';
-import { isCloudflareStream } from '@/utils/cloudflareHelpers';
 
 interface MediaGridItemProps {
   video: VideoFile;
@@ -31,8 +31,6 @@ const MediaGridItem = ({
   onMediaClick,
   onVideoReady
 }: MediaGridItemProps) => {
-  const isCloudflareVideo = isCloudflareStream(video.file_path || '') || video.stream_video_id;
-
   return (
     <Card 
       className={`relative group hover:shadow-md transition-shadow ${
