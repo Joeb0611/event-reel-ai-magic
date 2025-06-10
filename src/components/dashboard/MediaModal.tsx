@@ -1,4 +1,3 @@
-
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
 import { X } from 'lucide-react';
@@ -40,10 +39,9 @@ const MediaModal = ({ selectedMedia, onClose }: MediaModalProps) => {
           
           <div className="flex-1 flex items-center justify-center p-4 bg-white min-h-[50vh]">
             {selectedMedia?.url ? (
-              isVideo(selectedMedia.name) || isCloudflareStream(selectedMedia.file_path || '') ? (
+              isVideo(selectedMedia.name) ? (
                 <VideoDisplay
                   url={selectedMedia.url}
-                  streamId={selectedMedia.stream_video_id}
                   className="max-w-full max-h-full"
                   showControls={true}
                   autoPlay={false}

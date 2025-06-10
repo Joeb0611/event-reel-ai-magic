@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -53,8 +52,8 @@ const MediaGridItem = ({
         >
           <MediaPreview video={video} onVideoReady={onVideoReady} />
           
-          {/* Processing indicator for Cloudflare videos */}
-          {isCloudflareVideo && !canPreview && (
+          {/* Processing indicator for videos without URL */}
+          {!video.url && (
             <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
               <div className="text-white text-center">
                 <Loader className="w-6 h-6 animate-spin mx-auto mb-1" />

@@ -87,13 +87,13 @@ const ProcessingDashboard = ({ job, onRetry }: ProcessingDashboardProps) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-purple-100 rounded-lg p-3 text-center">
                 <Heart className="w-6 h-6 text-purple-600 mx-auto mb-1" />
-                <p className="text-lg font-semibold text-purple-700">{stats.ceremony}</p>
-                <p className="text-xs text-purple-600">Ceremony</p>
+                <p className="text-lg font-semibold text-purple-700">{stats.main_event}</p>
+                <p className="text-xs text-purple-600">Main Event</p>
               </div>
               <div className="bg-blue-100 rounded-lg p-3 text-center">
                 <Video className="w-6 h-6 text-blue-600 mx-auto mb-1" />
-                <p className="text-lg font-semibold text-blue-700">{stats.reception}</p>
-                <p className="text-xs text-blue-600">Reception</p>
+                <p className="text-lg font-semibold text-blue-700">{stats.celebration}</p>
+                <p className="text-xs text-blue-600">Celebration</p>
               </div>
               <div className="bg-pink-100 rounded-lg p-3 text-center">
                 <Heart className="w-6 h-6 text-pink-600 mx-auto mb-1" />

@@ -1,4 +1,3 @@
-
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Star, User, Trash2, MoreVertical, Loader } from 'lucide-react';
@@ -33,7 +32,6 @@ const MediaListItem = ({
   onVideoReady
 }: MediaListItemProps) => {
   const { isMobile } = useIsMobile();
-  const isCloudflareVideo = isCloudflareStream(video.file_path || '') || video.stream_video_id;
 
   return (
     <Card 
@@ -54,7 +52,7 @@ const MediaListItem = ({
             onClick={() => canPreview && onMediaClick(video)}
           >
             <MediaPreview video={video} onVideoReady={onVideoReady} />
-            {isCloudflareVideo && !canPreview && (
+            {!video.url && (
               <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                 <Loader className="w-3 h-3 animate-spin text-white" />
               </div>

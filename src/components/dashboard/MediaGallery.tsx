@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import {
   AlertDialog,
@@ -83,11 +82,8 @@ const MediaGallery = ({
   };
 
   const handleMediaClick = (media: VideoFile) => {
-    // For Cloudflare videos, only allow preview if video is ready
-    const isCloudflareVideo = isCloudflareStream(media.file_path || '') || media.stream_video_id;
-    const isVideoReady = videoReadyStates.get(media.id) || false;
-    
-    if (!isCloudflareVideo || isVideoReady) {
+    // For R2 videos, check if they're ready based on URL availability
+    if (media.url) {
       setSelectedMedia(media);
     }
   };
@@ -120,9 +116,8 @@ const MediaGallery = ({
             : 'space-y-2'
         }>
           {sortedVideos.map((video) => {
-            const isCloudflareVideo = isCloudflareStream(video.file_path || '') || video.stream_video_id;
-            const isVideoReady = videoReadyStates.get(video.id) || false;
-            const canPreview = !isCloudflareVideo || isVideoReady;
+            const isVideoReady = videoReadyStates.get(video.id) || !!video.url;
+            const canPreview = isVideoReady;
             const mustInclude = mustIncludeItems.has(video.id);
             
             const commonProps = {
