@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   isCloudflareR2,
@@ -146,7 +145,7 @@ const VideoThumbnailWithLoading = ({
         className={className}
         size={size}
         aspectRatio={aspectRatio}
-        fallbackIcon="file"
+        fallbackIcon="image"
         showRetry={false}
       />
     );

@@ -1,12 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Loader, AlertTriangle, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { extractStreamId, isCloudflareStream } from '@/utils/cloudflareHelpers';
 
 interface VideoDisplayProps {
   url?: string;
-  streamId?: string;
   className?: string;
   showControls?: boolean;
   autoPlay?: boolean;
@@ -18,7 +15,6 @@ interface VideoDisplayProps {
 
 const VideoDisplay = ({
   url,
-  streamId,
   className = "w-full h-full object-cover",
   showControls = true,
   autoPlay = false,
@@ -33,13 +29,13 @@ const VideoDisplay = ({
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
 
   useEffect(() => {
-    if (url || streamId) {
+    if (url) {
       checkVideoStatus();
     } else {
       setIsLoading(false);
       setStatus('error');
     }
-  }, [url, streamId]);
+  }, [url]);
 
   useEffect(() => {
     if (onStatusChange) {
@@ -48,7 +44,7 @@ const VideoDisplay = ({
   }, [status, onStatusChange]);
 
   const checkVideoStatus = async () => {
-    if (!url && !streamId) return;
+    if (!url) return;
 
     setIsLoading(true);
     setHasError(false);
@@ -56,50 +52,9 @@ const VideoDisplay = ({
     setStatus('loading');
 
     try {
-      let videoStreamId = streamId;
-      
-      // Extract stream ID if not provided directly
-      if (!videoStreamId && url) {
-        if (isCloudflareStream(url)) {
-          videoStreamId = extractStreamId(url);
-        }
-      }
-
-      if (videoStreamId && isCloudflareStream(url || `stream://${videoStreamId}`)) {
-        // For Cloudflare Stream videos, try to load the video directly
-        // The video element will handle the loading and error states
-        const videoUrl = url || `https://videodelivery.net/${videoStreamId}/manifest/video.m3u8`;
-        
-        // Test if the video is accessible by creating a temporary video element
-        const testVideo = document.createElement('video');
-        testVideo.preload = 'metadata';
-        
-        const loadPromise = new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error('Video load timeout'));
-          }, 10000); // 10 second timeout
-          
-          testVideo.onloadedmetadata = () => {
-            clearTimeout(timeout);
-            resolve(true);
-          };
-          
-          testVideo.onerror = () => {
-            clearTimeout(timeout);
-            reject(new Error('Video load error'));
-          };
-        });
-        
-        testVideo.src = videoUrl;
-        
-        await loadPromise;
-        setIsReady(true);
-        setStatus('ready');
-      } else {
-        // For other video sources, assume ready
-        setIsReady(true);
-        setStatus('ready');
-      }
+      // For R2 videos, assume they're ready if URL exists
+      setIsReady(true);
+      setStatus('ready');
     } catch (error) {
       console.error('Error checking video status:', error);
       setHasError(true);
@@ -122,7 +77,7 @@ const VideoDisplay = ({
     setStatus('ready');
   };
 
-  if (!url && !streamId) {
+  if (!url) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded">
         <Video className="w-8 h-8 text-gray-400" />
@@ -160,7 +115,7 @@ const VideoDisplay = ({
     );
   }
 
-  const videoUrl = url || (streamId ? `https://videodelivery.net/${streamId}/manifest/video.m3u8` : '');
+  const videoUrl = url;
 
   return (
     <video

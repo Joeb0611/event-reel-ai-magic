@@ -17,3 +17,15 @@ export interface ThumbnailSizes {
 }
 
 export type MediaStatus = 'loading' | 'ready' | 'processing' | 'error' | 'not-found';
+
+// Updated EventMoment type to match the AI service
+export type EventMomentType = 'main_event' | 'celebration' | 'emotional' | 'group' | 'performance' | 'speech';
+
+export interface EventMoment {
+  type: EventMomentType;
+  subtype?: string;
+  description: string;
+  timestamp: number;
+  duration: number;
+  confidence: number;
+}

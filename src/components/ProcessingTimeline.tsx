@@ -17,14 +17,18 @@ const ProcessingTimeline = ({ moments }: ProcessingTimelineProps) => {
 
   const getMomentIcon = (type: EventMoment['type']) => {
     switch (type) {
-      case 'ceremony':
+      case 'main_event':
         return '💒';
-      case 'reception':
+      case 'celebration':
         return '🎉';
       case 'emotional':
         return '💕';
       case 'group':
         return '👥';
+      case 'performance':
+        return '🎭';
+      case 'speech':
+        return '🎤';
       default:
         return '🎬';
     }

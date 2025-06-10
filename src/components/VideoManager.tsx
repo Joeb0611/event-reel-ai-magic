@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Trash2, Download, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,11 +16,8 @@ const VideoManager = ({ videos, onDeleteVideo, mustIncludeItems, onToggleMustInc
   const [selectedVideo, setSelectedVideo] = useState<VideoFile | null>(null);
 
   const handleThumbnailClick = (video: VideoFile) => {
-    // Only allow preview if thumbnail is ready for Cloudflare videos
-    const isCloudflareStream = video.file_path?.startsWith('stream://') || video.stream_video_id;
-    if (!isCloudflareStream || video.thumbnail_url) {
-      setSelectedVideo(video);
-    }
+    // Allow preview for R2 videos
+    setSelectedVideo(video);
   };
 
   const handleDownload = async (video: VideoFile) => {
@@ -101,12 +97,11 @@ const VideoManager = ({ videos, onDeleteVideo, mustIncludeItems, onToggleMustInc
                 }`}
                 onClick={() => handleThumbnailClick(video)}
               >
-                {/* Thumbnail with loading states - NO PREVIEW until ready */}
+                {/* Thumbnail with loading states */}
                 <div className="aspect-video">
                   <VideoThumbnailWithLoading
                     videoUrl={video.url}
                     filePath={video.file_path}
-                    streamVideoId={video.stream_video_id}
                     alt={video.name}
                     className="w-full h-full"
                     size="lg"

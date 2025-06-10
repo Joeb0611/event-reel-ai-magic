@@ -1,17 +1,19 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAIService } from '@/hooks/useAIService';
-import { parseEventMoments, stringifyEventMoments, EventMoment } from '@/utils/typeConverters';
+import { parseEventMoments, stringifyEventMoments } from '@/utils/typeConverters';
 import { EventAISettings } from '@/components/ai/AISettingsPanel';
 import { VideoFile } from '@/hooks/useVideos';
+import { EventMoment } from '@/utils/cloudflare/types';
 
 export interface AIInsights {
   total_people_detected: number;
   main_event_moments: number;
   celebration_moments: number;
+  ceremony_moments?: number; // Legacy compatibility
+  reception_moments?: number; // Legacy compatibility
 }
 
 export interface ProcessingJob {
@@ -88,7 +90,10 @@ export const useEventProcessing = (projectId: string | null) => {
       return {
         total_people_detected: parsedInsights.total_people_detected || 0,
         main_event_moments: parsedInsights.main_event_moments || parsedInsights.ceremony_moments || 0,
-        celebration_moments: parsedInsights.celebration_moments || parsedInsights.reception_moments || 0
+        celebration_moments: parsedInsights.celebration_moments || parsedInsights.reception_moments || 0,
+        // Keep legacy properties for backward compatibility
+        ceremony_moments: parsedInsights.ceremony_moments || parsedInsights.main_event_moments || 0,
+        reception_moments: parsedInsights.reception_moments || parsedInsights.celebration_moments || 0
       };
     }
     

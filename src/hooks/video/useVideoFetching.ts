@@ -1,7 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { getCloudflareStreamThumbnail } from '@/utils/cloudflareHelpers';
 import { VideoFile } from './types';
 
 export const useVideoFetching = () => {
@@ -64,19 +63,13 @@ export const useVideoFetching = () => {
         allVideos.push(...videosWithUrls);
       }
 
-      // Process videos data (Cloudflare Stream and R2)
+      // Process videos data (Cloudflare R2)
       if (videosResult.data) {
         const videoData = videosResult.data.map((video) => {
           let url: string | undefined;
           let thumbnail_url: string | undefined;
           
-          if (video.file_path?.startsWith('stream://')) {
-            // Cloudflare Stream video - use direct manifest URL for video playback
-            const streamId = video.file_path.replace('stream://', '');
-            url = `https://videodelivery.net/${streamId}/manifest/video.m3u8`;
-            // Generate thumbnail URL - this will be checked for availability in the component
-            thumbnail_url = getCloudflareStreamThumbnail(streamId);
-          } else if (video.file_path?.startsWith('r2://')) {
+          if (video.file_path?.startsWith('r2://')) {
             // Cloudflare R2 file - construct public URL
             const objectKey = video.file_path.replace('r2://', '');
             url = `https://d067de0dad23153466dc9015deb5d9df.r2.cloudflarestorage.com/memorymixer/${objectKey}`;
@@ -84,10 +77,6 @@ export const useVideoFetching = () => {
             if (video.name.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/)) {
               thumbnail_url = url;
             }
-          } else if (video.stream_video_id) {
-            // Fallback for stream video ID - use direct manifest URL
-            url = `https://videodelivery.net/${video.stream_video_id}/manifest/video.m3u8`;
-            thumbnail_url = getCloudflareStreamThumbnail(video.stream_video_id);
           }
 
           return {
@@ -103,7 +92,6 @@ export const useVideoFetching = () => {
             guest_name: video.guest_name,
             guest_message: video.guest_message,
             uploaded_by_guest: video.uploaded_by_guest || false,
-            stream_video_id: video.stream_video_id,
             url,
             thumbnail_url
           };

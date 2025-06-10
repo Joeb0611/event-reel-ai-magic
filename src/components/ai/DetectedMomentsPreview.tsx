@@ -1,8 +1,7 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Heart, Users, Video, Calendar, Star } from 'lucide-react';
+import { Heart, Users, Video, Calendar, Star, Mic, Drama } from 'lucide-react';
 import { EventMoment } from '@/hooks/useEventProcessing';
 
 interface DetectedMomentsPreviewProps {
@@ -14,14 +13,18 @@ interface DetectedMomentsPreviewProps {
 const DetectedMomentsPreview = ({ moments, onApprove, onReject }: DetectedMomentsPreviewProps) => {
   const getMomentIcon = (type: EventMoment['type']) => {
     switch (type) {
-      case 'ceremony':
+      case 'main_event':
         return Heart;
-      case 'reception':
+      case 'celebration':
         return Video;
       case 'emotional':
         return Heart;
       case 'group':
         return Users;
+      case 'performance':
+        return Drama;
+      case 'speech':
+        return Mic;
       default:
         return Star;
     }
@@ -29,14 +32,18 @@ const DetectedMomentsPreview = ({ moments, onApprove, onReject }: DetectedMoment
 
   const getMomentColor = (type: EventMoment['type']) => {
     switch (type) {
-      case 'ceremony':
+      case 'main_event':
         return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'reception':
+      case 'celebration':
         return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'emotional':
         return 'bg-pink-100 text-pink-700 border-pink-200';
       case 'group':
         return 'bg-green-100 text-green-700 border-green-200';
+      case 'performance':
+        return 'bg-orange-100 text-orange-700 border-orange-200';
+      case 'speech':
+        return 'bg-indigo-100 text-indigo-700 border-indigo-200';
       default:
         return 'bg-gray-100 text-gray-700 border-gray-200';
     }
@@ -67,14 +74,14 @@ const DetectedMomentsPreview = ({ moments, onApprove, onReject }: DetectedMoment
       <CardContent className="space-y-4">
         {/* Summary Stats */}
         <div className="grid grid-cols-4 gap-3 mb-4">
-          {['ceremony', 'reception', 'emotional', 'group'].map(type => {
+          {['main_event', 'celebration', 'emotional', 'group'].map(type => {
             const count = moments.filter(m => m.type === type).length;
             const Icon = getMomentIcon(type as EventMoment['type']);
             return (
               <div key={type} className="text-center p-2 bg-white rounded border">
                 <Icon className="w-4 h-4 mx-auto mb-1 text-gray-600" />
                 <div className="text-lg font-semibold">{count}</div>
-                <div className="text-xs text-gray-600 capitalize">{type}</div>
+                <div className="text-xs text-gray-600 capitalize">{type.replace('_', ' ')}</div>
               </div>
             );
           })}

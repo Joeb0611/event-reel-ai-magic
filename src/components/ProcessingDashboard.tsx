@@ -32,8 +32,8 @@ const ProcessingDashboard = ({ job, onRetry }: ProcessingDashboardProps) => {
   const getMomentStats = () => {
     const moments = job.detected_moments || [];
     const stats = {
-      ceremony: moments.filter(m => m.type === 'ceremony').length,
-      reception: moments.filter(m => m.type === 'reception').length,
+      main_event: moments.filter(m => m.type === 'main_event').length,
+      celebration: moments.filter(m => m.type === 'celebration').length,
       emotional: moments.filter(m => m.type === 'emotional').length,
       group: moments.filter(m => m.type === 'group').length,
     };

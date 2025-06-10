@@ -72,14 +72,18 @@ const AIProcessingPanel = ({ projectId, hasVideos, onProcessingComplete }: AIPro
 
   const getMomentTypeColor = (type: EventMoment['type']) => {
     switch (type) {
-      case 'ceremony':
+      case 'main_event':
         return 'bg-purple-100 text-purple-700';
-      case 'reception':
+      case 'celebration':
         return 'bg-blue-100 text-blue-700';
       case 'emotional':
         return 'bg-pink-100 text-pink-700';
       case 'group':
         return 'bg-green-100 text-green-700';
+      case 'performance':
+        return 'bg-orange-100 text-orange-700';
+      case 'speech':
+        return 'bg-indigo-100 text-indigo-700';
       default:
         return 'bg-gray-100 text-gray-700';
     }

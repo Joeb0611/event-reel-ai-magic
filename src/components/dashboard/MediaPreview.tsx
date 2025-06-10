@@ -1,8 +1,6 @@
-
 import { Image, Loader } from 'lucide-react';
 import VideoThumbnailWithLoading from '@/components/ui/VideoThumbnailWithLoading';
 import { VideoFile } from '@/hooks/useVideos';
-import { isCloudflareStream } from '@/utils/cloudflareHelpers';
 
 interface MediaPreviewProps {
   video: VideoFile;
@@ -20,12 +18,11 @@ const MediaPreview = ({ video, onVideoReady }: MediaPreviewProps) => {
     }
   };
 
-  if (isVideo(video.name) || isCloudflareStream(video.file_path || '')) {
+  if (isVideo(video.name)) {
     return (
       <VideoThumbnailWithLoading
         videoUrl={video.url}
         filePath={video.file_path}
-        streamVideoId={video.stream_video_id}
         alt={video.name}
         className="w-full h-full cursor-pointer"
         size="lg"
