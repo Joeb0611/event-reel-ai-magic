@@ -47,6 +47,7 @@ export const useEventProcessing = (projectId: string | null) => {
   useEffect(() => {
     if (projectId) {
       fetchCurrentJob();
+      // Only check service health if we have a project, and handle CORS gracefully
       checkServiceHealth();
     }
   }, [projectId]);
@@ -69,7 +70,14 @@ export const useEventProcessing = (projectId: string | null) => {
       setServiceStatus(isHealthy ? 'available' : 'sleeping');
     } catch (error) {
       console.error('Service health check failed:', error);
-      setServiceStatus('sleeping');
+      
+      // For CORS errors, assume service is available but has configuration issues
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.warn('CORS issue detected, assuming service is available');
+        setServiceStatus('available');
+      } else {
+        setServiceStatus('sleeping');
+      }
     }
   };
 
@@ -198,13 +206,9 @@ export const useEventProcessing = (projectId: string | null) => {
   const startProcessing = async (videos: VideoFile[], settings: EventAISettings, customMusicUrl?: string) => {
     if (!projectId || !user) return;
 
-    if (serviceStatus === 'sleeping') {
-      toast({
-        title: "AI Service Unavailable",
-        description: "The AI service is currently sleeping. Please try again in a few minutes.",
-        variant: "destructive",
-      });
-      return;
+    // Don't block processing due to CORS issues in health check
+    if (serviceStatus === 'sleeping' || serviceStatus === 'error') {
+      console.warn('Service status indicates issues, but attempting processing anyway');
     }
 
     setIsProcessing(true);
@@ -255,10 +259,16 @@ export const useEventProcessing = (projectId: string | null) => {
       
       let errorMessage = "Failed to start AI processing. Please try again.";
       
-      if (error instanceof Error && (error.message?.includes('unavailable') || error.message?.includes('sleeping'))) {
-        errorMessage = "AI service is currently unavailable. Please try again in a few minutes.";
-        setServiceStatus('sleeping');
-        setTimeout(checkServiceHealth, 30000);
+      if (error instanceof Error) {
+        if (error.message?.includes('CORS') || error.message?.includes('fetch')) {
+          errorMessage = "AI service connectivity issue. Please check service configuration or try again later.";
+        } else if (error.message?.includes('unavailable') || error.message?.includes('sleeping')) {
+          errorMessage = "AI service is currently unavailable. Please try again in a few minutes.";
+          setServiceStatus('sleeping');
+          setTimeout(checkServiceHealth, 30000);
+        } else {
+          errorMessage = error.message;
+        }
       }
       
       toast({

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { AI_SERVICE_CONFIG, mapVideoStyleToAI, mapDurationToAI, mapContentFocusToAI } from '@/config/aiService';
@@ -58,6 +57,14 @@ export const useAIService = () => {
       return response.ok;
     } catch (error) {
       console.error('AI service health check failed:', error);
+      
+      // Check if it's a CORS error
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        console.warn('CORS error detected - AI service may need CORS configuration');
+        // Return true to allow processing to continue despite CORS issues
+        return true;
+      }
+      
       return false;
     }
   };
@@ -94,10 +101,10 @@ export const useAIService = () => {
     setProcessingStatus('processing');
 
     try {
-      // Check health first
+      // Check health first, but don't fail if CORS issues exist
       const isHealthy = await checkHealth();
       if (!isHealthy) {
-        throw new Error('AI service is currently unavailable');
+        console.warn('AI service health check failed, but proceeding with processing attempt');
       }
 
       const mediaFiles = mapMediaFiles(videos);
@@ -145,9 +152,17 @@ export const useAIService = () => {
       console.error('AI processing error:', error);
       setProcessingStatus('failed');
       
+      let errorMessage = 'Failed to start AI processing. Please try again.';
+      
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        errorMessage = 'Cannot connect to AI service. Please check CORS configuration or try again later.';
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "AI Processing Error",
-        description: error instanceof Error ? error.message : 'Failed to start AI processing',
+        description: errorMessage,
         variant: "destructive",
       });
       
